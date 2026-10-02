@@ -13,14 +13,38 @@ const minSensitivity = 1.0;
 const maxSensitivity = 10.0;
 const defaultSensitivity = 5.0;
 
-/// 웹 디버그 키 ←→ 회전 속도(rad/s). decisions에 없음, 디버그용 제안값.
+/// 웹 디버그 키 ←→ 회전 속도(rad/s), 감도 기본값일 때. 디버그용 제안값.
 const debugKeyTurnSpeed = 3.0;
+
+/// 조이스틱을 이 반경(px)까지 끌면 달리기.
+const runRingRadius = 80.0;
+
+/// 달리기는 이동 입력이 이 이상일 때만.
+const runMinInput = 0.3;
 
 // ---------------------------------------------------------------- 자세 (3장)
 
 /// 걷기 기준 이동 속도(px/s). 자세별 배율은 [stanceStats].
 const walkSpeed = 220.0;
 const playerRadius = 16.0;
+
+/// 이 속도(px/s)를 넘으면 걷기로 판정.
+const movingSpeedThreshold = 30.0;
+const jumpDuration = 0.5;
+
+/// 점프 시작부터 다음 점프까지(착지 포함).
+const jumpCooldown = 0.75;
+
+/// 착지 때 몸이 낮은 상자 가장자리에 걸치면 공중을 이만큼씩 연장(미끄러져 내려옴).
+const edgeSlideExtension = 0.03;
+
+/// 앉으면 피격 반경 배율.
+const crouchHitRadiusScale = 0.7;
+
+// ---------------------------------------------------------- 엄폐 (4장)
+
+/// 낮은 상자에서 이 거리(px) 이내에 앉아야 숨는다.
+const lowCoverRange = 50.0;
 
 enum Stance { standing, walking, running, crouching, jumping }
 

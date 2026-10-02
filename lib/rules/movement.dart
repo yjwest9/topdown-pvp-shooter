@@ -26,6 +26,16 @@ double turn(
   required double sensitivity,
 }) => angle + dragDx * turnPerPixel * (sensitivity / defaultSensitivity);
 
+bool pointInBox(Vec p, Box b) =>
+    p.x >= b.left && p.x <= b.right && p.y >= b.top && p.y <= b.bottom;
+
+/// 점에서 사각형까지 거리(안이면 0).
+double distanceToBox(Vec p, Box b) {
+  final dx = p.x - p.x.clamp(b.left, b.right);
+  final dy = p.y - p.y.clamp(b.top, b.bottom);
+  return sqrt(dx * dx + dy * dy);
+}
+
 bool circleOverlapsBox(Vec c, double r, Box b) {
   final dx = c.x - c.x.clamp(b.left, b.right);
   final dy = c.y - c.y.clamp(b.top, b.bottom);

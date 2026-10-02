@@ -9,7 +9,7 @@ class MapBlock {
 
   final Box box;
 
-  /// 낮은 상자. 지금은 벽처럼 막기만 한다(점프·엄폐는 다음 단계).
+  /// 낮은 상자. 걸어서는 막히고 점프로 넘거나 올라선다.
   final bool low;
 }
 
@@ -37,7 +37,14 @@ class TestMap extends Component {
     MapBlock((left: 560, top: 1190, right: 630, bottom: 1260), low: true),
   ];
 
-  late final List<Box> boxes = [for (final b in blocks) b.box];
+  late final List<Box> highWalls = [
+    for (final b in blocks)
+      if (!b.low) b.box,
+  ];
+  late final List<Box> lowCrates = [
+    for (final b in blocks)
+      if (b.low) b.box,
+  ];
 
   static final _floor = Paint()..color = const Color(0xFF3A4A3A);
   static final _grid = Paint()
