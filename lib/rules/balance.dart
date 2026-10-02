@@ -2,7 +2,25 @@
 /// 확률·능력치는 0~1 비율(8% = 0.08).
 library;
 
+// ---------------------------------------------------------- 조작 (2장)
+
+/// 떠다니는 조이스틱 반경(px). 이만큼 밀면 입력 1.0.
+const joystickRadius = 50.0;
+
+/// 오른쪽 드래그 가로 1px당 회전(rad), 감도 기본값일 때.
+const turnPerPixel = 0.0075;
+const minSensitivity = 1.0;
+const maxSensitivity = 10.0;
+const defaultSensitivity = 5.0;
+
+/// 웹 디버그 키 ←→ 회전 속도(rad/s). decisions에 없음, 디버그용 제안값.
+const debugKeyTurnSpeed = 3.0;
+
 // ---------------------------------------------------------------- 자세 (3장)
+
+/// 걷기 기준 이동 속도(px/s). 자세별 배율은 [stanceStats].
+const walkSpeed = 220.0;
+const playerRadius = 16.0;
 
 enum Stance { standing, walking, running, crouching, jumping }
 
