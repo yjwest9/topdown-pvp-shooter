@@ -19,6 +19,16 @@ void main() {
     test('clamped to 20%', () {
       expect(missChance(accuracy: 0, evasion: 0.30), closeTo(0.20, 1e-9));
     });
+    test('airborne target +10%p, still capped at 20%', () {
+      expect(
+        missChance(accuracy: 0, evasion: 0, airborne: true),
+        closeTo(0.15, 1e-9),
+      );
+      expect(
+        missChance(accuracy: 0, evasion: 0.08, airborne: true),
+        closeTo(0.20, 1e-9),
+      );
+    });
   });
 
   group('critChance', () {
@@ -108,7 +118,7 @@ void main() {
   group('ttk', () {
     final expected = {
       rifleStandard: 0.77,
-      rifleRapid: 0.77,
+      rifleRapid: 0.63,
       riflePrecision: 0.84,
       rifleHeavy: 0.60,
       sniperBolt: 1.30,

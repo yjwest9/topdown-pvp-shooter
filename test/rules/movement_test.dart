@@ -69,4 +69,21 @@ void main() {
     expect(walkSpeed, 220);
     expect(playerRadius, 16);
   });
+
+  test('runDirectionOk: forward within +-45 degrees only', () {
+    expect(runDirectionOk(forward: 1, strafe: 0), isTrue);
+    expect(runDirectionOk(forward: 0.7, strafe: 0.69), isTrue);
+    expect(runDirectionOk(forward: 0.69, strafe: -0.7), isFalse);
+    expect(runDirectionOk(forward: 0, strafe: 1), isFalse);
+    expect(runDirectionOk(forward: -1, strafe: 0), isFalse);
+    expect(runDirectionOk(forward: 0, strafe: 0), isFalse);
+  });
+
+  test('distanceToSegment: middle, beyond the ends, zero length', () {
+    const a = (x: 0.0, y: 0.0), b = (x: 10.0, y: 0.0);
+    expect(distanceToSegment((x: 5.0, y: 3.0), a, b), 3);
+    expect(distanceToSegment((x: 13.0, y: 4.0), a, b), 5);
+    expect(distanceToSegment((x: -3.0, y: 4.0), a, b), 5);
+    expect(distanceToSegment((x: 3.0, y: 4.0), a, a), 5);
+  });
 }

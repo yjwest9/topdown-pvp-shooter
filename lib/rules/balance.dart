@@ -2,6 +2,8 @@
 /// 확률·능력치는 0~1 비율(8% = 0.08).
 library;
 
+import 'dart:math' show pi;
+
 // ---------------------------------------------------------- 조작 (2장)
 
 /// 떠다니는 조이스틱 반경(px). 이만큼 밀면 입력 1.0.
@@ -21,6 +23,9 @@ const runRingRadius = 80.0;
 
 /// 달리기는 이동 입력이 이 이상일 때만.
 const runMinInput = 0.3;
+
+/// 달리기는 정면 ±이 각도(rad) 안으로 밀 때만. [잠정]
+const runMaxAngle = pi / 4;
 
 // ---------------------------------------------------------------- 자세 (3장)
 
@@ -78,6 +83,9 @@ const missChanceBase = 0.05;
 const missChanceMin = 0.0;
 const missChanceMax = 0.20;
 
+/// 점프 중인 상대를 쏘면 미스 확률 +10%p. [잠정]
+const jumpMissBonus = 0.10;
+
 /// [잠정, 설정값]
 const critChanceCap = 0.30;
 
@@ -96,6 +104,17 @@ const maxUpgradeLevel = 5;
 
 enum WeaponFamily { rifle, sniper, shotgun, pistol }
 
+enum FireMode { auto, manual }
+
+/// 총알 속도(px/s), 모든 무기 공통.
+const bulletSpeed = 750.0;
+
+/// 자동 사격: 조준선 ±이 각도(rad) 안의 대상만.
+const autoFireAngle = 0.14;
+
+/// 훈련용 표적이 죽은 뒤 부활까지(초).
+const dummyRespawnTime = 2.0;
+
 class WeaponStats {
   const WeaponStats({
     required this.id,
@@ -104,6 +123,14 @@ class WeaponStats {
     required this.fireInterval,
     required this.critChance,
     required this.critMultiplier,
+    required this.range,
+    required this.magazine,
+    required this.reloadTime,
+    required this.spread,
+    required this.fireMode,
+    this.pellets = 1,
+    this.moveSpeed = 1.0,
+    this.moveSpreadScale = 1.0,
   });
 
   final String id;
@@ -116,6 +143,28 @@ class WeaponStats {
   final double fireInterval;
   final double critChance;
   final double critMultiplier;
+
+  /// 총알이 날아가는 거리(px).
+  final double range;
+  final int magazine;
+
+  /// 재장전 시간(초).
+  final double reloadTime;
+
+  /// 기본 퍼짐(rad). 단발은 조준선 ±spread, 샷건은 부채꼴 전체 폭.
+  final double spread;
+
+  /// 기본 발사 방식.
+  final FireMode fireMode;
+  final int pellets;
+
+  /// 플레이어 이동 속도 배율.
+  final double moveSpeed;
+
+  /// 이동 중(걷기·점프) 퍼짐에 곱하는 배율.
+  final double moveSpreadScale;
+
+  double get pelletDamage => damage / pellets;
 }
 
 // [잠정] 초기 수치.
@@ -126,14 +175,24 @@ const rifleStandard = WeaponStats(
   fireInterval: 0.11,
   critChance: 0.10,
   critMultiplier: 2.0,
+  range: 560,
+  magazine: 30,
+  reloadTime: 1.8,
+  spread: 0.035,
+  fireMode: FireMode.auto,
 );
 const rifleRapid = WeaponStats(
   id: 'rifle_rapid',
   family: WeaponFamily.rifle,
-  damage: 9,
+  damage: 10,
   fireInterval: 0.07,
   critChance: 0.10,
   critMultiplier: 2.0,
+  range: 450,
+  magazine: 40,
+  reloadTime: 2.2,
+  spread: 0.05,
+  fireMode: FireMode.auto,
 );
 const riflePrecision = WeaponStats(
   id: 'rifle_precision',
@@ -142,6 +201,11 @@ const riflePrecision = WeaponStats(
   fireInterval: 0.28,
   critChance: 0.10,
   critMultiplier: 2.0,
+  range: 700,
+  magazine: 15,
+  reloadTime: 2.0,
+  spread: 0.015,
+  fireMode: FireMode.auto,
 );
 const rifleHeavy = WeaponStats(
   id: 'rifle_heavy',
@@ -150,6 +214,12 @@ const rifleHeavy = WeaponStats(
   fireInterval: 0.10,
   critChance: 0.10,
   critMultiplier: 2.0,
+  range: 520,
+  magazine: 80,
+  reloadTime: 4.0,
+  spread: 0.06,
+  fireMode: FireMode.auto,
+  moveSpeed: 0.75,
 );
 const sniperBolt = WeaponStats(
   id: 'sniper_bolt',
@@ -158,6 +228,12 @@ const sniperBolt = WeaponStats(
   fireInterval: 1.3,
   critChance: 0.25,
   critMultiplier: 2.0,
+  range: 1100,
+  magazine: 5,
+  reloadTime: 2.5,
+  spread: 0.005,
+  fireMode: FireMode.manual,
+  moveSpeed: 0.85,
 );
 const sniperSemi = WeaponStats(
   id: 'sniper_semi',
@@ -166,6 +242,12 @@ const sniperSemi = WeaponStats(
   fireInterval: 0.45,
   critChance: 0.15,
   critMultiplier: 2.0,
+  range: 950,
+  magazine: 10,
+  reloadTime: 2.4,
+  spread: 0.01,
+  fireMode: FireMode.manual,
+  moveSpeed: 0.9,
 );
 const sniperLight = WeaponStats(
   id: 'sniper_light',
@@ -174,6 +256,12 @@ const sniperLight = WeaponStats(
   fireInterval: 0.9,
   critChance: 0.15,
   critMultiplier: 2.0,
+  range: 850,
+  magazine: 6,
+  reloadTime: 2.2,
+  spread: 0.008,
+  fireMode: FireMode.manual,
+  moveSpreadScale: 0.5,
 );
 const shotgunPump = WeaponStats(
   id: 'shotgun_pump',
@@ -182,6 +270,12 @@ const shotgunPump = WeaponStats(
   fireInterval: 0.8,
   critChance: 0.10,
   critMultiplier: 1.5,
+  range: 260,
+  magazine: 6,
+  reloadTime: 2.2,
+  spread: 0.25,
+  fireMode: FireMode.auto,
+  pellets: 8,
 );
 const shotgunAuto = WeaponStats(
   id: 'shotgun_auto',
@@ -190,6 +284,12 @@ const shotgunAuto = WeaponStats(
   fireInterval: 0.28,
   critChance: 0.10,
   critMultiplier: 1.5,
+  range: 200,
+  magazine: 8,
+  reloadTime: 2.6,
+  spread: 0.35,
+  fireMode: FireMode.auto,
+  pellets: 8,
 );
 const shotgunDouble = WeaponStats(
   id: 'shotgun_double',
@@ -198,6 +298,12 @@ const shotgunDouble = WeaponStats(
   fireInterval: 0.25,
   critChance: 0.10,
   critMultiplier: 1.5,
+  range: 180,
+  magazine: 2,
+  reloadTime: 2.6,
+  spread: 0.30,
+  fireMode: FireMode.auto,
+  pellets: 10,
 );
 const pistol = WeaponStats(
   id: 'pistol',
@@ -206,6 +312,11 @@ const pistol = WeaponStats(
   fireInterval: 0.3,
   critChance: 0.10,
   critMultiplier: 2.0,
+  range: 450,
+  magazine: 12,
+  reloadTime: 1.2,
+  spread: 0.03,
+  fireMode: FireMode.auto,
 );
 
 const weapons = <WeaponStats>[

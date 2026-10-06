@@ -50,11 +50,16 @@ class StanceState {
 
   /// 달리기를 새로 시작하는 순간에만 앉기가 풀린다.
   /// 앉은 뒤 달리기 입력을 계속 누르고 있어도 다시 일어나지 않는다.
-  void updateRunning({required bool wantsRun, required double inputMagnitude}) {
+  /// [firing]이면 걷기로(달리기 입력은 유지되어 사격이 끝나면 다시 달림).
+  void updateRunning({
+    required bool wantsRun,
+    required double inputMagnitude,
+    bool firing = false,
+  }) {
     final held = wantsRun && inputMagnitude >= runMinInput;
     if (held && !_runHeld) crouching = false;
     _runHeld = held;
-    running = held && !crouching;
+    running = held && !crouching && !firing;
   }
 
   /// 이동이 끝난 뒤 매 프레임 호출.

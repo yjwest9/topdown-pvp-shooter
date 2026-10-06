@@ -19,6 +19,10 @@ Vec moveDelta({
   return (x: (forward * c - strafe * s) * k, y: (forward * s + strafe * c) * k);
 }
 
+/// 이동 입력이 정면 ±[runMaxAngle] 안인지(앞쪽으로만 달린다).
+bool runDirectionOk({required double forward, required double strafe}) =>
+    forward > 0 && atan2(strafe.abs(), forward) <= runMaxAngle;
+
 /// 가로 드래그 [dragDx] px만큼 회전한 각도.
 double turn(
   double angle, {
@@ -34,6 +38,17 @@ double distanceToBox(Vec p, Box b) {
   final dx = p.x - p.x.clamp(b.left, b.right);
   final dy = p.y - p.y.clamp(b.top, b.bottom);
   return sqrt(dx * dx + dy * dy);
+}
+
+/// 점 [p]에서 선분 [a]→[b]까지 거리.
+double distanceToSegment(Vec p, Vec a, Vec b) {
+  final dx = b.x - a.x, dy = b.y - a.y;
+  final len2 = dx * dx + dy * dy;
+  final t = len2 == 0
+      ? 0.0
+      : (((p.x - a.x) * dx + (p.y - a.y) * dy) / len2).clamp(0.0, 1.0);
+  final ex = a.x + dx * t - p.x, ey = a.y + dy * t - p.y;
+  return sqrt(ex * ex + ey * ey);
 }
 
 bool circleOverlapsBox(Vec c, double r, Box b) {

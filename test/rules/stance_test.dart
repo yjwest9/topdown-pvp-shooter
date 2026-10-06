@@ -85,6 +85,16 @@ void main() {
     });
   });
 
+  group('running while firing', () {
+    test('firing stops running, run resumes when firing stops', () {
+      final s = StanceState()
+        ..updateRunning(wantsRun: true, inputMagnitude: 1, firing: true);
+      expect(s.running, isFalse);
+      s.updateRunning(wantsRun: true, inputMagnitude: 1);
+      expect(s.running, isTrue);
+    });
+  });
+
   group('crouch', () {
     test('toggles', () {
       final s = StanceState();

@@ -42,6 +42,13 @@ bool hiddenBehindLowCover(
   );
 }
 
+/// 낮은 상자 바로 뒤(50px 이내)에 앉아 숨은 사람은 그 상자 너머로 못 쏜다(숨은 사람은 못 맞힌다).
+bool shooterBehindCover(CoverBody shooter, Box crate) =>
+    shooter.crouching &&
+    !shooter.airborne &&
+    !shooter.onCrate &&
+    distanceToBox(shooter.pos, crate) <= lowCoverRange;
+
 /// 총알도 시야와 같은 규칙. 쏜 사람이 상자 위면 막히지 않는다.
 bool bulletBlockedByLowCover({
   required CoverBody target,

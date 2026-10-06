@@ -1,0 +1,123 @@
+import 'dart:math';
+import 'dart:ui';
+
+import 'package:flame/components.dart';
+import 'package:flame/effects.dart';
+
+import '../../rules/balance.dart';
+import '../../rules/combat.dart';
+import '../../rules/cover.dart';
+import '../../rules/movement.dart';
+import '../soldier_game.dart';
+import 'floating_text.dart';
+
+/// [bulletSpeed]로 날아가다 사거리만큼 가면 사라진다.
+/// 높은 벽: 불꽃 내고 사라짐 / 낮은 상자 뒤에 숨은 대상을 노린 총알: 상자에서 멈춤 /
+/// 대상: resolveHit, 미스면 통과.
+// ponytail: 프레임 이동 구간(선분)으로 판정하고 같은 구간 안 벽·표적의 앞뒤 순서는 안 따짐.
+// 60fps면 12.5px라 문제없음. 큰 dt를 쓰는 곳이 생기면 교차 지점 거리로 정렬.
+class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
+  Bullet({
+    required super.position,
+    required double angle,
+    required this.weapon,
+    required this.shooter,
+  }) : _dir = Vector2(cos(angle), sin(angle)),
+       super(angle: angle);
+
+  final WeaponStats weapon;
+
+  /// 쏜 순간 쏜 사람 상태(상자 위였는지 등).
+  final CoverBody shooter;
+  final Vector2 _dir;
+  double _traveled = 0;
+  final _missed = <Object>{};
+
+  static final _trail = Paint()
+    ..color = const Color(0xFFE8B33A)
+    ..strokeWidth = 2.5
+    ..strokeCap = StrokeCap.round;
+
+  @override
+  void update(double dt) {
+    final step = min(bulletSpeed * dt, weapon.range - _traveled);
+    final a = (x: position.x, y: position.y);
+    final next = position + _dir * step;
+    final b = (x: next.x, y: next.y);
+    final map = game.map;
+
+    if (lineBlockedByHighWall(a, b, map.highWalls)) {
+      return _stop(const Color(0xFF98A089));
+    }
+    final targets = game.dummies.where((d) => !d.dead);
+    for (final crate in map.lowCrates) {
+      if (!segmentHitsBox(a, b, crate)) continue;
+      final blocked =
+          shooterBehindCover(shooter, crate) ||
+          targets.any(
+            (t) => bulletBlockedByLowCover(
+              target: t.coverBody,
+              shooter: shooter,
+              lowCrates: [crate],
+            ),
+          );
+      if (blocked) return _stop(const Color(0xFFB08850));
+    }
+    for (final t in targets) {
+      if (_missed.contains(t)) continue;
+      final p = t.coverBody.pos;
+      if (distanceToSegment(p, a, b) > hitRadius(t.stance)) continue;
+      final hit = _roll(t.coverBody.airborne);
+      if (hit.miss) {
+        _missed.add(t);
+        game.world.add(FloatingText.miss(at: t.position.clone()));
+        continue;
+      }
+      t.takeDamage(hit.damage);
+      game.world.add(
+        FloatingText.damage(hit.damage, at: t.position.clone(), crit: hit.crit),
+      );
+      return _stop(const Color(0xFFE0563F));
+    }
+
+    position.setFrom(next);
+    _traveled += step;
+    if (_traveled >= weapon.range) removeFromParent();
+  }
+
+  // ponytail: 쏜 사람·맞는 사람 모두 기본 병사 +0, 무기 E+0. 캐릭터·등급 선택이 생기면 받아 온다.
+  HitResult _roll(bool targetAirborne) => resolveHit(
+    baseDamage: weapon.pelletDamage,
+    critMultiplier: weapon.critMultiplier,
+    gradeMultiplier: gradeMultiplier(Grade.e, 0),
+    missChance: missChance(
+      accuracy: basicSoldier.accuracy,
+      evasion: basicSoldier.evasion,
+      airborne: targetAirborne,
+    ),
+    critChance: critChance(
+      weaponCrit: weapon.critChance,
+      characterCrit: basicSoldier.crit,
+    ),
+    missRoll: game.random.nextDouble(),
+    critRoll: game.random.nextDouble(),
+  );
+
+  void _stop(Color color) {
+    game.world.add(
+      CircleComponent(
+        radius: 4,
+        position: position.clone(),
+        anchor: Anchor.center,
+        paint: Paint()..color = color,
+        children: [RemoveEffect(delay: 0.15)],
+      ),
+    );
+    removeFromParent();
+  }
+
+  @override
+  void render(Canvas canvas) {
+    canvas.drawLine(Offset.zero, const Offset(-14, 0), _trail);
+  }
+}

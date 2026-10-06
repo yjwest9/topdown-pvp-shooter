@@ -4,9 +4,13 @@ double spreadMultiplier(Stance s) => stanceStats[s]!.spread;
 
 bool canFire(Stance s) => stanceStats[s]!.canFire;
 
-/// 5% + 상대 회피 − 내 명중, 0~20%.
-double missChance({required double accuracy, required double evasion}) =>
-    (missChanceBase + evasion - accuracy).clamp(missChanceMin, missChanceMax);
+/// 5% + 상대 회피 − 내 명중 (+ 상대가 점프 중이면 10%p), 0~20%.
+double missChance({
+  required double accuracy,
+  required double evasion,
+  bool airborne = false,
+}) => (missChanceBase + evasion - accuracy + (airborne ? jumpMissBonus : 0))
+    .clamp(missChanceMin, missChanceMax);
 
 /// 무기 크리 + 캐릭터 크리, 상한 [critChanceCap].
 double critChance({

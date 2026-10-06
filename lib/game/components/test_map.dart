@@ -19,6 +19,15 @@ class TestMap extends Component {
   static const gridSize = 70.0;
   static const spawn = (x: 700.0, y: 1000.0);
 
+  /// 훈련용 표적: ① 탁 트인 곳 ② 낮은 상자(770~840) 바로 뒤에 앉음
+  /// ③ 스폰에서 1080px ④ 낮은 상자(1120~1190, 280~350) 위에 앉음.
+  static const dummySpots = [
+    (pos: (x: 700.0, y: 700.0), crouching: false, onCrate: false),
+    (pos: (x: 805.0, y: 740.0), crouching: true, onCrate: false),
+    (pos: (x: 100.0, y: 100.0), crouching: false, onCrate: false),
+    (pos: (x: 1155.0, y: 315.0), crouching: true, onCrate: true),
+  ];
+
   final blocks = const <MapBlock>[
     // 외곽 벽
     MapBlock((left: 0, top: 0, right: 1400, bottom: 20)),

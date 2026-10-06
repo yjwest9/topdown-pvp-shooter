@@ -7,11 +7,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:topsoldier/game/components/bullet.dart';
 import 'package:topsoldier/game/soldier_game.dart';
 import 'package:topsoldier/rules/balance.dart';
 
 GameTester<SoldierGame> gameTester({double sensitivity = 5}) => GameTester(
-  () => SoldierGame(sensitivity: sensitivity),
+  () => SoldierGame(sensitivity: sensitivity, random: Random(7)),
   createGameWidget: (game) =>
       RiverpodAwareGameWidget(key: GlobalKey(), game: game),
   pumpWidget: (widget, tester) =>
@@ -219,6 +220,7 @@ void main() {
     'touch: running joystick + tap DUCK -> crouch and keep moving',
     verify: (game, tester) async {
       place(game, -pi / 2);
+      game.dummies.clear(); // 정면 표적에 자동 사격하면 걷기로 바뀌므로
       final size = game.size;
       // 손가락 1: 왼쪽에서 조이스틱을 위로 100px (달리기 원 80px 밖)
       final stick = await tester.startGesture(Offset(150, size.y - 150));
@@ -268,6 +270,7 @@ void main() {
     'keyboard: Shift+W running, C -> crouch and keep going',
     verify: (game, tester) async {
       place(game, -pi / 2);
+      game.dummies.clear();
       void key(LogicalKeyboardKey k, Set<LogicalKeyboardKey> pressed) =>
           game.onKeyEvent(
             KeyDownEvent(
@@ -297,6 +300,279 @@ void main() {
       expect(game.player.body.crouching, isTrue);
       expect(game.player.body.running, isFalse);
       expect(y0 - game.player.position.y, closeTo(walkSpeed * 0.45, 2));
+    },
+  );
+
+  // ---------------------------------------------------------------- 사격
+
+  void key(SoldierGame game, LogicalKeyboardKey k) => game.onKeyEvent(
+    KeyDownEvent(
+      physicalKey: PhysicalKeyboardKey.keyA, // 판정엔 logicalKey만 씀
+      logicalKey: k,
+      timeStamp: Duration.zero,
+    ),
+    {k},
+  );
+
+  gameTester().testGameWidget(
+    'auto fire at dummy 1 (open ground) lowers its hp',
+    verify: (game, tester) async {
+      place(game, -pi / 2); // 스폰에서 북쪽, 표적 ①은 300px 앞
+      final dummy = game.dummies[0];
+      run(game, 1);
+      expect(dummy.hp, lessThan(100));
+      expect(game.player.weapon.ammo, lessThan(30));
+    },
+  );
+
+  gameTester().testGameWidget(
+    'dummy behind a high wall is not hit',
+    verify: (game, tester) async {
+      // 높은 벽 x 910~940 사이에 두고 동쪽으로 쏜다
+      game.player
+        ..position = Vector2(850, 700)
+        ..angle = 0;
+      final dummy = game.dummies[0]..position = Vector2(1000, 700);
+      game.fireButtonHeld = true;
+      run(game, 2);
+      expect(game.player.weapon.ammo, lessThan(30));
+      expect(dummy.hp, 100);
+    },
+  );
+
+  gameTester().testGameWidget(
+    'dummy 2 crouched behind a crate: not hit from the front, hit from on top',
+    verify: (game, tester) async {
+      final dummy = game.dummies[1];
+      expect(dummy.crouching, isTrue);
+      belowCrate(game, 900);
+      game.fireButtonHeld = true;
+      run(game, 2);
+      expect(game.player.weapon.ammo, lessThan(30));
+      expect(dummy.hp, 100);
+
+      game.fireButtonHeld = false;
+      run(game, 2); // 재장전 끝까지
+      belowCrate(game, 875);
+      game.player.forward = 0.5;
+      game.player.body.jump();
+      run(game, 0.5);
+      game.player.forward = 0;
+      run(game, 0.1);
+      expect(game.player.body.onCrate, isTrue);
+
+      game.fireButtonHeld = true;
+      run(game, 1);
+      expect(dummy.hp, lessThan(100));
+    },
+  );
+
+  gameTester().testGameWidget(
+    'running: target in the aim -> walk and fire, then run again',
+    verify: (game, tester) async {
+      place(game, pi / 2); // 남쪽, 표적 없음
+      game.player
+        ..forward = 1
+        ..wantsRun = true;
+      run(game, 0.25);
+      expect(game.player.body.running, isTrue);
+      final ammo = game.player.weapon.ammo;
+
+      game.player
+        ..position = Vector2(700, 1000)
+        ..angle = -pi / 2; // 탁 트인 곳 표적이 정면
+      run(game, 0.25);
+      expect(game.player.body.running, isFalse);
+      expect(game.player.weapon.ammo, lessThan(ammo));
+
+      game.player.angle = pi / 2; // 다시 표적 없는 쪽
+      run(game, 0.25);
+      expect(game.player.body.running, isTrue);
+    },
+  );
+
+  gameTester().testGameWidget(
+    'running: holding fire while running walks and fires',
+    verify: (game, tester) async {
+      place(game, pi / 2);
+      game.player
+        ..forward = 1
+        ..wantsRun = true;
+      game.fireButtonHeld = true;
+      run(game, 0.25);
+      expect(game.player.body.running, isFalse);
+      expect(game.player.weapon.ammo, lessThan(30));
+    },
+  );
+
+  gameTester().testGameWidget(
+    'runs only when pushing forward (+-45 degrees)',
+    verify: (game, tester) async {
+      place(game, pi / 2);
+      game.player
+        ..wantsRun = true
+        ..strafe = 1;
+      game.update(1 / 60);
+      expect(game.player.body.running, isFalse);
+      game.player
+        ..strafe = 0
+        ..forward = -1;
+      game.update(1 / 60);
+      expect(game.player.body.running, isFalse);
+      game.player.forward = 1;
+      game.update(1 / 60);
+      expect(game.player.body.running, isTrue);
+    },
+  );
+
+  gameTester().testGameWidget(
+    'crouched right behind a crate: cannot shoot over it',
+    verify: (game, tester) async {
+      // 낮은 상자 (420~490, 560~630) 남쪽 30px에 앉아 북쪽을 본다
+      game.player
+        ..position = Vector2(455, 660)
+        ..angle = -pi / 2;
+      game.player.body.toggleCrouch();
+      final dummy = game.dummies[0]..position = Vector2(455, 450);
+      final ammo = game.player.weapon.ammo; // 스폰에서 이미 쐈을 수 있음
+      run(game, 0.5);
+      expect(
+        game.player.weapon.ammo,
+        ammo,
+        reason: 'no auto fire while hidden',
+      );
+
+      game.fireButtonHeld = true;
+      run(game, 1);
+      game.fireButtonHeld = false;
+      expect(game.player.weapon.ammo, lessThan(ammo));
+      expect(dummy.hp, 100, reason: 'bullets stop at the crate');
+
+      game.player.body.toggleCrouch(); // 일어서면 자동 사격으로 맞힌다
+      run(game, 1);
+      expect(dummy.hp, lessThan(100));
+    },
+  );
+
+  gameTester().testGameWidget(
+    'emptying the magazine reloads it after the reload time',
+    verify: (game, tester) async {
+      place(game, pi / 2); // 남쪽 벽 쪽, 표적 없음
+      game.fireButtonHeld = true;
+      for (var i = 0; i < 600 && game.player.weapon.ammo > 0; i++) {
+        game.update(1 / 60);
+      }
+      expect(game.player.weapon.ammo, 0);
+      game.fireButtonHeld = false;
+      run(game, rifleStandard.reloadTime - 0.1);
+      expect(game.player.weapon.ammo, 0);
+      run(game, 0.2);
+      expect(game.player.weapon.ammo, 30);
+    },
+  );
+
+  gameTester().testGameWidget(
+    'pump shotgun: one shot spawns 8 pellets',
+    verify: (game, tester) async {
+      key(game, LogicalKeyboardKey.digit8);
+      expect(game.player.weapon.weapon, shotgunPump);
+      game.player
+        ..position =
+            Vector2(700, 850) // 표적 ①에서 150px
+        ..angle = -pi / 2;
+      game.update(1 / 60); // 자동 사격 1발
+      game.update(0); // 총알 붙이기
+      expect(
+        game.world.children.whereType<Bullet>().where(
+          (b) => b.weapon == shotgunPump,
+        ),
+        hasLength(8),
+      );
+      expect(game.player.weapon.ammo, 5);
+      run(game, 0.5);
+      expect(game.dummies[0].hp, lessThan(100));
+    },
+  );
+
+  gameTester().testGameWidget(
+    'switching weapons keeps the ammo of each weapon',
+    verify: (game, tester) async {
+      place(game, pi / 2);
+      key(game, LogicalKeyboardKey.digit3); // 정밀형 15발
+      game.fireButtonHeld = true;
+      game.update(1 / 60);
+      game.fireButtonHeld = false;
+      expect(game.player.weapon.ammo, 14);
+      key(game, LogicalKeyboardKey.digit2);
+      key(game, LogicalKeyboardKey.digit3);
+      expect(game.player.weapon.ammo, 14);
+      game.update(1 / 60);
+      expect(game.player.weapon.ammo, 14, reason: 'not refilled');
+    },
+  );
+
+  gameTester().testGameWidget(
+    'tap weapon slots (top right): secondary, then primary',
+    verify: (game, tester) async {
+      place(game, pi / 2);
+      final size = game.size;
+      // 보조 = 맨 오른쪽, 주무기 = 그 왼쪽 (슬롯 130x56, 여백 16, 간격 8)
+      await tester.tapAt(Offset(size.x - 16 - 65, 16 + 28));
+      expect(game.player.weapon.weapon, pistol);
+      await tester.tapAt(Offset(size.x - 16 - 130 - 8 - 65, 16 + 28));
+      expect(game.player.weapon.weapon, rifleStandard);
+      await tester.pump(const Duration(milliseconds: 100)); // 탭 타이머 정리
+    },
+  );
+
+  gameTester().testGameWidget(
+    'keys: Q swaps to the pistol, R reloads',
+    verify: (game, tester) async {
+      place(game, pi / 2);
+      key(game, LogicalKeyboardKey.keyQ);
+      expect(game.player.weapon.weapon, pistol);
+      game.fireButtonHeld = true;
+      game.update(1 / 60);
+      game.fireButtonHeld = false;
+      expect(game.player.weapon.ammo, 11);
+      key(game, LogicalKeyboardKey.keyR);
+      expect(game.player.weapon.reloading, isTrue);
+      key(game, LogicalKeyboardKey.keyQ); // 교체하면 재장전 취소
+      expect(game.player.secondary.reloading, isFalse);
+      expect(game.player.weapon.weapon, rifleStandard);
+    },
+  );
+
+  gameTester().testGameWidget(
+    'heavy MG moves at x0.75',
+    verify: (game, tester) async {
+      key(game, LogicalKeyboardKey.digit4);
+      place(game, 0);
+      game.player.forward = 1;
+      game.update(1);
+      expect(game.player.position.x, closeTo(700 + walkSpeed * 0.75, 1));
+    },
+  );
+
+  gameTester().testGameWidget(
+    'touch: hold FIRE (manual weapon) shoots, dragging it turns',
+    verify: (game, tester) async {
+      key(game, LogicalKeyboardKey.digit5); // 볼트액션, 수동
+      place(game, pi / 2);
+      final size = game.size;
+      final fire = await tester.startGesture(Offset(size.x - 70, size.y - 82));
+      game.update(1 / 60);
+      expect(game.player.weapon.ammo, 4);
+      // 끌어도 사격은 이어진다
+      await fire.moveBy(const Offset(50, 0));
+      await fire.moveBy(const Offset(50, 0));
+      expect(game.fireButtonHeld, isTrue);
+      expect(game.player.angle, closeTo(pi / 2 + 0.75, 1e-3));
+      run(game, sniperBolt.fireInterval + 0.1);
+      expect(game.player.weapon.ammo, 3);
+      await fire.up();
+      expect(game.fireButtonHeld, isFalse);
+      await tester.pump(const Duration(milliseconds: 100)); // 탭 타이머 정리
     },
   );
 }

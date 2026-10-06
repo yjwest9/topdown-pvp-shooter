@@ -114,6 +114,21 @@ void main() {
     });
   });
 
+  group('shooterBehindCover (hidden shooter cannot shoot over the crate)', () {
+    test('crouched right behind the crate', () {
+      expect(shooterBehindCover(crouchedBehind, crate), isTrue);
+    });
+    test('standing, jumping, on a crate or far away -> can shoot', () {
+      expect(shooterBehindCover(standing, crate), isFalse);
+      expect(shooterBehindCover(jumping, crate), isFalse);
+      expect(shooterBehindCover(onTop, crate), isFalse);
+      expect(
+        shooterBehindCover(body((x: 400.0, y: 125.0), crouching: true), crate),
+        isFalse,
+      );
+    });
+  });
+
   group('hitRadius', () {
     test('crouching 16 x 0.7, otherwise 16', () {
       expect(hitRadius(Stance.crouching), closeTo(11.2, 1e-9));
