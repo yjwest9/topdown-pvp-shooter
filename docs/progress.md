@@ -2,6 +2,12 @@
 
 작업이 끝날 때마다 맨 위에 추가한다. (날짜 / 한 것 / 다음 할 일 / 막힌 것)
 
+## 2026-10-06 (릴리스 준비 — main 병합, v0.1.0)
+- 한 것: 앱 이름 TOP SOLDIER, INTERNET 권한, version 0.1.0+1, 몰입 모드(immersiveSticky, 가로 고정은 기존 sensorLandscape), release 서명 설정(`android/key.properties` 있으면 서명, 없으면 경고 후 서명 없이 빌드 — 확인함), `android/key.properties.example`, `docs/release.md`.
+- 업로드 키 생성(D:\keys	opsoldier-upload.jks, 사용자), 서명된 app-release.aab 42.6MB 빌드 확인. 태그 v0.1.0.
+- 다음: Play Console 비공개 테스트 업로드, 테스터 12명(10/7 목표).
+- 막힌 것: 없음.
+
 ## 2026-10-06 (사격 — main 병합)
 - 한 것: decisions 6장에 사격 수치 표 추가(사거리·탄창·재장전·퍼짐·펠릿·이동속도·기본 발사, 경량 저격 moveSpreadScale 0.5). `WeaponStats` 필드 추가, `rules/weapon_state.dart`(탄약·연사 대기·자동/수동 재장전·교체 시 취소), `rules/aim.dart`(퍼짐 = 기본 × 자세 × 이동 중 배율, 샷건 부채꼴 펠릿, autoFireTarget), `distanceToSegment`. 게임: 총알(750px/s, 사거리, 높은 벽 불꽃, 낮은 상자 엄폐 차단, resolveHit 미스 통과), 훈련용 표적 4개(체력 링, 2초 부활), 데미지 숫자/MISS, 로드아웃(주무기 + 권총), 무기별 발사 방식 Map, 사격 버튼(수동 무기만, 누른 채 끌면 회전), SWAP/RELOAD 버튼, 키 1~0/Q/R/↑, 무기 이동속도 배율, HUD(무기 id·탄약·재장전 바·AUTO/MANUAL), 조준 점선 + 퍼짐 두 줄. 테스트 130개 통과.
 - 추가(사용자 피드백 반영): 무기마다 남은 탄 기억(바꿨다 돌아와도 장전 안 됨), 상자 바로 뒤에 앉아 숨으면 나도 못 쏨(양방향, 자동 사격 안 됨·수동은 상자에 박힘), 달리다 사격(자동 대상 또는 사격 버튼) → 걷기로 바뀌고 끝나면 다시 달림, 달리기는 정면 ±45°로 밀 때만(조이스틱 달리기 원은 위쪽 호만 표시)[잠정], 점프 중인 상대 미스 +10%p, 연사형 데미지 9→10(TTK 0.63), 권총 자동, SWAP 대신 오른쪽 위 주무기/보조무기 슬롯 버튼(탄약·발사 방식·재장전 바 표시). 테스트 140개 통과.

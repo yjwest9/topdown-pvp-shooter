@@ -1,0 +1,6 @@
+# 이 파일을 android/key.properties 로 복사해서 값을 채운다. key.properties는 커밋하지 않는다(.gitignore).
+# keyAlias는 upload, storeFile은 D:/keys/topsoldier-upload.jks (슬래시 / 사용).
+storePassword=
+keyPassword=
+keyAlias=
+storeFile=
