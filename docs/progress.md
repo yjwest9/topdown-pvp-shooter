@@ -2,6 +2,11 @@
 
 작업이 끝날 때마다 맨 위에 추가한다. (날짜 / 한 것 / 다음 할 일 / 막힌 것)
 
+## 2026-10-07 (정리 — main 병합)
+- 한 것: 게임 화면 나가기 버튼을 나침반 오른쪽으로 옮기고 SafeArea 제거(폰에서 카메라 구멍만큼 밀려 엉뚱한 자리에 보였음). 폰 런처 아이콘을 스토어 아이콘과 같은 그림으로 교체(mipmap 5종). 이 파일 2026-10-06 릴리스 준비 항목의 업로드 키 경로 탭 문자 수정(원격 fix/progress-key-path와 같은 수정).
+- 다음: 런처 아이콘은 다음 Play 업로드 빌드(0.1.0+2)에 들어감. 사망 후 부스터, 전적 저장.
+- 막힌 것: 없음.
+
 ## 2026-10-07 (1대1 전투와 승패 — main 병합)
 - 한 것: `rules/match.dart`(applyDamage·isKill·matchEndState·resultFor, TDD), balance에 매치 수치(3분, 20킬, 부활 5초, 보호 3000ms). 명중은 쏜 사람 화면의 보간된 상대 위치로 판정, resolveHit로 미스·크리(점프 중 +10%p), `hp/{상대}` 트랜잭션(0이거나 보호 중이면 중단), 0으로 만든 쪽이 kills 기록 + `score/{팀}` +1. 맞는 쪽: 가장자리 빨간 깜빡임, HUD 체력 바, "전사" + 5초 → 내 진영 부활(체력 100 + 보호 3초, 서버 시간 추정은 .info/serverTimeOffset), 보호 중 반투명 깜빡임(상대 화면도). 방장이 시작 때 startedAt·endsAt 기록, 종료 판정(시간·20킬·접속) 후 meta에 ended·winner. 상대가 나가면 남은 쪽 승리. HUD: 점수·남은 시간, 킬 로그, 상대 머리 위 체력 바, 데미지 숫자. 결과 화면(`ui/result/`, 명중률·크리). DB 규칙에 hp·kills·score 추가. 테스트 185개 통과.
 - 확인: DB 규칙 23가지 허용/거부를 에뮬레이터 REST로 확인(보호 중 데미지, 체력 올리기, 보호 시간 변경, 0 아래, 방 밖 사람, 남의 킬, 점수 +2, 없는 팀 모두 거부). 안드로이드 + REST 가짜 상대로 자동 사격 명중 → 킬(크리) → 점수, 피격 깜빡임, 사망·부활, 20킬 → 승리 결과 화면 → 로비 확인. 크롬 실제 대전은 사용자 확인 대기.
@@ -20,7 +25,7 @@
 
 ## 2026-10-06 (릴리스 준비 — main 병합, v0.1.0)
 - 한 것: 앱 이름 TOP SOLDIER, INTERNET 권한, version 0.1.0+1, 몰입 모드(immersiveSticky, 가로 고정은 기존 sensorLandscape), release 서명 설정(`android/key.properties` 있으면 서명, 없으면 경고 후 서명 없이 빌드 — 확인함), `android/key.properties.example`, `docs/release.md`.
-- 업로드 키 생성(D:\keys	opsoldier-upload.jks, 사용자), 서명된 app-release.aab 42.6MB 빌드 확인. 태그 v0.1.0.
+- 업로드 키 생성(`D:\keys\topsoldier-upload.jks`, 사용자), 서명된 app-release.aab 42.6MB 빌드 확인. 태그 v0.1.0.
 - 다음: Play Console 비공개 테스트 업로드, 테스터 12명(10/7 목표).
 - 막힌 것: 없음.
 

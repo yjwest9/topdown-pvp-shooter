@@ -72,17 +72,16 @@ class _MatchViewState extends State<MatchView> {
       body: Stack(
         children: [
           RiverpodAwareGameWidget<SoldierGame>(key: _gameKey, game: _game),
-          // 왼쪽 위 나침반·자세 글자 아래. 위 가운데는 상대가 자주 보이는 자리라 피한다.
+          // 나침반 오른쪽. Flame HUD처럼 화면 모서리 기준이라 SafeArea를 쓰지 않는다
+          // (SafeArea가 카메라 구멍만큼 밀어서 폰에서 엉뚱한 자리에 보였다).
           Positioned(
-            left: 4,
-            top: 100,
-            child: SafeArea(
-              child: TextButton(
-                onPressed: () => unawaited(_exit()),
-                child: const Text(
-                  '나가기',
-                  style: TextStyle(color: Color(0xFFE3E6D8)),
-                ),
+            left: 76,
+            top: 4,
+            child: TextButton(
+              onPressed: () => unawaited(_exit()),
+              child: const Text(
+                '나가기',
+                style: TextStyle(color: Color(0xFFE3E6D8)),
               ),
             ),
           ),
