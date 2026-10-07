@@ -53,9 +53,7 @@ app.*.map.json
 *.jks
 *.keystore
 key.properties
-google-services.json
 GoogleService-Info.plist
-lib/firebase_options.dart
 firebase-debug.log
 database-debug.log
 firestore-debug.log

@@ -1,35 +1,30 @@
-import 'package:flame_riverpod/flame_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'game/soldier_game.dart';
+import 'data/services/firebase_setup.dart';
+import 'ui/lobby/lobby_view.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // 몰입 모드: 상태바·내비바 숨김. 가장자리에서 쓸면 잠깐 보였다 다시 숨는다.
   // 가로 고정은 AndroidManifest의 sensorLandscape.
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  // 훈련소는 Firebase를 쓰지 않는다. 로그인·DB 연결은 방에 들어갈 때.
+  await initFirebase(useEmulator: const bool.fromEnvironment('USE_EMULATOR'));
   runApp(const ProviderScope(child: TopSoldierApp()));
 }
 
-class TopSoldierApp extends StatefulWidget {
+class TopSoldierApp extends StatelessWidget {
   const TopSoldierApp({super.key});
-
-  @override
-  State<TopSoldierApp> createState() => _TopSoldierAppState();
-}
-
-class _TopSoldierAppState extends State<TopSoldierApp> {
-  final _gameKey = GlobalKey<RiverpodAwareGameWidgetState<SoldierGame>>();
-  final _game = SoldierGame();
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'TOP SOLDIER',
       debugShowCheckedModeBanner: false,
-      home: RiverpodAwareGameWidget<SoldierGame>(key: _gameKey, game: _game),
+      theme: ThemeData.dark(),
+      home: const LobbyView(),
     );
   }
 }

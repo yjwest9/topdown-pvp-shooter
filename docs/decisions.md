@@ -203,6 +203,7 @@ Open API 1개 이상 / 푸시 알림 1개 이상 / Firebase / REST·JSON / MVVM 
 - Flutter + Flame + flame_tiled, Riverpod 3(코드 생성 없음) + flame_riverpod.
 - Flutter 공식 아키텍처(MVVM + Repository + Service) + `rules/` 순수 Dart 계층. 자세한 건 `CLAUDE.md`.
 - Firebase: Auth, Realtime Database, Firestore, Cloud Messaging. Spark(무료) 요금제 기준.
+- Firebase 클라이언트 설정(`lib/firebase_options.dart`, `google-services.json`)은 비밀값이 아니라 커밋한다. 보안은 DB 규칙으로 지키고, 없으면 CI analyze가 실패한다(2026-10-07).
 - Git: GitHub Flow(main 하나 + 기능 브랜치, 스쿼시 병합, 배포는 태그).
 
 ## 15. 우선순위

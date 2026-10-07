@@ -1,0 +1,27 @@
+{
+  "rules": {
+    "rooms": {
+      ".read": "auth != null",
+      "$code": {
+        "meta": {
+          ".write": "auth != null && (data.exists() ? data.child('hostUid').val() === auth.uid : newData.child('hostUid').val() === auth.uid)"
+        },
+        "players": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        },
+        "states": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        },
+        "shots": {
+          "$id": {
+            ".write": "auth != null && !data.exists() && newData.child('by').val() === auth.uid"
+          }
+        }
+      }
+    }
+  }
+}

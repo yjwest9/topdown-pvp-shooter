@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "825779638613",
+    "firebase_url": "https://topsoldier-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "topsoldier",
+    "storage_bucket": "topsoldier.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:825779638613:android:622287ce32fb3717655fdc",
+        "android_client_info": {
+          "package_name": "com.yjseo.topsoldier"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDBePDmxN_LpZTHBmLuRMOFDnhTEDIYvh8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

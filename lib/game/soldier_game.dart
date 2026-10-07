@@ -10,20 +10,29 @@ import 'package:flutter/widgets.dart';
 import '../rules/aim.dart';
 import '../rules/balance.dart';
 import '../rules/combat.dart';
+import '../rules/cover.dart';
 import '../rules/movement.dart';
 import 'components/bullet.dart';
 import 'components/compass.dart';
 import 'components/fire_button.dart';
 import 'components/player.dart';
+import 'components/remote_player.dart';
 import 'components/round_button.dart';
 import 'components/target_dummy.dart';
 import 'components/test_map.dart';
 import 'components/touch_controls.dart';
 import 'components/weapon_hud.dart';
+import 'net/match_sync.dart';
 
 class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
-  SoldierGame({this.sensitivity = defaultSensitivity, Random? random})
-    : random = random ?? Random();
+  SoldierGame({
+    this.sensitivity = defaultSensitivity,
+    Random? random,
+    this.match,
+  }) : random = random ?? Random();
+
+  /// null이면 오프라인 훈련소(표적 있음). 있으면 1대1(표적 없음).
+  final MatchSync? match;
 
   /// 시점 감도 1~10.
   final double sensitivity;
@@ -50,21 +59,26 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   Future<void> onLoad() async {
     await super.onLoad();
     map = TestMap();
+    // 방장·훈련소는 남쪽에서 북쪽을, 참가자는 북쪽에서 남쪽을 보고 시작. 진영 맵은 나중.
+    final south = match?.isHost ?? true;
+    final spawn = south ? TestMap.spawn : TestMap.spawnNorth;
     player = Player(
-      position: Vector2(TestMap.spawn.x, TestMap.spawn.y),
-      angle: -pi / 2, // 북쪽(맵 위쪽)을 보고 시작
+      position: Vector2(spawn.x, spawn.y),
+      angle: south ? -pi / 2 : pi / 2,
       highWalls: map.highWalls,
       lowCrates: map.lowCrates,
     );
     dummies = [
-      for (final d in TestMap.dummySpots)
-        TargetDummy(
-          position: Vector2(d.pos.x, d.pos.y),
-          crouching: d.crouching,
-          onCrate: d.onCrate,
-        ),
+      if (match == null)
+        for (final d in TestMap.dummySpots)
+          TargetDummy(
+            position: Vector2(d.pos.x, d.pos.y),
+            crouching: d.crouching,
+            onCrate: d.onCrate,
+          ),
     ];
     await world.addAll([map, ...dummies, player]);
+    if (match != null) await add(match!);
 
     // 플레이어가 화면 가로 중앙, 세로 66% 지점.
     camera.viewfinder.anchor = const Anchor(0.5, 0.66);
@@ -166,6 +180,14 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     stanceLabel.text = _stanceText();
   }
 
+  /// 자동 사격·상자 판정 대상: 살아 있는 표적 + 상대.
+  List<CoverBody> get enemyBodies => [
+    for (final d in dummies)
+      if (!d.dead) d.coverBody,
+    for (final r in match?.remotes.values ?? const <RemotePlayer>[])
+      if (r.state != null) r.coverBody,
+  ];
+
   FireMode get _fireMode => fireModes[player.weapon.weapon.id]!;
 
   bool get _triggerHeld =>
@@ -182,10 +204,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
           shooter: player.coverBody,
           aim: player.angle,
           range: w.weapon.range,
-          targets: [
-            for (final d in dummies)
-              if (!d.dead) d.coverBody,
-          ],
+          targets: enemyBodies,
           highWalls: map.highWalls,
           lowCrates: map.lowCrates,
         ) !=
@@ -214,6 +233,9 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
           shooter: player.coverBody,
         ),
     ]);
+    for (final a in angles) {
+      match?.sendShot(muzzle, a, w.weapon.id);
+    }
   }
 
   String _stanceText() {

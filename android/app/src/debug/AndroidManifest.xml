@@ -4,4 +4,6 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Firebase 로컬 에뮬레이터(http://10.0.2.2) 연결용. debug 빌드에만 적용된다. -->
+    <application android:usesCleartextTraffic="true"/>
 </manifest>

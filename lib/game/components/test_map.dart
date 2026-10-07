@@ -19,6 +19,9 @@ class TestMap extends Component {
   static const gridSize = 70.0;
   static const spawn = (x: 700.0, y: 1000.0);
 
+  /// 1대1 참가자 스폰(방장은 [spawn]).
+  static const spawnNorth = (x: 700.0, y: 400.0);
+
   /// 훈련용 표적: ① 탁 트인 곳 ② 낮은 상자(770~840) 바로 뒤에 앉음
   /// ③ 스폰에서 1080px ④ 낮은 상자(1120~1190, 280~350) 위에 앉음.
   static const dummySpots = [

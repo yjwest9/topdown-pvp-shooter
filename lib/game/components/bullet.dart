@@ -10,6 +10,7 @@ import '../../rules/cover.dart';
 import '../../rules/movement.dart';
 import '../soldier_game.dart';
 import 'floating_text.dart';
+import 'target_dummy.dart';
 
 /// [bulletSpeed]로 날아가다 사거리만큼 가면 사라진다.
 /// 높은 벽: 불꽃 내고 사라짐 / 낮은 상자 뒤에 숨은 대상을 노린 총알: 상자에서 멈춤 /
@@ -22,6 +23,7 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
     required double angle,
     required this.weapon,
     required this.shooter,
+    this.hitsTargets = true,
   }) : _dir = Vector2(cos(angle), sin(angle)),
        super(angle: angle);
 
@@ -29,6 +31,9 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
 
   /// 쏜 순간 쏜 사람 상태(상자 위였는지 등).
   final CoverBody shooter;
+
+  /// false = 상대 화면에 그리는 연출용(맞아도 아무 일 없음, 상자·벽에서만 멈춤).
+  final bool hitsTargets;
   final Vector2 _dir;
   double _traveled = 0;
   final _missed = <Object>{};
@@ -49,20 +54,24 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
     if (lineBlockedByHighWall(a, b, map.highWalls)) {
       return _stop(const Color(0xFF98A089));
     }
-    final targets = game.dummies.where((d) => !d.dead);
+    // 상자 뒤에 숨은 쪽을 노린 총알은 상자에서 멈춘다. 연출용 총알이 노리는 건 나.
+    final covered = hitsTargets ? game.enemyBodies : [game.player.coverBody];
     for (final crate in map.lowCrates) {
       if (!segmentHitsBox(a, b, crate)) continue;
       final blocked =
           shooterBehindCover(shooter, crate) ||
-          targets.any(
+          covered.any(
             (t) => bulletBlockedByLowCover(
-              target: t.coverBody,
+              target: t,
               shooter: shooter,
               lowCrates: [crate],
             ),
           );
       if (blocked) return _stop(const Color(0xFFB08850));
     }
+    final targets = hitsTargets
+        ? game.dummies.where((d) => !d.dead)
+        : const <TargetDummy>[];
     for (final t in targets) {
       if (_missed.contains(t)) continue;
       final p = t.coverBody.pos;

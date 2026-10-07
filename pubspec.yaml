@@ -39,6 +39,9 @@ dependencies:
   flutter_riverpod: ^3.4.3
   flame_riverpod: ^5.5.5
   shared_preferences: ^2.5.5
+  firebase_core: 4.15.0
+  firebase_auth: 6.7.0
+  firebase_database: 12.6.0
 
 dev_dependencies:
   flutter_test:

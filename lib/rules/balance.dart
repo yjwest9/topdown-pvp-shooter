@@ -385,3 +385,11 @@ const assault = CharacterStats(
 );
 
 const characters = <CharacterStats>[basicSoldier, marksman, scout, assault];
+
+// ------------------------------------------------------ 멀티플레이 (13장)
+
+/// 내 상태를 초당 이 횟수만큼 기록한다.
+const stateSendHz = 15;
+
+/// 상대 상태를 이만큼(ms) 늦게 재생하며 보간한다.
+const interpolationDelayMs = 100;

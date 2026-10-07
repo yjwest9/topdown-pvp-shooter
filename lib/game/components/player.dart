@@ -128,7 +128,7 @@ class Player extends PositionComponent {
   }
 
   /// 점프 중 0→1→0, 상자 위 +0.5 (decisions 시안과 같은 연출).
-  double get _lift {
+  double get lift {
     final jump = body.airborne
         ? sin(pi * (1 - body.airTime / jumpDuration).clamp(0, 1))
         : 0.0;
@@ -138,7 +138,6 @@ class Player extends PositionComponent {
   @override
   void render(Canvas canvas) {
     const c = Offset(playerRadius, playerRadius);
-    final lift = _lift;
     // 점프 최대 1.35배, 상자 위 1.175배, 앉으면 ×0.82.
     final scale = (1 + 0.35 * lift) * (body.crouching ? 0.82 : 1);
     _renderAim(canvas, c);

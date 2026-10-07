@@ -2,6 +2,14 @@
 
 작업이 끝날 때마다 맨 위에 추가한다. (날짜 / 한 것 / 다음 할 일 / 막힌 것)
 
+## 2026-10-07 (1대1 실시간 위치 동기화 — main 병합)
+- 한 것: Firebase 클라이언트 설정 커밋(decisions 14장), firebase_core·firebase_auth·firebase_database 추가. 익명 로그인 + 임시 닉네임 `Soldier####`. 로비(훈련소 / 방 만들기 / 코드로 입장, 대기실, 방장 시작). 방 코드 4자리, meta 생성 트랜잭션으로 충돌 시 다른 코드 재시도. 게임 중 내 상태 초당 15회 `rooms/{code}/states/{uid}`(서버 시간 t), 상대는 `RemotePlayer`로 100ms 늦게 보간(각도 최단 방향), 점프 크기·앉기 링·상자 위·낮은 상자 뒤 숨김. 사격은 연출만(`shots` → 상대 화면에 같은 시각 총알). 나가기·뒤로 가기, onDisconnect(connected=false + 내 states 삭제), 상대가 나가면 "상대가 나갔습니다" 2초 → 로비. 방장 남쪽/참가자 북쪽 스폰, 온라인에선 표적 없음. `database.rules.json`, `firebase.json` 에뮬레이터 설정, `docs/multiplayer-test.md`. 테스트 163개 통과.
+- 확인: 안드로이드 에뮬레이터 + Firebase 에뮬레이터 + REST로 넣은 가짜 상대로 방 생성 → 입장 → 시작 → 상대 이동·점프·총알 표시 → 상대 퇴장 메시지 → 로비, 앱 강제 종료 시 onDisconnect 확인. DB 규칙 11가지 허용/거부를 REST로 확인. 크롬 실제 접속은 아직(웹 빌드 컴파일만 확인).
+- 사용자 확인(크롬 + 안드로이드 1대1): 움직임은 약간 지연되지만 실시간으로 볼 만함. 서로 총알이 보이고, 나가기 후 2초 뒤 로비로 정상 복귀. 총알이 맞지 않는 건 이번 범위(연출만)대로.
+- 알려진 문제: 모바일 게임 화면에서 나가기 버튼 위치가 어색함(나중에 HUD 정리 때 고침).
+- 다음: 데미지·HP(트랜잭션).
+- 막힌 것: 안드로이드에서 `useDatabaseEmulator`를 쓰면 FlutterFire가 호출마다 새 DB 연결을 만들어(20초에 444개) 몇 초 뒤 수신이 멈추고 앱이 스레드 부족으로 죽음 → 안드로이드는 에뮬레이터 주소(`http://10.0.2.2:9000?ns=…`)로 인스턴스를 직접 만들어 해결. 상태 쓰기는 이전 쓰기가 끝나야 다음을 보내게 막음(서버가 느려도 요청이 쌓이지 않게). DB 에뮬레이터가 JDK 26에서 한 번 내부 오류(NullPointerException)로 30초 멈춘 적 있음 — 에뮬레이터 지원 범위는 Java 11~21. 다시 나면 JDK 21 설치 검토.
+
 ## 2026-10-06 (릴리스 준비 — main 병합, v0.1.0)
 - 한 것: 앱 이름 TOP SOLDIER, INTERNET 권한, version 0.1.0+1, 몰입 모드(immersiveSticky, 가로 고정은 기존 sensorLandscape), release 서명 설정(`android/key.properties` 있으면 서명, 없으면 경고 후 서명 없이 빌드 — 확인함), `android/key.properties.example`, `docs/release.md`.
 - 업로드 키 생성(D:\keys	opsoldier-upload.jks, 사용자), 서명된 app-release.aab 42.6MB 빌드 확인. 태그 v0.1.0.

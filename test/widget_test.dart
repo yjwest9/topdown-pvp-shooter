@@ -5,8 +5,21 @@ import 'package:topsoldier/game/soldier_game.dart';
 import 'package:topsoldier/main.dart';
 
 void main() {
-  testWidgets('app shows the game', (tester) async {
+  testWidgets('lobby → 훈련소 opens the offline game without Firebase', (
+    tester,
+  ) async {
     await tester.pumpWidget(const ProviderScope(child: TopSoldierApp()));
-    expect(find.byType(RiverpodAwareGameWidget<SoldierGame>), findsOneWidget);
+    expect(find.text('방 만들기'), findsOneWidget);
+
+    await tester.tap(find.text('훈련소'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final game = tester
+        .widget<RiverpodAwareGameWidget<SoldierGame>>(
+          find.byType(RiverpodAwareGameWidget<SoldierGame>),
+        )
+        .game!;
+    expect(game.match, isNull);
   });
 }
