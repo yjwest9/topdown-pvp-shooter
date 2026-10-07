@@ -10,11 +10,11 @@ import 'package:flutter/widgets.dart';
 import '../rules/aim.dart';
 import '../rules/balance.dart';
 import '../rules/combat.dart';
-import '../rules/cover.dart';
 import '../rules/movement.dart';
 import 'components/bullet.dart';
 import 'components/compass.dart';
 import 'components/fire_button.dart';
+import 'components/match_hud.dart';
 import 'components/player.dart';
 import 'components/remote_player.dart';
 import 'components/round_button.dart';
@@ -59,12 +59,9 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   Future<void> onLoad() async {
     await super.onLoad();
     map = TestMap();
-    // 방장·훈련소는 남쪽에서 북쪽을, 참가자는 북쪽에서 남쪽을 보고 시작. 진영 맵은 나중.
-    final south = match?.isHost ?? true;
-    final spawn = south ? TestMap.spawn : TestMap.spawnNorth;
     player = Player(
-      position: Vector2(spawn.x, spawn.y),
-      angle: south ? -pi / 2 : pi / 2,
+      position: Vector2(_spawn.x, _spawn.y),
+      angle: _spawnAngle,
       highWalls: map.highWalls,
       lowCrates: map.lowCrates,
     );
@@ -78,7 +75,10 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
           ),
     ];
     await world.addAll([map, ...dummies, player]);
-    if (match != null) await add(match!);
+    if (match != null) {
+      await add(match!);
+      await camera.viewport.add(MatchHud(match!));
+    }
 
     // 플레이어가 화면 가로 중앙, 세로 66% 지점.
     camera.viewfinder.anchor = const Anchor(0.5, 0.66);
@@ -165,27 +165,57 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     sensitivity: sensitivity,
   );
 
+  // 방장(A팀)·훈련소는 남쪽에서 북쪽을, 참가자(B팀)는 북쪽에서 남쪽을 보고 시작. 진영 맵은 나중.
+  bool get _south => match?.isHost ?? true;
+  Vec get _spawn => _south ? TestMap.spawn : TestMap.spawnNorth;
+  double get _spawnAngle => _south ? -pi / 2 : pi / 2;
+
+  /// 내 진영 스폰으로 되돌린다(부활).
+  void respawnPlayer() =>
+      player.respawnAt(Vector2(_spawn.x, _spawn.y), _spawnAngle);
+
   @override
   void update(double dt) {
+    // 죽어 있는 동안은 움직이거나 쏘지 못한다.
+    if (match?.isDead ?? false) {
+      player
+        ..forward = 0
+        ..strafe = 0
+        ..wantsRun = false;
+    }
     final keyTurn =
         (_keys.contains(LogicalKeyboardKey.arrowRight) ? 1 : 0) -
         (_keys.contains(LogicalKeyboardKey.arrowLeft) ? 1 : 0);
     player.angle +=
         keyTurn * debugKeyTurnSpeed * (sensitivity / defaultSensitivity) * dt;
     // 이동 전에 정해야 달리던 중이면 이번 프레임부터 걷는다.
-    player.firing = _wantsToFire();
+    player.firing = !(match?.isDead ?? false) && _wantsToFire();
     super.update(dt);
     _updateFiring(dt);
     _syncCamera();
     stanceLabel.text = _stanceText();
   }
 
-  /// 자동 사격·상자 판정 대상: 살아 있는 표적 + 상대.
-  List<CoverBody> get enemyBodies => [
+  /// 총알·자동 사격 대상: 살아 있는 표적 + 살아 있는 상대.
+  List<HitTarget> get hitTargets => [
     for (final d in dummies)
-      if (!d.dead) d.coverBody,
+      if (!d.dead)
+        (
+          key: d,
+          body: d.coverBody,
+          stance: d.stance,
+          protected: false,
+          onHit: (h, _) => d.takeDamage(h.damage),
+        ),
     for (final r in match?.remotes.values ?? const <RemotePlayer>[])
-      if (r.state != null) r.coverBody,
+      if (r.targetable)
+        (
+          key: r,
+          body: r.coverBody,
+          stance: r.stance,
+          protected: r.protected,
+          onHit: (h, w) => match!.hit(r.uid, h, w),
+        ),
   ];
 
   FireMode get _fireMode => fireModes[player.weapon.weapon.id]!;
@@ -204,7 +234,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
           shooter: player.coverBody,
           aim: player.angle,
           range: w.weapon.range,
-          targets: enemyBodies,
+          targets: [for (final t in hitTargets) t.body],
           highWalls: map.highWalls,
           lowCrates: map.lowCrates,
         ) !=

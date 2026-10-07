@@ -38,6 +38,22 @@ class Player extends PositionComponent {
   /// 지난 프레임 실제 이동 속도(px/s). 서기/걷기 판정용.
   double speed = 0;
 
+  /// 부활 보호 중: 반투명하게 깜빡인다.
+  bool blinking = false;
+  double _t = 0;
+
+  /// 부활: 자리·방향을 옮기고 자세를 처음 상태로.
+  void respawnAt(Vector2 at, double facing) {
+    position.setFrom(at);
+    angle = facing;
+    body
+      ..airTime = 0
+      ..jumpCooldownLeft = 0
+      ..crouching = false
+      ..running = false
+      ..onCrate = false;
+  }
+
   Stance get stance => body.stance(speed);
 
   CoverBody get coverBody => (
@@ -81,6 +97,7 @@ class Player extends PositionComponent {
     ..color = const Color(0xFFFFFFFF)
     ..strokeWidth = 4;
   static final _shadow = Paint()..color = const Color(0x59000000);
+  static final _faded = Paint()..color = const Color(0x59000000);
   static final _aimLine = Paint()
     ..color = const Color(0x47E8B33A)
     ..strokeWidth = 1.5;
@@ -95,6 +112,7 @@ class Player extends PositionComponent {
   @override
   void update(double dt) {
     if (dt <= 0) return;
+    _t += dt;
     final input = sqrt(forward * forward + strafe * strafe);
     body.updateRunning(
       wantsRun: wantsRun && runDirectionOk(forward: forward, strafe: strafe),
@@ -141,6 +159,8 @@ class Player extends PositionComponent {
     // 점프 최대 1.35배, 상자 위 1.175배, 앉으면 ×0.82.
     final scale = (1 + 0.35 * lift) * (body.crouching ? 0.82 : 1);
     _renderAim(canvas, c);
+    final blink = blinking && (_t * 8).floor().isEven;
+    if (blink) canvas.saveLayer(null, _faded);
 
     if (lift > 0) {
       // 그림자는 화면 오른쪽 아래로. 플레이어는 늘 화면 위를 보므로
@@ -162,6 +182,7 @@ class Player extends PositionComponent {
       canvas.drawCircle(Offset.zero, playerRadius * 1.25, _crouchRing);
     }
     canvas.restore();
+    if (blink) canvas.restore();
   }
 
   /// 정면 점선(사거리까지) + 현재 퍼짐 폭 두 줄. 로컬 +x = 정면.

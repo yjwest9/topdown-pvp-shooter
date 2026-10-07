@@ -10,7 +10,15 @@ import '../../rules/cover.dart';
 import '../../rules/movement.dart';
 import '../soldier_game.dart';
 import 'floating_text.dart';
-import 'target_dummy.dart';
+
+/// 총알이 맞힐 수 있는 대상(훈련 표적, 상대). [key]는 같은 대상인지 가리는 용도.
+typedef HitTarget = ({
+  Object key,
+  CoverBody body,
+  Stance stance,
+  bool protected,
+  void Function(HitResult hit, WeaponStats weapon) onHit,
+});
 
 /// [bulletSpeed]로 날아가다 사거리만큼 가면 사라진다.
 /// 높은 벽: 불꽃 내고 사라짐 / 낮은 상자 뒤에 숨은 대상을 노린 총알: 상자에서 멈춤 /
@@ -55,7 +63,10 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
       return _stop(const Color(0xFF98A089));
     }
     // 상자 뒤에 숨은 쪽을 노린 총알은 상자에서 멈춘다. 연출용 총알이 노리는 건 나.
-    final covered = hitsTargets ? game.enemyBodies : [game.player.coverBody];
+    final targets = hitsTargets ? game.hitTargets : const <HitTarget>[];
+    final covered = hitsTargets
+        ? [for (final t in targets) t.body]
+        : [game.player.coverBody];
     for (final crate in map.lowCrates) {
       if (!segmentHitsBox(a, b, crate)) continue;
       final blocked =
@@ -69,23 +80,20 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
           );
       if (blocked) return _stop(const Color(0xFFB08850));
     }
-    final targets = hitsTargets
-        ? game.dummies.where((d) => !d.dead)
-        : const <TargetDummy>[];
     for (final t in targets) {
-      if (_missed.contains(t)) continue;
-      final p = t.coverBody.pos;
-      if (distanceToSegment(p, a, b) > hitRadius(t.stance)) continue;
-      final hit = _roll(t.coverBody.airborne);
+      if (_missed.contains(t.key)) continue;
+      if (distanceToSegment(t.body.pos, a, b) > hitRadius(t.stance)) continue;
+      final at = Vector2(t.body.pos.x, t.body.pos.y);
+      // 부활 보호 중: 총알만 멈추고 아무 일 없음.
+      if (t.protected) return _stop(const Color(0xFFE3E6D8));
+      final hit = _roll(t.body.airborne);
       if (hit.miss) {
-        _missed.add(t);
-        game.world.add(FloatingText.miss(at: t.position.clone()));
+        _missed.add(t.key);
+        game.world.add(FloatingText.miss(at: at));
         continue;
       }
-      t.takeDamage(hit.damage);
-      game.world.add(
-        FloatingText.damage(hit.damage, at: t.position.clone(), crit: hit.crit),
-      );
+      t.onHit(hit, weapon);
+      game.world.add(FloatingText.damage(hit.damage, at: at, crit: hit.crit));
       return _stop(const Color(0xFFE0563F));
     }
 

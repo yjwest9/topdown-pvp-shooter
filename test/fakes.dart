@@ -16,7 +16,17 @@ class FakeRtdbService implements RtdbService {
   final root = <String, Object?>{};
   int serverTime = 1000;
   int _pushId = 0;
-  final _changed = StreamController<void>.broadcast(sync: true);
+  var _changed = StreamController<void>.broadcast(sync: true);
+
+  /// 테스트 사이 초기화. 이전 테스트의 구독은 더 이상 이벤트를 받지 않는다.
+  void reset() {
+    root.clear();
+    writes.clear();
+    onDisconnect.clear();
+    serverTime = 1000;
+    hold = null;
+    _changed = StreamController<void>.broadcast(sync: true);
+  }
 
   /// 끊길 때 할 일. 테스트에선 [disconnect]로 실행.
   final onDisconnect = <String, Object?>{};
@@ -43,7 +53,7 @@ class FakeRtdbService implements RtdbService {
     _ => v,
   };
 
-  void _write(String path, Object? value) {
+  void _write(String path, Object? value, {bool notify = true}) {
     final parts = _parts(path);
     var node = root;
     for (final p in parts.take(parts.length - 1)) {
@@ -55,7 +65,7 @@ class FakeRtdbService implements RtdbService {
       node[parts.last] = _resolve(value);
     }
     writes[path] = (writes[path] ?? 0) + 1;
-    _changed.add(null);
+    if (notify) _changed.add(null);
   }
 
   /// 접속 끊김: onDisconnect 작업 실행.
@@ -78,9 +88,11 @@ class FakeRtdbService implements RtdbService {
 
   @override
   Future<void> update(String path, Map<String, Object?> value) async {
+    // 실제 RTDB처럼 한 번에 적용하고 한 번만 알린다.
     for (final e in value.entries) {
-      _write('$path/${e.key}', e.value);
+      _write('$path/${e.key}', e.value, notify: false);
     }
+    _changed.add(null);
   }
 
   @override
@@ -91,10 +103,14 @@ class FakeRtdbService implements RtdbService {
       _write('$path/id${_pushId++}', value);
 
   @override
-  Future<bool> setIfAbsent(String path, Object? value) async {
-    if (_read(path) != null) return false;
-    _write(path, value);
-    return true;
+  Future<({bool committed, Object? value})> transaction(
+    String path,
+    Object? Function(Object? current) update,
+  ) async {
+    final next = update(_read(path));
+    if (identical(next, txAbort)) return (committed: false, value: _read(path));
+    _write(path, next);
+    return (committed: true, value: _read(path));
   }
 
   @override

@@ -20,6 +20,21 @@
           "$id": {
             ".write": "auth != null && !data.exists() && newData.child('by').val() === auth.uid"
           }
+        },
+        "hp": {
+          "$uid": {
+            ".write": "auth != null && root.child('rooms/' + $code + '/players/' + auth.uid).exists() && (auth.uid === $uid ? newData.child('value').val() === 100 : (data.exists() && newData.child('value').isNumber() && newData.child('value').val() >= 0 && newData.child('value').val() < data.child('value').val() && data.child('protectedUntil').val() <= now && newData.child('protectedUntil').val() === data.child('protectedUntil').val()))"
+          }
+        },
+        "kills": {
+          "$id": {
+            ".write": "auth != null && !data.exists() && newData.child('killer').val() === auth.uid"
+          }
+        },
+        "score": {
+          "$team": {
+            ".write": "auth != null && ($team === 'A' || $team === 'B') && root.child('rooms/' + $code + '/players/' + auth.uid).exists() && newData.val() === (data.exists() ? data.val() : 0) + 1"
+          }
         }
       }
     }

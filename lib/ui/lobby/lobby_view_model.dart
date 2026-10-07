@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/room.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/room_repository.dart';
+import '../../rules/balance.dart';
 
 class LobbyState {
   const LobbyState({
@@ -124,7 +125,9 @@ class LobbyViewModel extends Notifier<LobbyState> {
   }
 
   Future<void> start() async {
-    if (state.canStart) await rooms.start(state.code!);
+    if (state.canStart) {
+      await rooms.start(state.code!, durationMs: matchDurationMs);
+    }
   }
 
   /// 대기실에서 나가기.

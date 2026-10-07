@@ -1,17 +1,21 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flame/components.dart';
 import 'package:flame_riverpod/flame_riverpod.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:topsoldier/data/models/match_stats.dart';
 import 'package:topsoldier/data/repositories/room_repository.dart';
 import 'package:topsoldier/game/components/bullet.dart';
 import 'package:topsoldier/game/components/test_map.dart';
 import 'package:topsoldier/game/net/match_sync.dart';
 import 'package:topsoldier/game/soldier_game.dart';
 import 'package:topsoldier/rules/balance.dart';
+import 'package:topsoldier/rules/combat.dart';
+import 'package:topsoldier/rules/match.dart';
 
 import '../../fakes.dart';
 
@@ -48,11 +52,7 @@ Map<String, Object?> state(double x, double y, {String stance = 'standing'}) =>
 
 void main() {
   final db = FakeRtdbService();
-  setUp(() {
-    db.root.clear();
-    db.writes.clear();
-    db.serverTime = 1000;
-  });
+  setUp(db.reset);
 
   onlineTester(db).testGameWidget(
     'sends my state 15 times per second',
@@ -167,20 +167,177 @@ void main() {
     },
   );
 
+  /// onMatchEnd 기록용.
+  ({MatchStats stats, bool opponentLeft})? ended;
+  void listenEnd(SoldierGame game) {
+    ended = null;
+    game.match!.onMatchEnd = (stats, {required opponentLeft}) =>
+        ended = (stats: stats, opponentLeft: opponentLeft);
+  }
+
+  Future<void> bothPlaying({required int endsIn}) async {
+    await db.update('rooms/$code/meta', {
+      'hostUid': 'a',
+      'status': 'playing',
+      'endsAt': db.serverTime + endsIn,
+    });
+    await db.set('rooms/$code/players/a', {
+      'name': 'A',
+      'connected': true,
+      'team': 'A',
+    });
+    await db.set('rooms/$code/players/b', {
+      'name': 'B',
+      'connected': true,
+      'team': 'B',
+    });
+  }
+
   onlineTester(db).testGameWidget(
-    'opponent disconnect calls onOpponentLeft once',
+    'opponent leaving mid-match: I win, once',
     verify: (game, tester) async {
-      var left = 0;
-      game.match!.onOpponentLeft = () => left++;
+      listenEnd(game);
       await db.set('rooms/$code/players/b', {'name': 'B', 'connected': true});
       await tester.pump();
-      expect(left, 0);
+      expect(ended, isNull);
 
       await db.set('rooms/$code/players/b/connected', false);
-      await tester.pump();
       await db.set('rooms/$code/players/b/connected', false);
       await tester.pump();
-      expect(left, 1);
+      expect(ended!.opponentLeft, true);
+      expect(ended!.stats.result, MatchResult.win);
+    },
+  );
+
+  // ------------------------------------------------------------- 전투
+
+  Future<void> setHp(String id, double value, {int protectedUntil = 0}) =>
+      db.set('rooms/$code/hp/$id', {
+        'value': value,
+        'protectedUntil': protectedUntil,
+      });
+
+  const hit13 = HitResult(miss: false, crit: false, damage: 13);
+
+  onlineTester(db).testGameWidget(
+    'on start I write my full hp with spawn protection',
+    verify: (game, tester) async {
+      await tester.pump();
+      final hp = await db.get('rooms/$code/hp/a') as Map;
+      expect(hp['value'], basicSoldier.hp);
+      expect(hp['protectedUntil'], db.serverTime + spawnProtectionMs);
+    },
+  );
+
+  onlineTester(db).testGameWidget(
+    'my hit lowers the opponent hp by transaction',
+    verify: (game, tester) async {
+      await setHp('b', 100);
+      game.match!.hit('b', hit13, rifleStandard);
+      await tester.pump();
+      expect((await db.get('rooms/$code/hp/b') as Map)['value'], 87);
+      expect(await db.get('rooms/$code/kills'), isNull);
+    },
+  );
+
+  onlineTester(db).testGameWidget(
+    'hit that takes hp to 0 records a kill and +1 to my team',
+    verify: (game, tester) async {
+      await setHp('b', 10);
+      game.match!.hit('b', hit13, rifleStandard);
+      await tester.pump();
+
+      expect((await db.get('rooms/$code/hp/b') as Map)['value'], 0);
+      final kills = (await db.get('rooms/$code/kills') as Map).values;
+      expect(kills, hasLength(1));
+      expect((kills.single as Map)['killer'], 'a');
+      expect((kills.single as Map)['victim'], 'b');
+      expect(await db.get('rooms/$code/score/A'), 1);
+
+      // 이미 0이면 더 깎거나 킬을 또 세지 않는다.
+      game.match!.hit('b', hit13, rifleStandard);
+      await tester.pump();
+      expect(await db.get('rooms/$code/score/A'), 1);
+    },
+  );
+
+  onlineTester(db).testGameWidget(
+    'spawn-protected opponent takes no damage',
+    verify: (game, tester) async {
+      await setHp('b', 100, protectedUntil: db.serverTime + 1000);
+      game.match!.hit('b', hit13, rifleStandard);
+      await tester.pump();
+      expect((await db.get('rooms/$code/hp/b') as Map)['value'], 100);
+    },
+  );
+
+  onlineTester(db).testGameWidget(
+    'my auto-fire hits the opponent in front (my screen decides)',
+    verify: (game, tester) async {
+      await setHp('b', 100);
+      // 나는 (700,1000)에서 북쪽을 본다. 상대는 정면 250px.
+      await db.set('rooms/$code/states/b', state(700, 750));
+      db.serverTime += 500;
+      for (var i = 0; i < 90; i++) {
+        game.update(1 / 60);
+        await tester.pump();
+      }
+      expect((await db.get('rooms/$code/hp/b') as Map)['value'], lessThan(100));
+    },
+  );
+
+  onlineTester(db).testGameWidget(
+    'when I die: dead for 5s, then back at my spawn with full hp + protection',
+    verify: (game, tester) async {
+      await tester.pump();
+      game.player.position = Vector2(300, 300);
+      await setHp('a', 0);
+      await tester.pump();
+      expect(game.match!.isDead, true);
+
+      for (var i = 0; i < (respawnDelay * 60).round() + 2; i++) {
+        game.update(1 / 60);
+        await tester.pump();
+      }
+      final hp = await db.get('rooms/$code/hp/a') as Map;
+      expect(hp['value'], basicSoldier.hp);
+      expect(hp['protectedUntil'], db.serverTime + spawnProtectionMs);
+      expect(game.match!.isDead, false);
+      expect(game.player.position.y, TestMap.spawn.y);
+    },
+  );
+
+  onlineTester(db).testGameWidget(
+    'host ends the match at $killsToWin kills and both see the result',
+    verify: (game, tester) async {
+      listenEnd(game);
+      await bothPlaying(endsIn: 60000);
+      await db.set('rooms/$code/score/A', killsToWin);
+      await tester.pump();
+      game.update(1 / 60);
+      await tester.pump();
+
+      expect(await db.get('rooms/$code/meta/status'), 'ended');
+      expect(await db.get('rooms/$code/meta/winner'), 'A');
+      expect(ended!.stats.result, MatchResult.win);
+      expect(ended!.opponentLeft, false);
+    },
+  );
+
+  onlineTester(db).testGameWidget(
+    'time up with equal score is a draw',
+    verify: (game, tester) async {
+      listenEnd(game);
+      await bothPlaying(endsIn: 1000);
+      await tester.pump();
+      game.update(1 / 60);
+      expect(await db.get('rooms/$code/meta/status'), 'playing');
+
+      db.serverTime += 1000;
+      game.update(1 / 60);
+      await tester.pump();
+      expect(await db.get('rooms/$code/meta/winner'), 'draw');
+      expect(ended!.stats.result, MatchResult.draw);
     },
   );
 }

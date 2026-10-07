@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flame_riverpod/flame_riverpod.dart';
 import 'package:flutter/material.dart';
 
+import '../../data/models/match_stats.dart';
 import '../../game/net/match_sync.dart';
 import '../../game/soldier_game.dart';
+import '../result/result_view.dart';
 
 /// 게임 화면. [match]가 없으면 오프라인 훈련소.
 // ponytail: 뷰모델 없음. 할 일이 나가기뿐이고 그건 MatchSync가 한다. 화면 상태가 늘면 분리.
@@ -26,17 +28,31 @@ class _MatchViewState extends State<MatchView> {
   @override
   void initState() {
     super.initState();
-    widget.match?.onOpponentLeft = () {
-      setState(() => _message = '상대가 나갔습니다');
-      Future.delayed(const Duration(seconds: 2), _exit);
+    widget.match?.onMatchEnd = (stats, {required opponentLeft}) async {
+      if (opponentLeft) {
+        setState(() => _message = '상대가 나갔습니다');
+        await Future<void>.delayed(const Duration(seconds: 2));
+      }
+      await _exit(result: stats);
     };
   }
 
-  Future<void> _exit() async {
+  /// 방을 나간다. [result]가 있으면(매치 끝) 결과 화면으로, 없으면(중간에 나감) 로비로.
+  Future<void> _exit({MatchStats? result}) async {
     if (_exiting) return;
     _exiting = true;
     await widget.match?.leave();
-    if (mounted) Navigator.of(context).pop();
+    if (!mounted) return;
+    final nav = Navigator.of(context);
+    if (result == null) {
+      nav.pop();
+    } else {
+      unawaited(
+        nav.pushReplacement(
+          MaterialPageRoute<void>(builder: (_) => ResultView(stats: result)),
+        ),
+      );
+    }
   }
 
   @override

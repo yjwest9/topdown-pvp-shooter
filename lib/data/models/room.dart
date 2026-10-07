@@ -8,23 +8,42 @@ int _i(Object? v) => (v as num?)?.toInt() ?? 0;
 
 /// `rooms/{code}/meta`
 class RoomMeta {
-  const RoomMeta({required this.hostUid, required this.status});
+  const RoomMeta({
+    required this.hostUid,
+    required this.status,
+    this.endsAt = 0,
+    this.winner,
+  });
 
   factory RoomMeta.fromJson(Object? json) {
     final m = _map(json);
     return RoomMeta(
       hostUid: m['hostUid'] as String,
       status: m['status'] as String,
+      endsAt: _i(m['endsAt']),
+      winner: m['winner'] as String?,
     );
   }
 
   static const waiting = 'waiting';
   static const playing = 'playing';
+  static const ended = 'ended';
+
+  /// [winner] 값.
+  static const teamA = 'A';
+  static const teamB = 'B';
+  static const draw = 'draw';
 
   final String hostUid;
 
-  /// [waiting] → [playing].
+  /// [waiting] → [playing] → [ended].
   final String status;
+
+  /// 서버 시간(ms). 시작 전엔 0.
+  final int endsAt;
+
+  /// [teamA], [teamB], [draw]. 끝나기 전엔 null.
+  final String? winner;
 }
 
 /// `rooms/{code}/players/{uid}`
@@ -33,6 +52,7 @@ class RoomPlayer {
     required this.uid,
     required this.name,
     required this.connected,
+    this.team = RoomMeta.teamA,
   });
 
   factory RoomPlayer.fromJson(String uid, Object? json) {
@@ -41,12 +61,71 @@ class RoomPlayer {
       uid: uid,
       name: m['name'] as String? ?? '',
       connected: m['connected'] as bool? ?? false,
+      team: m['team'] as String? ?? RoomMeta.teamA,
     );
   }
 
   final String uid;
   final String name;
   final bool connected;
+
+  /// 방장 A(남쪽), 참가자 B(북쪽).
+  final String team;
+}
+
+/// `rooms/{code}/hp/{uid}`. 맞힌 쪽이 트랜잭션으로 깎는다.
+class NetHp {
+  const NetHp({required this.value, required this.protectedUntil});
+
+  factory NetHp.fromJson(Object? json) {
+    final m = _map(json);
+    return NetHp(
+      value: _d(m['value']),
+      protectedUntil: _i(m['protectedUntil']),
+    );
+  }
+
+  final double value;
+
+  /// 서버 시간(ms). 이 전까지 부활 무적.
+  final int protectedUntil;
+
+  Map<String, Object?> toJson() => {
+    'value': value,
+    'protectedUntil': protectedUntil,
+  };
+}
+
+/// `rooms/{code}/kills/{id}`. 킬 로그.
+class NetKill {
+  const NetKill({
+    required this.killer,
+    required this.victim,
+    required this.weapon,
+    required this.crit,
+  });
+
+  factory NetKill.fromJson(Object? json) {
+    final m = _map(json);
+    return NetKill(
+      killer: m['killer'] as String,
+      victim: m['victim'] as String,
+      weapon: m['weapon'] as String,
+      crit: m['crit'] as bool? ?? false,
+    );
+  }
+
+  final String killer;
+  final String victim;
+  final String weapon;
+  final bool crit;
+
+  Map<String, Object?> toJson() => {
+    'killer': killer,
+    'victim': victim,
+    'weapon': weapon,
+    'crit': crit,
+  };
 }
 
 /// `rooms/{code}/states/{uid}`. 초당 15회 기록.

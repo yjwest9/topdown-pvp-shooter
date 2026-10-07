@@ -393,3 +393,17 @@ const stateSendHz = 15;
 
 /// 상대 상태를 이만큼(ms) 늦게 재생하며 보간한다.
 const interpolationDelayMs = 100;
+
+// ------------------------------------------------- 매치 (11장, 12장) [잠정]
+
+/// 팀 데스매치 시간.
+const matchDurationMs = 180000;
+
+/// 먼저 이 킬 수에 닿으면 끝.
+const killsToWin = 20;
+
+/// 죽고 나서 부활까지(초). 부스터 선택도 이 시간 안에.
+const respawnDelay = 5.0;
+
+/// 부활 직후 무적(ms).
+const spawnProtectionMs = 3000;
