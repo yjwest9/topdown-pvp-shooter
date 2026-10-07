@@ -31,6 +31,13 @@ class WeaponState {
     reloadLeft = weapon.reloadTime;
   }
 
+  /// 부활 시: 탄창 가득, 재장전·연사 대기 없음.
+  void refill() {
+    ammo = weapon.magazine;
+    reloadLeft = 0;
+    cooldown = 0;
+  }
+
   /// 무기 교체 시. 탄은 그대로.
   void cancelReload() => reloadLeft = 0;
 

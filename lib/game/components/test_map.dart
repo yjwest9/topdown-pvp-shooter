@@ -1,26 +1,13 @@
-import 'dart:ui';
+import 'game_map.dart';
 
-import 'package:flame/components.dart';
+export 'game_map.dart' show MapBlock;
 
-import '../../rules/movement.dart';
+/// 하드코딩 훈련소 맵(1400², 표적 4개). PvP는 frontline(Tiled).
+class TestMap extends GameMap {
+  TestMap() : super(width: mapSize, height: mapSize, blocks: _blocks);
 
-class MapBlock {
-  const MapBlock(this.box, {this.low = false});
-
-  final Box box;
-
-  /// 낮은 상자. 걸어서는 막히고 점프로 넘거나 올라선다.
-  final bool low;
-}
-
-/// 하드코딩 테스트 맵. 진영 맵(Tiled)은 나중에.
-class TestMap extends Component {
   static const mapSize = 1400.0;
-  static const gridSize = 70.0;
   static const spawn = (x: 700.0, y: 1000.0);
-
-  /// 1대1 참가자 스폰(방장은 [spawn]).
-  static const spawnNorth = (x: 700.0, y: 400.0);
 
   /// 훈련용 표적: ① 탁 트인 곳 ② 낮은 상자(770~840) 바로 뒤에 앉음
   /// ③ 스폰에서 1080px ④ 낮은 상자(1120~1190, 280~350) 위에 앉음.
@@ -31,7 +18,7 @@ class TestMap extends Component {
     (pos: (x: 1155.0, y: 315.0), crouching: true, onCrate: true),
   ];
 
-  final blocks = const <MapBlock>[
+  static const _blocks = <MapBlock>[
     // 외곽 벽
     MapBlock((left: 0, top: 0, right: 1400, bottom: 20)),
     MapBlock((left: 0, top: 1380, right: 1400, bottom: 1400)),
@@ -48,36 +35,4 @@ class TestMap extends Component {
     MapBlock((left: 1120, top: 280, right: 1190, bottom: 350), low: true),
     MapBlock((left: 560, top: 1190, right: 630, bottom: 1260), low: true),
   ];
-
-  late final List<Box> highWalls = [
-    for (final b in blocks)
-      if (!b.low) b.box,
-  ];
-  late final List<Box> lowCrates = [
-    for (final b in blocks)
-      if (b.low) b.box,
-  ];
-
-  static final _floor = Paint()..color = const Color(0xFF3A4A3A);
-  static final _grid = Paint()
-    ..color = const Color(0xFF4A5C4A)
-    ..strokeWidth = 1;
-  static final _wall = Paint()..color = const Color(0xFF8A8F96);
-  static final _lowBox = Paint()..color = const Color(0xFFB08850);
-
-  @override
-  void render(Canvas canvas) {
-    canvas.drawRect(const Rect.fromLTWH(0, 0, mapSize, mapSize), _floor);
-    for (var v = 0.0; v <= mapSize; v += gridSize) {
-      canvas
-        ..drawLine(Offset(v, 0), Offset(v, mapSize), _grid)
-        ..drawLine(Offset(0, v), Offset(mapSize, v), _grid);
-    }
-    for (final b in blocks) {
-      canvas.drawRect(
-        Rect.fromLTRB(b.box.left, b.box.top, b.box.right, b.box.bottom),
-        b.low ? _lowBox : _wall,
-      );
-    }
-  }
 }

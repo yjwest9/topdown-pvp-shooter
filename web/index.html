@@ -31,6 +31,9 @@
 
   <title>topsoldier</title>
   <link rel="manifest" href="manifest.json">
+  <!-- Firebase 로컬 에뮬레이터 연결 시 SDK가 화면 아래에 붙이는 경고 띠. HUD(HP 바)를 가려서 숨긴다.
+       에뮬레이터 모드에서만 생기므로 실제 빌드에는 영향 없음. -->
+  <style>.firebase-emulator-warning { display: none !important; }</style>
 </head>
 <body>
   <!--

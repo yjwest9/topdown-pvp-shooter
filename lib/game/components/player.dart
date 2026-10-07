@@ -42,10 +42,13 @@ class Player extends PositionComponent {
   bool blinking = false;
   double _t = 0;
 
-  /// 부활: 자리·방향을 옮기고 자세를 처음 상태로.
+  /// 부활: 자리·방향을 옮기고 자세를 처음 상태로, 가진 무기 탄약을 모두 채운다.
   void respawnAt(Vector2 at, double facing) {
     position.setFrom(at);
     angle = facing;
+    for (final w in _owned.values) {
+      w.refill();
+    }
     body
       ..airTime = 0
       ..jumpCooldownLeft = 0

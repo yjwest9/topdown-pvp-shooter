@@ -71,4 +71,16 @@ void main() {
     w.tick(0.125);
     expect(w.reloading, isTrue);
   });
+
+  test('refill (respawn): full magazine, no reload or cooldown left', () {
+    final w = WeaponState(rifleStandard)..tryFire();
+    w.ammo = 0;
+    w.tick(0.01); // 자동 재장전 시작
+    expect(w.reloading, isTrue);
+
+    w.refill();
+    expect(w.ammo, rifleStandard.magazine);
+    expect(w.reloading, isFalse);
+    expect(w.tryFire(), isTrue);
+  });
 }

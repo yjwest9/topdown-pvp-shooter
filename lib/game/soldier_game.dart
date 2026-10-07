@@ -7,14 +7,18 @@ import 'package:flame_riverpod/flame_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../data/models/room.dart';
 import '../rules/aim.dart';
 import '../rules/balance.dart';
 import '../rules/combat.dart';
 import '../rules/movement.dart';
+import '../rules/spawn.dart';
 import 'components/bullet.dart';
 import 'components/compass.dart';
 import 'components/fire_button.dart';
+import 'components/game_map.dart';
 import 'components/match_hud.dart';
+import 'components/minimap.dart';
 import 'components/player.dart';
 import 'components/remote_player.dart';
 import 'components/round_button.dart';
@@ -46,7 +50,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   /// 사격 버튼을 누르고 있음(터치).
   bool fireButtonHeld = false;
 
-  late final TestMap map;
+  late final GameMap map;
   late final Player player;
   late final Compass compass;
   late final TextComponent stanceLabel;
@@ -58,9 +62,13 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    map = TestMap();
+    // PvP는 진영 맵(Tiled), 훈련소는 하드코딩 테스트 맵 + 표적.
+    map = match == null
+        ? TestMap()
+        : GameMap.fromTmx(await assets.readFile('maps/frontline.tmx'));
+    final spawn = _pickSpawn();
     player = Player(
-      position: Vector2(_spawn.x, _spawn.y),
+      position: Vector2(spawn.x, spawn.y),
       angle: _spawnAngle,
       highWalls: map.highWalls,
       lowCrates: map.lowCrates,
@@ -77,7 +85,11 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     await world.addAll([map, ...dummies, player]);
     if (match != null) {
       await add(match!);
-      await camera.viewport.add(MatchHud(match!));
+      // 나침반(20~68) → 나가기 버튼(Flutter, 76~150) 오른쪽.
+      await camera.viewport.addAll([
+        MatchHud(match!),
+        Minimap(position: Vector2(156, 8)),
+      ]);
     }
 
     // 플레이어가 화면 가로 중앙, 세로 66% 지점.
@@ -165,14 +177,32 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     sensitivity: sensitivity,
   );
 
-  // 방장(A팀)·훈련소는 남쪽에서 북쪽을, 참가자(B팀)는 북쪽에서 남쪽을 보고 시작. 진영 맵은 나중.
-  bool get _south => match?.isHost ?? true;
-  Vec get _spawn => _south ? TestMap.spawn : TestMap.spawnNorth;
-  double get _spawnAngle => _south ? -pi / 2 : pi / 2;
+  /// A팀(방장, 남쪽)·훈련소는 북쪽을, B팀(북쪽)은 남쪽을 보고 시작.
+  double get _spawnAngle =>
+      (match?.team ?? RoomMeta.teamA) == RoomMeta.teamA ? -pi / 2 : pi / 2;
 
-  /// 내 진영 스폰으로 되돌린다(부활).
-  void respawnPlayer() =>
-      player.respawnAt(Vector2(_spawn.x, _spawn.y), _spawnAngle);
+  /// 내 팀 스폰 중 상대와 가장 먼 곳. 상대 위치를 모르면(시작) 상대 진영 스폰 기준.
+  Vec _pickSpawn() {
+    final m = match;
+    if (m == null) return TestMap.spawn;
+    final enemyTeam = m.team == RoomMeta.teamA
+        ? RoomMeta.teamB
+        : RoomMeta.teamA;
+    final seen = [
+      for (final r in m.remotes.values)
+        if (r.state != null) (x: r.position.x, y: r.position.y),
+    ];
+    return farthestSpawn(
+      map.spawnsOf(m.team),
+      seen.isEmpty ? map.spawnsOf(enemyTeam) : seen,
+    );
+  }
+
+  /// 내 진영 스폰으로 되돌린다(부활). 탄약도 가득.
+  void respawnPlayer() {
+    final s = _pickSpawn();
+    player.respawnAt(Vector2(s.x, s.y), _spawnAngle);
+  }
 
   @override
   void update(double dt) {

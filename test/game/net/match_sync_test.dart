@@ -10,7 +10,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:topsoldier/data/models/match_stats.dart';
 import 'package:topsoldier/data/repositories/room_repository.dart';
 import 'package:topsoldier/game/components/bullet.dart';
-import 'package:topsoldier/game/components/test_map.dart';
 import 'package:topsoldier/game/net/match_sync.dart';
 import 'package:topsoldier/game/soldier_game.dart';
 import 'package:topsoldier/rules/balance.dart';
@@ -105,9 +104,11 @@ void main() {
   );
 
   onlineTester(db).testGameWidget(
-    'host spawns south, no training dummies online',
+    'host starts at an A spawn of the frontline map, no training dummies',
     verify: (game, tester) async {
-      expect(game.player.position.y, TestMap.spawn.y);
+      final me = (x: game.player.position.x, y: game.player.position.y);
+      expect(game.map.spawnsOf('A'), contains(me));
+      expect(game.map.width, 1610);
       expect(game.dummies, isEmpty);
     },
   );
@@ -275,8 +276,11 @@ void main() {
     'my auto-fire hits the opponent in front (my screen decides)',
     verify: (game, tester) async {
       await setHp('b', 100);
-      // 나는 (700,1000)에서 북쪽을 본다. 상대는 정면 250px.
-      await db.set('rooms/$code/states/b', state(700, 750));
+      // frontline 중앙 길(11열)의 빈 곳에서 북쪽을 본다. 상대는 정면 210px.
+      game.player
+        ..position = Vector2(805, 1575)
+        ..angle = -pi / 2;
+      await db.set('rooms/$code/states/b', state(805, 1365));
       db.serverTime += 500;
       for (var i = 0; i < 90; i++) {
         game.update(1 / 60);
@@ -290,7 +294,9 @@ void main() {
     'when I die: dead for 5s, then back at my spawn with full hp + protection',
     verify: (game, tester) async {
       await tester.pump();
-      game.player.position = Vector2(300, 300);
+      game.player.position = Vector2(805, 1365);
+      game.player.primary.ammo = 3;
+      game.player.secondary.ammo = 0;
       await setHp('a', 0);
       await tester.pump();
       expect(game.match!.isDead, true);
@@ -303,7 +309,11 @@ void main() {
       expect(hp['value'], basicSoldier.hp);
       expect(hp['protectedUntil'], db.serverTime + spawnProtectionMs);
       expect(game.match!.isDead, false);
-      expect(game.player.position.y, TestMap.spawn.y);
+      final me = (x: game.player.position.x, y: game.player.position.y);
+      expect(game.map.spawnsOf('A'), contains(me));
+      // 부활하면 모든 무기 탄약이 가득.
+      expect(game.player.primary.ammo, game.player.primary.weapon.magazine);
+      expect(game.player.secondary.ammo, game.player.secondary.weapon.magazine);
     },
   );
 
