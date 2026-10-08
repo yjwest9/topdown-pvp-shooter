@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/match_stats.dart';
 import '../../rules/match.dart';
+import '../lobby/lobby_view_model.dart';
 import 'result_view_model.dart';
 
-class ResultView extends StatelessWidget {
+class ResultView extends ConsumerWidget {
   const ResultView({super.key, required this.stats});
 
   final MatchStats stats;
 
   @override
-  Widget build(BuildContext context) {
-    final vm = ResultViewModel(stats);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vm = ResultViewModel(
+      stats,
+      holiday: ref.watch(holidayProvider).value,
+    );
     final color = switch (stats.result) {
       MatchResult.win => const Color(0xFFE8B33A),
       MatchResult.lose => const Color(0xFFE0563F),

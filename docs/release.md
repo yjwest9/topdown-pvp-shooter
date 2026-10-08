@@ -21,8 +21,10 @@ version: 0.1.1+2   # 다음 업로드
 dart format .
 flutter analyze
 flutter test
-flutter build appbundle --release
+flutter build appbundle --release --dart-define-from-file=.env.local
 ```
+
+`.env.local`(커밋 안 됨)에 `HOLIDAY_API_KEY`가 있어야 공휴일 이벤트가 동작한다(docs/push.md). 빠지면 이벤트만 꺼진다.
 
 결과: `build/app/outputs/bundle/release/app-release.aab` → Play Console에 업로드.
 

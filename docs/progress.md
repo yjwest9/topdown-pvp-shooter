@@ -2,6 +2,13 @@
 
 작업이 끝날 때마다 맨 위에 추가한다. (날짜 / 한 것 / 다음 할 일 / 막힌 것)
 
+## 2026-10-07 (공휴일 이벤트 + 푸시 — main 병합)
+- 한 것: 패키지 http 1.6, firebase_messaging 16.7(사용자 확인). 특일정보 API(`HttpHolidayService`, Encoding·Decoding 키 모두 됨) → `EventRepository.todayHoliday`(실패·키 없음·웹 CORS는 이벤트 없음) → 로비 배너 "오늘은 ○○! 매치 보상 2배", 결과 화면 "이벤트 ○○ 보상 ×2"(골드 보상은 아직 없음, `holidayRewardMultiplier`). 키는 `.env.local`(커밋 안 됨) + `--dart-define-from-file=.env.local`, 틀은 `.env.example`(main에 커밋·push). 시작 시 알림 권한 요청 + FCM 토픽 `holiday_event` 구독(안드로이드). 발송은 Firebase 콘솔 예약(docs/push.md). 테스트 204개 통과.
+- 확인: 실제 API로 2026-10 공휴일 3개(개천절, 대체공휴일, 한글날) 받아 10/9를 한글날로 판정. 에뮬레이터에서 알림 권한 요청 → 허용(granted). main push 후 GitHub CI 통과.
+- 사용자 확인(10-08): 콘솔에서 holiday_event 토픽 시험 발송 → 에뮬레이터에 알림 도착.
+- 다음: 10/9 09:00 예약 발송. Play 업로드 전 데이터 보안·개인정보처리방침에 FCM 반영.
+- 막힌 것: 없음. 공휴일 이름이 콘솔에서 깨져 보인 건 Windows 콘솔 표시 문제(응답은 정상 UTF-8).
+
 ## 2026-10-07 (진영 맵 frontline — main 병합)
 - 한 것: `assets/maps/frontline.tmx`(Tiled 오브젝트 레이어 walls·crates·spawns·bases, 1610 × 2590 = 23 × 37칸). 180도 회전 대칭, 세 갈래 길(서·동 긴 시야, 중앙 상자 근접전, 6·16열 구분 벽에 18행 건너는 길), 진영 입구 3개 + 엇갈린 안쪽 벽 + 스폰 칸막이로 밖에서 스폰이 안 보임, 각 갈래와 중앙에 낮은 상자 엄폐 라인 + 올라설 상자, 정중앙 상자. `GameMap`(TestMap이 상속) + `GameMap.fromTmx`(flame_tiled 파서). PvP는 frontline, 훈련소는 그대로. `rules/spawn.dart` farthestSpawn(가장 가까운 적과 가장 먼 스폰, 상대를 모르면 상대 진영 스폰 기준), 부활 시 모든 무기 `refill()`. 미니맵(나침반·나가기 오른쪽 90 × 145, 북쪽 위, 벽·상자·진영·내 위치와 방향). 맵 미리보기 `docs/maps/frontline.png`(`flutter test tool/map_preview_test.dart`로 다시 생성). decisions 11장에 맵 형식·크기·스폰 규칙 반영, 1장에 Open API 확정(특일정보). 테스트 195개 통과.
 - 맵 테스트(tmx 직접 읽음): 대칭, 70px 격자·경계, 팀당 스폰 3개·벽/상자와 안 겹침·자기 진영 안, BFS로 모든 스폰에서 상대 진영 도달, 35px 샘플로 진영 밖에서 스폰 직선 시야 없음. 안쪽 벽 하나를 지우면 대칭·시야 테스트가 실패하는 것 확인.

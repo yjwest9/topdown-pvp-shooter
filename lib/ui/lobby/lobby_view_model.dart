@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/models/holiday.dart';
 import '../../data/models/room.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../data/repositories/event_repository.dart';
 import '../../data/repositories/room_repository.dart';
 import '../../rules/balance.dart';
 
@@ -54,6 +56,11 @@ class LobbyState {
     started: started ?? this.started,
   );
 }
+
+/// 오늘이 공휴일이면 그 공휴일(매치 보상 2배 이벤트). 앱 실행 중 한 번만 묻는다.
+final holidayProvider = FutureProvider<Holiday?>(
+  (ref) => ref.read(eventRepositoryProvider).todayHoliday(DateTime.now()),
+);
 
 final lobbyProvider = NotifierProvider<LobbyViewModel, LobbyState>(
   LobbyViewModel.new,

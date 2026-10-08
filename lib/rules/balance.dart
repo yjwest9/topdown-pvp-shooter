@@ -407,3 +407,8 @@ const respawnDelay = 5.0;
 
 /// 부활 직후 무적(ms).
 const spawnProtectionMs = 3000;
+
+// ------------------------------------------------- 이벤트 (1장, 9장)
+
+/// 공휴일(특일정보 API)에 매치 보상 배율.
+const holidayRewardMultiplier = 2;

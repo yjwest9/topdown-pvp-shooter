@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../game/net/match_sync.dart';
+import '../../rules/balance.dart';
 import '../match/match_view.dart';
 import 'lobby_view_model.dart';
 
@@ -72,6 +73,17 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900),
           ),
+          if (ref.watch(holidayProvider).value case final h?) ...[
+            const SizedBox(height: 8),
+            Text(
+              '오늘은 ${h.name}! 매치 보상 $holidayRewardMultiplier배 이벤트',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFFE8B33A),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           FilledButton(
             onPressed: () => unawaited(_play(null)),

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:topsoldier/data/models/holiday.dart';
 import 'package:topsoldier/data/models/match_stats.dart';
 import 'package:topsoldier/rules/match.dart';
 import 'package:topsoldier/ui/result/result_view_model.dart';
@@ -42,5 +43,17 @@ void main() {
       ('명중률', '50%  (5 / 10)'),
       ('크리티컬', '1'),
     ]);
+  });
+
+  test('holiday event adds a reward multiplier row', () {
+    final vm = ResultViewModel(
+      const MatchStats(result: MatchResult.win),
+      holiday: Holiday(date: DateTime(2026, 10, 9), name: '한글날'),
+    );
+    expect(vm.rows.last, ('이벤트', '한글날 보상 ×2'));
+    expect(
+      const ResultViewModel(MatchStats(result: MatchResult.win)).rows,
+      hasLength(4),
+    );
   });
 }
