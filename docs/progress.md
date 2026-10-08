@@ -2,6 +2,11 @@
 
 작업이 끝날 때마다 맨 위에 추가한다. (날짜 / 한 것 / 다음 할 일 / 막힌 것)
 
+## 2026-10-08 (릴리스 0.1.1+2 준비)
+- 한 것: 공휴일 이벤트 main 병합. version 0.1.1+2. 실서버 Realtime DB에 `database.rules.json` 배포(그전엔 전부 거부라 릴리스 앱에서 대전 불가였음). 실서버 익명 로그인 사용 설정 확인(사용자). 서명된 app-release.aab 51.0MB 빌드(`--dart-define-from-file=.env.local`). 테스트 204개 통과.
+- 다음: 개인정보처리방침 gist 갱신(Firebase Auth·Realtime DB·FCM), 데이터 보안 설문 수정, Play Console 비공개 테스트에 업로드, 태그 v0.1.1.
+- 막힌 것: 없음.
+
 ## 2026-10-07 (공휴일 이벤트 + 푸시 — main 병합)
 - 한 것: 패키지 http 1.6, firebase_messaging 16.7(사용자 확인). 특일정보 API(`HttpHolidayService`, Encoding·Decoding 키 모두 됨) → `EventRepository.todayHoliday`(실패·키 없음·웹 CORS는 이벤트 없음) → 로비 배너 "오늘은 ○○! 매치 보상 2배", 결과 화면 "이벤트 ○○ 보상 ×2"(골드 보상은 아직 없음, `holidayRewardMultiplier`). 키는 `.env.local`(커밋 안 됨) + `--dart-define-from-file=.env.local`, 틀은 `.env.example`(main에 커밋·push). 시작 시 알림 권한 요청 + FCM 토픽 `holiday_event` 구독(안드로이드). 발송은 Firebase 콘솔 예약(docs/push.md). 테스트 204개 통과.
 - 확인: 실제 API로 2026-10 공휴일 3개(개천절, 대체공휴일, 한글날) 받아 10/9를 한글날로 판정. 에뮬레이터에서 알림 권한 요청 → 허용(granted). main push 후 GitHub CI 통과.
