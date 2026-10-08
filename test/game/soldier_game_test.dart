@@ -267,6 +267,42 @@ void main() {
   );
 
   gameTester().testGameWidget(
+    'joystick held + Space/C keys: jump and crouch keep the joystick moving',
+    verify: (game, tester) async {
+      place(game, -pi / 2);
+      game.dummies.clear();
+      void key(LogicalKeyboardKey k) => game.onKeyEvent(
+        KeyDownEvent(
+          physicalKey: PhysicalKeyboardKey.keyA, // 판정엔 logicalKey만 씀
+          logicalKey: k,
+          timeStamp: Duration.zero,
+        ),
+        {k},
+      );
+      final stick = await tester.startGesture(Offset(150, game.size.y - 150));
+      for (var i = 0; i < 6; i++) {
+        await stick.moveBy(const Offset(0, -10));
+      }
+      game.update(1 / 60);
+      final forward = game.player.forward;
+      expect(forward, greaterThan(0));
+
+      key(LogicalKeyboardKey.space);
+      expect(game.player.forward, forward, reason: 'jump keeps joystick');
+      expect(game.player.body.airborne, isTrue);
+      key(LogicalKeyboardKey.keyC);
+      expect(game.player.forward, forward, reason: 'C keeps joystick');
+
+      final y0 = game.player.position.y;
+      game.update(1 / 60);
+      expect(game.player.position.y, lessThan(y0), reason: 'still moving');
+
+      await stick.up();
+      await tester.pump(const Duration(milliseconds: 100));
+    },
+  );
+
+  gameTester().testGameWidget(
     'keyboard: Shift+W running, C -> crouch and keep going',
     verify: (game, tester) async {
       place(game, -pi / 2);

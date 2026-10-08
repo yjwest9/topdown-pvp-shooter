@@ -322,6 +322,13 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
 
   void _syncRun() => player.wantsRun = _touchRun || _shiftHeld;
 
+  static final _moveKeys = {
+    LogicalKeyboardKey.keyW,
+    LogicalKeyboardKey.keyA,
+    LogicalKeyboardKey.keyS,
+    LogicalKeyboardKey.keyD,
+  };
+
   static final _gameKeys = {
     LogicalKeyboardKey.keyW,
     LogicalKeyboardKey.keyA,
@@ -381,12 +388,16 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
       if (slot >= 0) player.selectPrimary(weapons[slot]);
     }
 
-    double axis(LogicalKeyboardKey plus, LogicalKeyboardKey minus) =>
-        (_keys.contains(plus) ? 1.0 : 0.0) -
-        (_keys.contains(minus) ? 1.0 : 0.0);
-    player
-      ..forward = axis(LogicalKeyboardKey.keyW, LogicalKeyboardKey.keyS)
-      ..strafe = axis(LogicalKeyboardKey.keyD, LogicalKeyboardKey.keyA);
+    // WASD가 아닌 키(Space, C 등)는 이동값을 건드리지 않는다. 터치 조이스틱을
+    // 쥔 채 Space/C를 눌러도 계속 가야 한다.
+    if (_moveKeys.contains(key)) {
+      double axis(LogicalKeyboardKey plus, LogicalKeyboardKey minus) =>
+          (_keys.contains(plus) ? 1.0 : 0.0) -
+          (_keys.contains(minus) ? 1.0 : 0.0);
+      player
+        ..forward = axis(LogicalKeyboardKey.keyW, LogicalKeyboardKey.keyS)
+        ..strafe = axis(LogicalKeyboardKey.keyD, LogicalKeyboardKey.keyA);
+    }
     _syncRun();
     return KeyEventResult.handled;
   }
