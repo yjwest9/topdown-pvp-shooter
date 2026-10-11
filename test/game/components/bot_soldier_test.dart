@@ -141,4 +141,66 @@ void main() {
       expect(hpOf(bot), basicSoldier.hp);
     },
   );
+
+  testWidgets('hard bot hits a still player far more than easy', (
+    tester,
+  ) async {
+    // 중앙 길 340px, 나는 가만히(봇을 안 봄). 봇·나 체력은 안 닳게 채우며 10초 누적 데미지.
+    Future<double> damage(BotDifficulty d, int seed) async {
+      final db = FakeRtdbService();
+      final repo = RoomRepository(db);
+      final game = SoldierGame(
+        random: Random(seed),
+        bot: d,
+        match: MatchSync(
+          rooms: repo,
+          code: code,
+          uid: 'a',
+          isHost: true,
+          clock: () => db.serverTime,
+        ),
+      );
+      await tester.runAsync(() async {
+        await tester.pumpWidget(
+          ProviderScope(
+            child: RiverpodAwareGameWidget<SoldierGame>(
+              key: GlobalKey(),
+              game: game,
+            ),
+          ),
+        );
+        await tester.pump();
+      });
+      await run(game, tester, 0.1);
+      game.player
+        ..position = Vector2(805, 1575)
+        ..angle = pi / 2;
+      botOf(game).body.position = Vector2(805, 1235);
+      await repo.setHp(code, bot, const NetHp(value: 1e9, protectedUntil: 0));
+      const full = 1e6;
+      var total = 0.0;
+      for (var i = 0; i < 600; i++) {
+        await repo.setHp(
+          code,
+          'a',
+          const NetHp(value: full, protectedUntil: 0),
+        );
+        db.serverTime += 16;
+        game.update(1 / 60);
+        if (i % 3 == 0) await tester.pump();
+        final hp =
+            (((db.root['rooms']! as Map)[code] as Map)['hp'] as Map)['a'];
+        total += full - ((hp as Map)['value'] as num);
+      }
+      return total;
+    }
+
+    var easy = 0.0, hard = 0.0;
+    for (final seed in [1, 2, 3]) {
+      easy += await damage(BotDifficulty.easy, seed);
+      hard += await damage(BotDifficulty.hard, seed);
+    }
+    expect(easy, greaterThan(0));
+    expect(hard, greaterThan(easy * 2), reason: 'easy $easy, hard $hard');
+  });
 }

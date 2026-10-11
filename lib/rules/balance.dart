@@ -441,7 +441,7 @@ class BotLevel {
 const botLevels = <BotDifficulty, BotLevel>{
   BotDifficulty.easy: BotLevel(
     reaction: 0.6,
-    aimError: 0.10,
+    aimError: 0.25,
     hideHp: 30,
     jumpPerSecond: 0.1,
   ),
@@ -453,7 +453,7 @@ const botLevels = <BotDifficulty, BotLevel>{
   ),
   BotDifficulty.hard: BotLevel(
     reaction: 0.2,
-    aimError: 0.02,
+    aimError: 0.0,
     hideHp: 50,
     jumpPerSecond: 0.4,
   ),
