@@ -33,6 +33,8 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     this.sensitivity = defaultSensitivity,
     Random? random,
     this.match,
+    this.minimapRotates = true,
+    this.onMinimapRotatesChanged,
   }) : random = random ?? Random();
 
   /// null이면 오프라인 훈련소(표적 있음). 있으면 1대1(표적 없음).
@@ -40,6 +42,20 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
 
   /// 시점 감도 1~10.
   final double sensitivity;
+
+  /// 미니맵이 내 방향으로 도는지(true) 내 진영이 늘 아래인 고정인지(false).
+  bool minimapRotates;
+
+  /// 미니맵 모드를 눌러서 바꿨을 때(저장은 화면이 한다).
+  final void Function(bool rotates)? onMinimapRotatesChanged;
+
+  /// 내가 A팀(방장)인지. 훈련소는 A.
+  bool get isTeamA => (match?.team ?? RoomMeta.teamA) == RoomMeta.teamA;
+
+  void toggleMinimapMode() {
+    minimapRotates = !minimapRotates;
+    onMinimapRotatesChanged?.call(minimapRotates);
+  }
 
   /// 탄 퍼짐·미스·크리 랜덤. 테스트는 Random(seed)를 넣는다.
   final Random random;
@@ -58,6 +74,9 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
 
   final _keys = <LogicalKeyboardKey>{};
   bool _touchRun = false;
+
+  /// 1대1에만 있다. 눌러도 조이스틱·회전이 시작되지 않게 터치 층에 알린다.
+  Minimap? minimap;
 
   @override
   Future<void> onLoad() async {
@@ -86,10 +105,8 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     if (match != null) {
       await add(match!);
       // 나침반(20~68) → 나가기 버튼(Flutter, 76~150) 오른쪽.
-      await camera.viewport.addAll([
-        MatchHud(match!),
-        Minimap(position: Vector2(156, 8)),
-      ]);
+      minimap = Minimap(position: Vector2(156, 8));
+      await camera.viewport.addAll([MatchHud(match!), minimap!]);
     }
 
     // 플레이어가 화면 가로 중앙, 세로 66% 지점.
@@ -158,7 +175,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
           _syncRun();
         },
         onTurn: turnBy,
-        buttons: buttons,
+        buttons: [...buttons, ?minimap],
         isRunning: () => player.body.running,
         fireButton: fireButton,
       ),
@@ -178,8 +195,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   );
 
   /// A팀(방장, 남쪽)·훈련소는 북쪽을, B팀(북쪽)은 남쪽을 보고 시작.
-  double get _spawnAngle =>
-      (match?.team ?? RoomMeta.teamA) == RoomMeta.teamA ? -pi / 2 : pi / 2;
+  double get _spawnAngle => isTeamA ? -pi / 2 : pi / 2;
 
   /// 내 팀 스폰 중 상대와 가장 먼 곳. 상대 위치를 모르면(시작) 상대 진영 스폰 기준.
   Vec _pickSpawn() {

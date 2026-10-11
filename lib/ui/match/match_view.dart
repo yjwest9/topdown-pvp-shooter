@@ -2,32 +2,48 @@ import 'dart:async';
 
 import 'package:flame_riverpod/flame_riverpod.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/match_stats.dart';
+import '../../data/repositories/settings_repository.dart';
 import '../../game/net/match_sync.dart';
 import '../../game/soldier_game.dart';
 import '../result/result_view.dart';
 
 /// 게임 화면. [match]가 없으면 오프라인 훈련소.
 // ponytail: 뷰모델 없음. 할 일이 나가기뿐이고 그건 MatchSync가 한다. 화면 상태가 늘면 분리.
-class MatchView extends StatefulWidget {
+class MatchView extends ConsumerStatefulWidget {
   const MatchView({super.key, this.match});
 
   final MatchSync? match;
 
   @override
-  State<MatchView> createState() => _MatchViewState();
+  ConsumerState<MatchView> createState() => _MatchViewState();
 }
 
-class _MatchViewState extends State<MatchView> {
+class _MatchViewState extends ConsumerState<MatchView> {
   final _gameKey = GlobalKey<RiverpodAwareGameWidgetState<SoldierGame>>();
-  late final _game = SoldierGame(match: widget.match);
+  late final _game = SoldierGame(
+    match: widget.match,
+    onMinimapRotatesChanged: (rotates) => unawaited(
+      ref.read(settingsRepositoryProvider).setMinimapRotates(rotates),
+    ),
+  );
   String? _message;
   bool _exiting = false;
 
   @override
   void initState() {
     super.initState();
+    // 미니맵은 1대1에만 있다(훈련소는 설정을 읽지 않는다).
+    if (widget.match != null) {
+      unawaited(
+        ref
+            .read(settingsRepositoryProvider)
+            .minimapRotates()
+            .then((rotates) => _game.minimapRotates = rotates),
+      );
+    }
     widget.match?.onMatchEnd = (stats, {required opponentLeft}) async {
       if (opponentLeft) {
         setState(() => _message = '상대가 나갔습니다');
