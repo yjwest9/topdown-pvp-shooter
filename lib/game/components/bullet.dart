@@ -32,6 +32,7 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
     required this.weapon,
     required this.shooter,
     this.hitsTargets = true,
+    this.targets,
   }) : _dir = Vector2(cos(angle), sin(angle)),
        super(angle: angle);
 
@@ -42,6 +43,9 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
 
   /// false = 상대 화면에 그리는 연출용(맞아도 아무 일 없음, 상자·벽에서만 멈춤).
   final bool hitsTargets;
+
+  /// 맞힐 대상. 없으면 [SoldierGame.hitTargets](내가 쏜 총알). 봇 총알은 나를 넘긴다.
+  final List<HitTarget> Function()? targets;
   final Vector2 _dir;
   double _traveled = 0;
   final _missed = <Object>{};
@@ -63,7 +67,9 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
       return _stop(const Color(0xFF98A089));
     }
     // 상자 뒤에 숨은 쪽을 노린 총알은 상자에서 멈춘다. 연출용 총알이 노리는 건 나.
-    final targets = hitsTargets ? game.hitTargets : const <HitTarget>[];
+    final targets = !hitsTargets
+        ? const <HitTarget>[]
+        : this.targets?.call() ?? game.hitTargets;
     final covered = hitsTargets
         ? [for (final t in targets) t.body]
         : [game.player.coverBody];

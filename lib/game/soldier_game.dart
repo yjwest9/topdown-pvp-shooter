@@ -13,6 +13,7 @@ import '../rules/balance.dart';
 import '../rules/combat.dart';
 import '../rules/movement.dart';
 import '../rules/spawn.dart';
+import 'components/bot_soldier.dart';
 import 'components/bullet.dart';
 import 'components/compass.dart';
 import 'components/fire_button.dart';
@@ -35,10 +36,14 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     this.match,
     this.minimapRotates = true,
     this.onMinimapRotatesChanged,
+    this.bot,
   }) : random = random ?? Random();
 
   /// null이면 오프라인 훈련소(표적 있음). 있으면 1대1(표적 없음).
   final MatchSync? match;
+
+  /// 있으면 봇전([match]는 메모리 DB 방, 상대는 봇).
+  final BotDifficulty? bot;
 
   /// 시점 감도 1~10.
   final double sensitivity;
@@ -104,6 +109,9 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     await world.addAll([map, ...dummies, player]);
     if (match != null) {
       await add(match!);
+      if (bot case final b?) {
+        await add(BotSoldier(match: match!, level: botLevels[b]!));
+      }
       // 나침반(20~68) → 나가기 버튼(Flutter, 76~150) 오른쪽.
       minimap = Minimap(position: Vector2(156, 8));
       await camera.viewport.addAll([MatchHud(match!), minimap!]);

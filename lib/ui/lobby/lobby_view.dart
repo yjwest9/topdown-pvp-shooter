@@ -24,10 +24,22 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
     super.dispose();
   }
 
-  Future<void> _play(MatchSync? match) async {
-    await Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => MatchView(match: match)));
+  Future<void> _play(MatchSync? match, {BotDifficulty? bot}) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MatchView(match: match, bot: bot),
+      ),
+    );
     if (match != null) ref.read(lobbyProvider.notifier).backToMenu();
+  }
+
+  Future<void> _playBot(BotDifficulty bot) async {
+    final room = await ref.read(lobbyProvider.notifier).botRoom();
+    if (!mounted) return;
+    await _play(
+      MatchSync(rooms: room.rooms, code: room.code, uid: 'me', isHost: true),
+      bot: bot,
+    );
   }
 
   @override
@@ -88,6 +100,26 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
           FilledButton(
             onPressed: () => unawaited(_play(null)),
             child: const Text('훈련소'),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Text('봇전'),
+              const SizedBox(width: 12),
+              for (final (bot, label) in [
+                (BotDifficulty.easy, '쉬움'),
+                (BotDifficulty.normal, '보통'),
+                (BotDifficulty.hard, '어려움'),
+              ]) ...[
+                Expanded(
+                  child: FilledButton.tonal(
+                    onPressed: () => unawaited(_playBot(bot)),
+                    child: Text(label),
+                  ),
+                ),
+                if (bot != BotDifficulty.hard) const SizedBox(width: 8),
+              ],
+            ],
           ),
           const SizedBox(height: 12),
           FilledButton.tonal(

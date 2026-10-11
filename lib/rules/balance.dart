@@ -412,3 +412,58 @@ const spawnProtectionMs = 3000;
 
 /// 공휴일(특일정보 API)에 매치 보상 배율.
 const holidayRewardMultiplier = 2;
+
+// ------------------------------------------------------------- 봇 (12장) [잠정]
+
+enum BotDifficulty { easy, normal, hard }
+
+class BotLevel {
+  const BotLevel({
+    required this.reaction,
+    required this.aimError,
+    required this.hideHp,
+    required this.jumpPerSecond,
+  });
+
+  /// 상대를 보고 첫 발까지(초).
+  final double reaction;
+
+  /// 발사마다 조준에 더하는 오차 ±(rad). 무기 퍼짐과 별도.
+  final double aimError;
+
+  /// 체력이 이 값 이하로 처음 떨어지면 엄폐하러 간다.
+  final double hideHp;
+
+  /// 교전 중 초당 점프 확률.
+  final double jumpPerSecond;
+}
+
+const botLevels = <BotDifficulty, BotLevel>{
+  BotDifficulty.easy: BotLevel(
+    reaction: 0.6,
+    aimError: 0.10,
+    hideHp: 30,
+    jumpPerSecond: 0.1,
+  ),
+  BotDifficulty.normal: BotLevel(
+    reaction: 0.35,
+    aimError: 0.05,
+    hideHp: 40,
+    jumpPerSecond: 0.25,
+  ),
+  BotDifficulty.hard: BotLevel(
+    reaction: 0.2,
+    aimError: 0.02,
+    hideHp: 50,
+    jumpPerSecond: 0.4,
+  ),
+};
+
+/// 봇 조준: 상대 속도를 이 시간(초) 동안의 평균으로 본다(5장).
+const botPredictWindow = 0.35;
+
+/// 엄폐 자리를 찾는 거리(px).
+const botCoverSearch = 350.0;
+
+/// 엄폐하면 최소 이 시간(초)은 앉아 있는다.
+const botCoverHold = 2.0;

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:topsoldier/data/models/room.dart';
 import 'package:topsoldier/data/repositories/room_repository.dart';
 
 import '../../fakes.dart';
@@ -81,5 +82,31 @@ void main() {
 
     final players = await repo.players(code).first;
     expect(players.map((p) => p.uid), unorderedEquals(['a', 'b']));
+  });
+
+  test('bot room: offline, me (A) and bot (B), already playing', () async {
+    final r = await RoomRepository.botRoom(
+      uid: 'me',
+      name: 'Me',
+      durationMs: 1000,
+    );
+    final players = await r.rooms.players(r.code).first;
+    expect(
+      {for (final p in players) p.uid: p.team},
+      {'me': RoomMeta.teamA, RoomRepository.botUid: RoomMeta.teamB},
+    );
+    final meta = (await r.rooms.meta(r.code).first)!;
+    expect(meta.status, RoomMeta.playing);
+    expect(meta.endsAt, greaterThan(0));
+
+    // 변경이 비동기로 전달된다(체력 트랜잭션 → hp 스트림).
+    await r.rooms.setHp(
+      r.code,
+      'me',
+      const NetHp(value: 100, protectedUntil: 0),
+    );
+    final next = r.rooms.hp(r.code).firstWhere((h) => h['me']?.value == 87);
+    await r.rooms.damage(r.code, 'me', (cur) => cur.value - 13);
+    expect((await next)['me']!.value, 87);
   });
 }

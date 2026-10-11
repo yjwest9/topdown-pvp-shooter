@@ -78,6 +78,14 @@ class LobbyViewModel extends Notifier<LobbyState> {
     return const LobbyState();
   }
 
+  /// 봇전 방(기기 안 메모리 DB, 로그인 없음). 이미 시작한 상태로 온다.
+  Future<({RoomRepository rooms, String code})> botRoom() =>
+      RoomRepository.botRoom(
+        uid: 'me',
+        name: _auth.nickname,
+        durationMs: matchDurationMs,
+      );
+
   Future<void> createRoom() => _enter((uid, name) async {
     final code = await rooms.createRoom(uid: uid, name: name);
     return (code: code, host: true);

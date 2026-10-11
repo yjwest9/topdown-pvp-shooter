@@ -8,14 +8,18 @@ import '../../data/models/match_stats.dart';
 import '../../data/repositories/settings_repository.dart';
 import '../../game/net/match_sync.dart';
 import '../../game/soldier_game.dart';
+import '../../rules/balance.dart';
 import '../result/result_view.dart';
 
 /// 게임 화면. [match]가 없으면 오프라인 훈련소.
 // ponytail: 뷰모델 없음. 할 일이 나가기뿐이고 그건 MatchSync가 한다. 화면 상태가 늘면 분리.
 class MatchView extends ConsumerStatefulWidget {
-  const MatchView({super.key, this.match});
+  const MatchView({super.key, this.match, this.bot});
 
   final MatchSync? match;
+
+  /// 봇전 난이도. [match]는 메모리 DB 방.
+  final BotDifficulty? bot;
 
   @override
   ConsumerState<MatchView> createState() => _MatchViewState();
@@ -25,6 +29,7 @@ class _MatchViewState extends ConsumerState<MatchView> {
   final _gameKey = GlobalKey<RiverpodAwareGameWidgetState<SoldierGame>>();
   late final _game = SoldierGame(
     match: widget.match,
+    bot: widget.bot,
     onMinimapRotatesChanged: (rotates) => unawaited(
       ref.read(settingsRepositoryProvider).setMinimapRotates(rotates),
     ),

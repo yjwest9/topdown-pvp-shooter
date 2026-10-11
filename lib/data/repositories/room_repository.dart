@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/room.dart';
+import '../services/local_rtdb_service.dart';
 import '../services/rtdb_service.dart';
 
 final roomRepositoryProvider = Provider(
@@ -29,6 +30,23 @@ class RoomRepository {
   final Random _random;
 
   static const maxPlayers = 2;
+
+  /// 봇전의 봇 uid.
+  static const botUid = 'bot';
+
+  /// 봇전(decisions 12장): 기기 안 메모리 DB에 방을 만들고 나(A)와 봇(B)을 넣어 바로 시작한다.
+  static Future<({RoomRepository rooms, String code})> botRoom({
+    required String uid,
+    required String name,
+    required int durationMs,
+  }) async {
+    final rooms = RoomRepository(LocalRtdbService());
+    final code = await rooms.createRoom(uid: uid, name: name);
+    await rooms.joinRoom(code, uid: botUid, name: 'BOT');
+    await rooms.start(code, durationMs: durationMs);
+    return (rooms: rooms, code: code);
+  }
+
   static const _createTries = 20;
 
   String _room(String code) => 'rooms/$code';
