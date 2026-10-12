@@ -149,6 +149,84 @@ void main() {
       expect(p.byId(p.secondaryId)!.weaponId, 'pistol');
     });
 
+    group('upgrade', () {
+      Future<(ProfileRepository, String)> owned(
+        FakeRtdbService db,
+        int gold,
+      ) async {
+        final repo = await withGold(db, gold);
+        await repo.grantStarter(
+          'u',
+          primary: 'rifle_standard',
+          secondary: 'pistol',
+        );
+        final p = (await repo.watch('u').first)!;
+        return (repo, p.owned('rifle_standard')!.id);
+      }
+
+      Future<(int, int)> goldAndLevel(ProfileRepository repo) async {
+        final p = (await repo.watch('u').first)!;
+        return (p.gold, p.owned('rifle_standard')!.level);
+      }
+
+      test('success: gold taken, level +1', () async {
+        final db = FakeRtdbService();
+        final (repo, id) = await owned(db, 5000);
+        expect(
+          await repo.upgrade('u', id, fromLevel: 0, cost: 2000, success: true),
+          true,
+        );
+        expect(await goldAndLevel(repo), (3000, 1));
+      });
+
+      test('fail: only gold taken', () async {
+        final db = FakeRtdbService();
+        final (repo, id) = await owned(db, 5000);
+        expect(
+          await repo.upgrade('u', id, fromLevel: 0, cost: 2000, success: false),
+          true,
+        );
+        expect(await goldAndLevel(repo), (3000, 0));
+      });
+
+      test('not enough gold: nothing changes', () async {
+        final db = FakeRtdbService();
+        final (repo, id) = await owned(db, 1999);
+        expect(
+          await repo.upgrade('u', id, fromLevel: 0, cost: 2000, success: true),
+          false,
+        );
+        expect(await goldAndLevel(repo), (1999, 0));
+      });
+
+      test(
+        'the same upgrade twice is applied once (level already moved)',
+        () async {
+          final db = FakeRtdbService();
+          final (repo, id) = await owned(db, 10000);
+          for (var i = 0; i < 2; i++) {
+            await repo.upgrade(
+              'u',
+              id,
+              fromLevel: 0,
+              cost: 2000,
+              success: true,
+            );
+          }
+          expect(await goldAndLevel(repo), (8000, 1));
+        },
+      );
+
+      test('a rerun of the transaction keeps the same result', () async {
+        // 실제 RTDB는 서버 값이 다르면 같은 함수를 다시 부른다. 성공 여부는 밖에서 정해져
+        // 있으니 다시 돌아도 같은 결과, 한 번만 적용.
+        final db = FakeRtdbService()..rerunTransactions = true;
+        final (repo, id) = await owned(db, 10000);
+        await repo.upgrade('u', id, fromLevel: 0, cost: 2000, success: true);
+        expect(await goldAndLevel(repo), (8000, 1));
+      });
+    });
+
     test('match reward keeps weapons and loadout', () async {
       final db = FakeRtdbService();
       final repo = await withGold(db, 0);

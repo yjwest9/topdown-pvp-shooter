@@ -60,5 +60,6 @@ HitResult resolveHit({
 
 int shotsToKill(double damage, double hp) => (hp / damage).ceil();
 
-/// (필요 발수 − 1) × 연사 간격, 체력 100 기준.
-double ttk(WeaponStats w) => (shotsToKill(w.damage, 100) - 1) * w.fireInterval;
+/// (필요 발수 − 1) × 연사 간격, 체력 100 기준. [damageMultiplier]는 등급·강화 배율.
+double ttk(WeaponStats w, {double damageMultiplier = 1}) =>
+    (shotsToKill(w.damage * damageMultiplier, 100) - 1) * w.fireInterval;

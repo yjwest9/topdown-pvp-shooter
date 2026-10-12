@@ -62,6 +62,20 @@ void main() {
     expect(find.text('TRG-42'), findsWidgets);
   });
 
+  testWidgets('owned weapon shows the upgrade panel; low gold blocks it', (
+    tester,
+  ) async {
+    await open(tester, const LoadoutView(), gold: 1000);
+    expect(find.text('강화 +0 → +1'), findsOneWidget);
+    expect(find.text('2,000 G · 성공률 90%'), findsOneWidget);
+    expect(find.text('데미지 13.0 → 13.3'), findsOneWidget);
+    expect(find.text('골드 부족'), findsOneWidget);
+    // 미보유 무기에는 강화 영역이 없다
+    await tester.tap(find.text('FAMAS'));
+    await tester.pump();
+    expect(find.textContaining('강화 +'), findsNothing);
+  });
+
   testWidgets('enough gold → buy button', (tester) async {
     await open(tester, const LoadoutView(), gold: 20000);
     await tester.tap(find.text('M14'));

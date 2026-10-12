@@ -56,6 +56,8 @@ class _MatchViewState extends ConsumerState<MatchView> {
       minimapRotates: settings.minimapRotates,
       primary: loadout.primary,
       secondary: loadout.secondary,
+      primaryLevel: loadout.primaryLevel,
+      secondaryLevel: loadout.secondaryLevel,
       onMinimapRotatesChanged: (rotates) => unawaited(
         ref.read(settingsProvider.notifier).setMinimapRotates(rotates),
       ),

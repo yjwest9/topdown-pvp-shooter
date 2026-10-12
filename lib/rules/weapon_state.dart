@@ -4,9 +4,14 @@ import 'balance.dart';
 
 /// 무기 한 자루의 탄약·연사 대기·재장전 (decisions 6장).
 class WeaponState {
-  WeaponState(this.weapon) : ammo = weapon.magazine;
+  WeaponState(this.weapon, {this.grade = Grade.e, this.level = 0})
+    : ammo = weapon.magazine;
 
   final WeaponStats weapon;
+
+  /// 보유 무기의 등급·강화 단계(decisions 7장). 데미지 배율만 바뀐다.
+  final Grade grade;
+  final int level;
   int ammo;
   double cooldown = 0;
   double reloadLeft = 0;

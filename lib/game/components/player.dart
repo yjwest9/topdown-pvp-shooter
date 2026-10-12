@@ -19,11 +19,17 @@ class Player extends PositionComponent {
     required this.lowCrates,
     this.primaryWeapon = startingPrimary,
     this.secondaryWeapon = startingSecondary,
+    this.primaryLevel = 0,
+    this.secondaryLevel = 0,
   }) : super(size: Vector2.all(playerRadius * 2), anchor: Anchor.center);
 
   /// 로드아웃으로 처음 드는 무기.
   final WeaponStats primaryWeapon;
   final WeaponStats secondaryWeapon;
+
+  /// 로드아웃 무기의 강화 단계(등급은 지금 E만).
+  final int primaryLevel;
+  final int secondaryLevel;
 
   final List<Box> highWalls;
   final List<Box> lowCrates;
@@ -74,12 +80,12 @@ class Player extends PositionComponent {
 
   /// 가진 무기마다 탄약 상태를 기억한다(바꿨다 돌아와도 장전 안 됨).
   final _owned = <WeaponStats, WeaponState>{};
-  WeaponState _own(WeaponStats w) =>
-      _owned.putIfAbsent(w, () => WeaponState(w));
+  WeaponState _own(WeaponStats w, [int level = 0]) =>
+      _owned.putIfAbsent(w, () => WeaponState(w, level: level));
 
   /// 로드아웃: 주무기 + 보조(권총).
-  late WeaponState primary = _own(primaryWeapon);
-  late final WeaponState secondary = _own(secondaryWeapon);
+  late WeaponState primary = _own(primaryWeapon, primaryLevel);
+  late final WeaponState secondary = _own(secondaryWeapon, secondaryLevel);
   bool usingPrimary = true;
 
   WeaponState get weapon => usingPrimary ? primary : secondary;

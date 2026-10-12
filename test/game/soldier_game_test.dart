@@ -364,6 +364,32 @@ void main() {
     {k},
   );
 
+  GameTester<SoldierGame>(
+    () => SoldierGame(random: Random(7), primaryLevel: 5),
+    createGameWidget: (game) =>
+        RiverpodAwareGameWidget(key: GlobalKey(), game: game),
+    pumpWidget: (widget, tester) =>
+        tester.pumpWidget(ProviderScope(child: widget)),
+  ).testGameWidget(
+    'K2 +5: one hit on a dummy does 13 x 1.10 (crit: x crit multiplier)',
+    verify: (game, tester) async {
+      expect(game.player.primary.level, 5);
+      place(game, -pi / 2);
+      final dummy = game.dummies[0];
+      for (var i = 0; i < 120 && dummy.hp == 100; i++) {
+        game.update(1 / 60);
+      }
+      final hit = 100 - dummy.hp;
+      const one = 13 * 1.10;
+      expect(
+        (hit - one).abs() < 1e-6 ||
+            (hit - one * rifleStandard.critMultiplier).abs() < 1e-6,
+        isTrue,
+        reason: 'first hit was $hit',
+      );
+    },
+  );
+
   gameTester().testGameWidget(
     'auto fire at dummy 1 (open ground) lowers its hp',
     verify: (game, tester) async {

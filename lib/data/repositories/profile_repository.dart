@@ -107,6 +107,38 @@ class ProfileRepository {
     return bought;
   }
 
+  /// 강화 한 번. 성공 여부([success])는 밖에서 한 번만 굴려서 넘긴다(트랜잭션이 다시
+  /// 돌아도 결과가 안 바뀌게). 골드가 [cost] 이상이고 그 무기가 아직 [fromLevel]일 때만
+  /// 골드를 빼고, 성공이면 단계 +1. 조건이 안 맞으면(이미 강화됨·골드 부족) 아무것도
+  /// 안 바꾸고 false.
+  Future<bool> upgrade(
+    String uid,
+    String ownedId, {
+    required int fromLevel,
+    required int cost,
+    required bool success,
+  }) async {
+    var applied = false;
+    await _db.transaction(_user(uid), (cur) {
+      applied = false;
+      if (cur == null) return null; // 서버 값으로 다시 불린다
+      final p = Profile.fromJson(cur);
+      final w = p.byId(ownedId);
+      if (w == null || w.level != fromLevel || p.gold < cost) return txAbort;
+      applied = true;
+      final m = {...(cur as Map<Object?, Object?>)};
+      final weapons = {...(m['weapons']! as Map<Object?, Object?>)};
+      weapons[ownedId] = {
+        ...(weapons[ownedId]! as Map<Object?, Object?>),
+        'level': fromLevel + (success ? 1 : 0),
+      };
+      m['weapons'] = weapons;
+      m['gold'] = p.gold - cost;
+      return m;
+    });
+    return applied;
+  }
+
   /// 장착. [primary]면 주무기 칸, 아니면 보조 칸에 [ownedId].
   Future<void> equip(String uid, String ownedId, {required bool primary}) =>
       _db.update('${_user(uid)}/loadout', {

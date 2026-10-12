@@ -1,16 +1,31 @@
+import 'dart:math';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/profile.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../rules/balance.dart';
+import '../../rules/upgrade.dart';
 
-/// 장착한 무기(로드아웃). 프로필이 없거나 옛 데이터면 기본 무기.
-({WeaponStats primary, WeaponStats secondary}) equippedWeapons(Profile? p) => (
-  primary: weaponById(p?.byId(p.primaryId)?.weaponId ?? '') ?? startingPrimary,
-  secondary:
-      weaponById(p?.byId(p.secondaryId)?.weaponId ?? '') ?? startingSecondary,
-);
+/// 장착한 무기(로드아웃)와 강화 단계. 프로필이 없거나 옛 데이터면 기본 무기 +0.
+({
+  WeaponStats primary,
+  int primaryLevel,
+  WeaponStats secondary,
+  int secondaryLevel,
+})
+equippedWeapons(Profile? p) {
+  final pw = p?.byId(p.primaryId), sw = p?.byId(p.secondaryId);
+  final primary = weaponById(pw?.weaponId ?? '');
+  final secondary = weaponById(sw?.weaponId ?? '');
+  return (
+    primary: primary ?? startingPrimary,
+    primaryLevel: primary == null ? 0 : pw!.level,
+    secondary: secondary ?? startingSecondary,
+    secondaryLevel: secondary == null ? 0 : sw!.level,
+  );
+}
 
 class LoadoutState {
   const LoadoutState({
@@ -18,6 +33,8 @@ class LoadoutState {
     required this.family,
     required this.selected,
     this.busy = false,
+    this.upgradeResult,
+    this.upgradeSeq = 0,
   });
 
   final Profile profile;
@@ -29,12 +46,19 @@ class LoadoutState {
   final WeaponStats selected;
   final bool busy;
 
+  /// 마지막 강화 결과(연출용). [upgradeSeq]가 바뀔 때마다 한 번 보여 준다.
+  final UpgradeOutcome? upgradeResult;
+  final int upgradeSeq;
+
   List<WeaponStats> get list => [
     for (final w in weapons)
       if (w.family == family) w,
   ];
 
   bool owns(WeaponStats w) => profile.owned(w.id) != null;
+
+  /// 보유 무기의 강화 단계(없으면 0).
+  int levelOf(WeaponStats w) => profile.owned(w.id)?.level ?? 0;
 
   bool isEquipped(WeaponStats w) {
     final e = equippedWeapons(profile);
@@ -48,13 +72,22 @@ class LoadoutState {
     WeaponFamily? family,
     WeaponStats? selected,
     bool? busy,
+    UpgradeOutcome? upgradeResult,
+    int? upgradeSeq,
   }) => LoadoutState(
     profile: profile ?? this.profile,
     family: family ?? this.family,
     selected: selected ?? this.selected,
     busy: busy ?? this.busy,
+    upgradeResult: upgradeResult ?? this.upgradeResult,
+    upgradeSeq: upgradeSeq ?? this.upgradeSeq,
   );
 }
+
+/// 강화 확률을 굴리는 0~1 난수. 테스트는 정해진 값으로 바꾼다.
+final upgradeRollProvider = Provider<double Function()>(
+  (ref) => Random().nextDouble,
+);
 
 final loadoutProvider =
     NotifierProvider.autoDispose<LoadoutViewModel, LoadoutState>(
@@ -94,6 +127,42 @@ class LoadoutViewModel extends Notifier<LoadoutState> {
     state = state.copyWith(busy: true);
     try {
       return await _repo.buy(await _auth.signIn(), w.id, weaponPrice);
+    } finally {
+      state = state.copyWith(busy: false);
+    }
+  }
+
+  /// 고른 보유 무기를 한 번 강화한다. 확률은 여기서 한 번만 굴리고 저장소에 결과를 넘긴다.
+  /// 골드 부족·최대 단계면 저장하지 않고 그 결과만. 저장 중 무기 단계나 골드가 바뀌어
+  /// 있었으면(다른 기기 등) 아무것도 안 바꾸고 null.
+  Future<UpgradeOutcome?> upgrade() async {
+    final owned = state.profile.owned(state.selected.id);
+    if (owned == null || state.busy) return null;
+    final level = owned.level;
+    final outcome = tryUpgrade(
+      level: level,
+      gold: state.profile.gold,
+      roll: ref.read(upgradeRollProvider)(),
+    );
+    if (outcome == UpgradeOutcome.notEnoughGold ||
+        outcome == UpgradeOutcome.maxLevel) {
+      return outcome;
+    }
+    state = state.copyWith(busy: true);
+    try {
+      final applied = await _repo.upgrade(
+        await _auth.signIn(),
+        owned.id,
+        fromLevel: level,
+        cost: upgradeCost(level),
+        success: outcome == UpgradeOutcome.success,
+      );
+      if (!applied) return null;
+      state = state.copyWith(
+        upgradeResult: outcome,
+        upgradeSeq: state.upgradeSeq + 1,
+      );
+      return outcome;
     } finally {
       state = state.copyWith(busy: false);
     }

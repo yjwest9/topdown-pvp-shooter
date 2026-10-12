@@ -39,6 +39,8 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     this.bot,
     this.primary = startingPrimary,
     this.secondary = startingSecondary,
+    this.primaryLevel = 0,
+    this.secondaryLevel = 0,
     this.primaryFireMode = FireMode.auto,
     this.secondaryFireMode = FireMode.auto,
   }) : random = random ?? Random();
@@ -46,6 +48,10 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   /// 로드아웃(decisions 6장). 숫자키 1~0 변경은 훈련소에서만.
   final WeaponStats primary;
   final WeaponStats secondary;
+
+  /// 로드아웃 무기의 강화 단계. 내 총알 데미지에 배율로 들어간다.
+  final int primaryLevel;
+  final int secondaryLevel;
 
   /// null이면 오프라인 훈련소(표적 있음). 있으면 1대1(표적 없음).
   final MatchSync? match;
@@ -110,6 +116,8 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
       lowCrates: map.lowCrates,
       primaryWeapon: primary,
       secondaryWeapon: secondary,
+      primaryLevel: primaryLevel,
+      secondaryLevel: secondaryLevel,
     );
     dummies = [
       if (match == null)
@@ -331,6 +339,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
           angle: a,
           weapon: w.weapon,
           shooter: player.coverBody,
+          gradeMultiplier: gradeMultiplier(w.grade, w.level),
         ),
     ]);
     for (final a in angles) {

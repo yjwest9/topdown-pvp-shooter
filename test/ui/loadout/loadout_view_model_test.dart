@@ -3,11 +3,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:topsoldier/data/repositories/auth_repository.dart';
 import 'package:topsoldier/data/repositories/profile_repository.dart';
 import 'package:topsoldier/rules/balance.dart';
+import 'package:topsoldier/rules/upgrade.dart';
 import 'package:topsoldier/ui/loadout/loadout_view_model.dart';
 
 import '../../fakes.dart';
 
-Future<ProviderContainer> loadout(FakeRtdbService db, {int gold = 0}) async {
+Future<ProviderContainer> loadout(
+  FakeRtdbService db, {
+  int gold = 0,
+  double roll = 0.5,
+}) async {
   final repo = ProfileRepository(db);
   await repo.create('u', 'A');
   await db.update('users/u', {'gold': gold});
@@ -18,6 +23,7 @@ Future<ProviderContainer> loadout(FakeRtdbService db, {int gold = 0}) async {
         AuthRepository(FakeAuthService('u')),
       ),
       profileRepositoryProvider.overrideWithValue(repo),
+      upgradeRollProvider.overrideWithValue(() => roll),
     ],
   );
   addTearDown(c.dispose);
@@ -66,6 +72,58 @@ void main() {
     await pumpEventQueue();
     expect(c.read(loadoutProvider).profile.gold, 19999);
     expect(((await db.get('users/u/weapons'))! as Map).length, 2);
+  });
+
+  group('upgrade the selected K2', () {
+    Future<(ProviderContainer, LoadoutViewModel)> k2(
+      FakeRtdbService db, {
+      required int gold,
+      required double roll,
+    }) async {
+      final c = await loadout(db, gold: gold, roll: roll);
+      return (c, c.read(loadoutProvider.notifier)..select(rifleStandard));
+    }
+
+    test('success (roll under 90%): -2,000 G, +1, plays the effect', () async {
+      final (c, vm) = await k2(FakeRtdbService(), gold: 5000, roll: 0.1);
+      expect(await vm.upgrade(), UpgradeOutcome.success);
+      await pumpEventQueue();
+      final s = c.read(loadoutProvider);
+      expect((s.profile.gold, s.levelOf(rifleStandard)), (3000, 1));
+      expect((s.upgradeResult, s.upgradeSeq), (UpgradeOutcome.success, 1));
+      // 장착 무기 단계도 +1 → 다음 매치에 반영
+      expect(equippedWeapons(s.profile).primaryLevel, 1);
+    });
+
+    test('fail (roll 0.95): only gold is gone', () async {
+      final (c, vm) = await k2(FakeRtdbService(), gold: 5000, roll: 0.95);
+      expect(await vm.upgrade(), UpgradeOutcome.fail);
+      await pumpEventQueue();
+      final s = c.read(loadoutProvider);
+      expect((s.profile.gold, s.levelOf(rifleStandard)), (3000, 0));
+      expect(s.upgradeResult, UpgradeOutcome.fail);
+    });
+
+    test('not enough gold: nothing is written', () async {
+      final (c, vm) = await k2(FakeRtdbService(), gold: 1999, roll: 0.1);
+      expect(await vm.upgrade(), UpgradeOutcome.notEnoughGold);
+      await pumpEventQueue();
+      final s = c.read(loadoutProvider);
+      expect(
+        (s.profile.gold, s.levelOf(rifleStandard), s.upgradeSeq),
+        (1999, 0, 0),
+      );
+    });
+
+    test('+5 is the max', () async {
+      final db = FakeRtdbService();
+      final (c, vm) = await k2(db, gold: 99999, roll: 0.1);
+      final id = c.read(loadoutProvider).profile.owned('rifle_standard')!.id;
+      await db.update('users/u/weapons/$id', {'level': maxUpgradeLevel});
+      await pumpEventQueue();
+      expect(await vm.upgrade(), UpgradeOutcome.maxLevel);
+      expect(c.read(loadoutProvider).profile.gold, 99999);
+    });
   });
 
   test('no profile yet → default K2 / M9', () {

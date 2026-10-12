@@ -6,6 +6,7 @@ import 'package:flame/text.dart';
 import 'package:flutter/painting.dart' show FontWeight, TextStyle;
 
 import '../../rules/balance.dart';
+import '../../rules/upgrade.dart';
 import '../../rules/weapon_state.dart';
 
 /// 오른쪽 위 무기 슬롯 버튼(주무기 / 보조무기). 누르면 그 무기를 든다.
@@ -83,7 +84,7 @@ class WeaponSlot extends PositionComponent with TapCallbacks {
       ..drawRRect(rect, on ? _edgeOn : _edge);
     final mode = fireMode() == FireMode.auto ? 'AUTO' : 'MANUAL';
     _small.render(canvas, '$label · $mode', Vector2(8, 4));
-    _name.render(canvas, w.weapon.name, Vector2(8, 16));
+    _name.render(canvas, withLevel(w.weapon.name, w.level), Vector2(8, 16));
     _ammo.render(canvas, '${w.ammo} / ${w.weapon.magazine}', Vector2(8, 31));
     if (w.reloading) {
       const barW = slotW - 16;

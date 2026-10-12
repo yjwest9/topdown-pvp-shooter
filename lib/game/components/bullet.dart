@@ -34,10 +34,14 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
     required this.shooter,
     this.hitsTargets = true,
     this.targets,
+    this.gradeMultiplier = 1.0,
   }) : _dir = Vector2(cos(angle), sin(angle)),
        super(angle: angle);
 
   final WeaponStats weapon;
+
+  /// 쏜 무기의 등급·강화 배율(decisions 7장). 봇·상대 총알은 E+0.
+  final double gradeMultiplier;
 
   /// 쏜 순간 쏜 사람 상태(상자 위였는지 등).
   final CoverBody shooter;
@@ -110,11 +114,11 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
     if (_traveled >= weapon.range) removeFromParent();
   }
 
-  // ponytail: 쏜 사람·맞는 사람 모두 기본 병사 +0, 무기 E+0. 캐릭터·등급 선택이 생기면 받아 온다.
+  // ponytail: 쏜 사람·맞는 사람 모두 기본 병사 +0. 캐릭터 선택이 생기면 받아 온다.
   HitResult _roll(bool targetAirborne) => resolveHit(
     baseDamage: weapon.pelletDamage,
     critMultiplier: weapon.critMultiplier,
-    gradeMultiplier: gradeMultiplier(Grade.e, 0),
+    gradeMultiplier: gradeMultiplier,
     missChance: missChance(
       accuracy: basicSoldier.accuracy,
       evasion: basicSoldier.evasion,

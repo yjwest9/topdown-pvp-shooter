@@ -104,6 +104,10 @@ const damagePerUpgradeLevel = 0.02;
 /// 무기·캐릭터 공통 강화 상한.
 const maxUpgradeLevel = 5;
 
+/// 강화 비용(골드)과 성공률. [i]는 지금 단계(+i → +i+1). 실패해도 무기는 그대로, 골드만 잃는다.
+const upgradeCosts = <int>[2000, 4000, 6000, 8000, 10000];
+const upgradeChances = <double>[0.9, 0.8, 0.7, 0.6, 0.5];
+
 // ---------------------------------------------------------------- 무기 (6장)
 
 enum WeaponFamily { rifle, sniper, shotgun, pistol }

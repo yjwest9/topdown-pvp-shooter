@@ -25,6 +25,7 @@ class FakeRtdbService implements RtdbService {
     onDisconnect.clear();
     serverTime = 1000;
     hold = null;
+    rerunTransactions = false;
     _changed = StreamController<void>.broadcast(sync: true);
   }
 
@@ -105,11 +106,15 @@ class FakeRtdbService implements RtdbService {
   @override
   String newKey(String path) => 'id${_pushId++}';
 
+  /// true면 트랜잭션 함수를 두 번 부른다(서버 값이 달라 다시 도는 경우 흉내). 쓰기는 마지막 결과만.
+  bool rerunTransactions = false;
+
   @override
   Future<({bool committed, Object? value})> transaction(
     String path,
     Object? Function(Object? current) update,
   ) async {
+    if (rerunTransactions) update(_read(path));
     final next = update(_read(path));
     if (identical(next, txAbort)) return (committed: false, value: _read(path));
     _write(path, next);

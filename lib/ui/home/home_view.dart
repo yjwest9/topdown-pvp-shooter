@@ -7,6 +7,7 @@ import '../../data/models/profile.dart';
 import '../../game/net/match_sync.dart';
 import '../../rules/balance.dart';
 import '../../rules/rewards.dart';
+import '../../rules/upgrade.dart';
 import '../format.dart';
 import '../loadout/loadout_view.dart';
 import '../loadout/loadout_view_model.dart';
@@ -373,7 +374,10 @@ class _Character extends StatelessWidget {
             GradeBadge(profile.byId(profile.primaryId)?.grade ?? 'E'),
             const SizedBox(width: 8),
             Text(
-              equippedWeapons(profile).primary.name,
+              withLevel(
+                equippedWeapons(profile).primary.name,
+                equippedWeapons(profile).primaryLevel,
+              ),
               style: const TextStyle(
                 color: lightColor,
                 fontWeight: FontWeight.w800,
