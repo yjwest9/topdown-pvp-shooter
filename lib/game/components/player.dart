@@ -17,7 +17,13 @@ class Player extends PositionComponent {
     required super.angle,
     required this.highWalls,
     required this.lowCrates,
+    this.primaryWeapon = startingPrimary,
+    this.secondaryWeapon = startingSecondary,
   }) : super(size: Vector2.all(playerRadius * 2), anchor: Anchor.center);
+
+  /// 로드아웃으로 처음 드는 무기.
+  final WeaponStats primaryWeapon;
+  final WeaponStats secondaryWeapon;
 
   final List<Box> highWalls;
   final List<Box> lowCrates;
@@ -72,8 +78,8 @@ class Player extends PositionComponent {
       _owned.putIfAbsent(w, () => WeaponState(w));
 
   /// 로드아웃: 주무기 + 보조(권총).
-  late WeaponState primary = _own(startingPrimary);
-  late final WeaponState secondary = _own(pistol);
+  late WeaponState primary = _own(primaryWeapon);
+  late final WeaponState secondary = _own(secondaryWeapon);
   bool usingPrimary = true;
 
   WeaponState get weapon => usingPrimary ? primary : secondary;

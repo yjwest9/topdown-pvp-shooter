@@ -28,3 +28,11 @@ String? nicknameError(String name) {
   if (!_nickname.hasMatch(name)) return '한글, 영문, 숫자만 쓸 수 있습니다.';
   return null;
 }
+
+/// 승률 0~1. 0판이면 0.
+double winRate({required int wins, required int matches}) =>
+    matches == 0 ? 0 : wins / matches;
+
+/// 킬 ÷ 데스. 0데스면 킬 수 그대로.
+double kdRatio({required int kills, required int deaths}) =>
+    deaths == 0 ? kills.toDouble() : kills / deaths;

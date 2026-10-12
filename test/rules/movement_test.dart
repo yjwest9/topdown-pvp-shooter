@@ -34,9 +34,14 @@ void main() {
 
   group('turn', () {
     test('dx x 0.0075 x (sensitivity / 5)', () {
-      expect(turn(0, dragDx: 100, sensitivity: 5), closeTo(0.75, 1e-9));
-      expect(turn(0, dragDx: 100, sensitivity: 10), closeTo(1.5, 1e-9));
-      expect(turn(1, dragDx: -100, sensitivity: 5), closeTo(0.25, 1e-9));
+      expect(turn(0, dragDx: 100, sensitivity: 5), closeTo(0.4875, 1e-9));
+      expect(turn(0, dragDx: 100, sensitivity: 10), closeTo(0.975, 1e-9));
+      expect(turn(1, dragDx: -100, sensitivity: 5), closeTo(0.5125, 1e-9));
+      // 2026-10-12에 0.65배로 내림: 새 10 = 예전 6.5
+      expect(
+        turn(0, dragDx: 100, sensitivity: 10),
+        closeTo(100 * 0.0075 * (6.5 / 5), 1e-9),
+      );
     });
   });
 

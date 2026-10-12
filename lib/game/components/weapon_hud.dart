@@ -83,7 +83,7 @@ class WeaponSlot extends PositionComponent with TapCallbacks {
       ..drawRRect(rect, on ? _edgeOn : _edge);
     final mode = fireMode() == FireMode.auto ? 'AUTO' : 'MANUAL';
     _small.render(canvas, '$label · $mode', Vector2(8, 4));
-    _name.render(canvas, w.weapon.id, Vector2(8, 16));
+    _name.render(canvas, w.weapon.name, Vector2(8, 16));
     _ammo.render(canvas, '${w.ammo} / ${w.weapon.magazine}', Vector2(8, 31));
     if (w.reloading) {
       const barW = slotW - 16;

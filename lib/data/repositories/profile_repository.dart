@@ -58,4 +58,58 @@ class ProfileRepository {
     });
     return change;
   }
+
+  // ---------------------------------------------------------- 무기 (6장)
+
+  /// 로드아웃이 없으면(새 유저·기존 유저) 기본 무기 2개를 주고 장착한다. 이미 있으면 그대로.
+  Future<void> grantStarter(
+    String uid, {
+    required String primary,
+    required String secondary,
+  }) async {
+    final p = _db.newKey('${_user(uid)}/weapons');
+    final s = _db.newKey('${_user(uid)}/weapons');
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await _db.transaction(_user(uid), (cur) {
+      if (cur == null) return null; // 서버 값으로 다시 불린다
+      if (Profile.fromJson(cur).hasLoadout) return txAbort;
+      final m = {...(cur as Map<Object?, Object?>)};
+      m['weapons'] = {
+        ...((m['weapons'] as Map<Object?, Object?>?) ?? const {}),
+        p: OwnedWeapon(id: p, weaponId: primary).toJson(now),
+        s: OwnedWeapon(id: s, weaponId: secondary).toJson(now),
+      };
+      m['loadout'] = {'primary': p, 'secondary': s};
+      return m;
+    });
+  }
+
+  /// [weaponId]를 [price] 골드에 산다. 골드 차감과 무기 생성은 트랜잭션 하나로.
+  /// 골드가 모자라거나 이미 있으면 아무것도 안 바꾸고 false.
+  Future<bool> buy(String uid, String weaponId, int price) async {
+    final id = _db.newKey('${_user(uid)}/weapons');
+    final now = DateTime.now().millisecondsSinceEpoch;
+    var bought = false;
+    await _db.transaction(_user(uid), (cur) {
+      bought = false;
+      if (cur == null) return null;
+      final p = Profile.fromJson(cur);
+      if (p.gold < price || p.owned(weaponId) != null) return txAbort;
+      bought = true;
+      final m = {...(cur as Map<Object?, Object?>)};
+      m['gold'] = p.gold - price;
+      m['weapons'] = {
+        ...((m['weapons'] as Map<Object?, Object?>?) ?? const {}),
+        id: OwnedWeapon(id: id, weaponId: weaponId).toJson(now),
+      };
+      return m;
+    });
+    return bought;
+  }
+
+  /// 장착. [primary]면 주무기 칸, 아니면 보조 칸에 [ownedId].
+  Future<void> equip(String uid, String ownedId, {required bool primary}) =>
+      _db.update('${_user(uid)}/loadout', {
+        primary ? 'primary' : 'secondary': ownedId,
+      });
 }

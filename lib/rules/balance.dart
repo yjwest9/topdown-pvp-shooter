@@ -10,7 +10,11 @@ import 'dart:math' show pi;
 const joystickRadius = 50.0;
 
 /// 오른쪽 드래그 가로 1px당 회전(rad), 감도 기본값일 때.
-const turnPerPixel = 0.0075;
+/// 2026-10-12: 전체를 0.65배로 내림(0.0075 → 0.004875). 새 감도 10 ≈ 예전 6.5.
+const turnPerPixel = 0.004875;
+
+/// 감도는 소수 한 자리까지(5.7, 3.7 …).
+const sensitivityStep = 0.1;
 const minSensitivity = 1.0;
 const maxSensitivity = 10.0;
 const defaultSensitivity = 5.0;
@@ -104,6 +108,7 @@ const maxUpgradeLevel = 5;
 
 enum WeaponFamily { rifle, sniper, shotgun, pistol }
 
+/// 발사 방식. 무기마다가 아니라 주무기·보조무기 칸마다 정한다(설정, decisions 2장).
 enum FireMode { auto, manual }
 
 /// 총알 속도(px/s), 모든 무기 공통.
@@ -118,6 +123,9 @@ const dummyRespawnTime = 2.0;
 class WeaponStats {
   const WeaponStats({
     required this.id,
+    required this.name,
+    required this.pros,
+    required this.cons,
     required this.family,
     required this.damage,
     required this.fireInterval,
@@ -127,13 +135,19 @@ class WeaponStats {
     required this.magazine,
     required this.reloadTime,
     required this.spread,
-    required this.fireMode,
     this.pellets = 1,
     this.moveSpeed = 1.0,
     this.moveSpreadScale = 1.0,
   });
 
   final String id;
+
+  /// 화면에 보이는 이름(decisions 6장). 상표권자 요청이 오면 여기만 바꾼다.
+  final String name;
+
+  /// 장점·단점 한 줄(decisions 6장 표).
+  final String pros;
+  final String cons;
   final WeaponFamily family;
 
   /// 샷건은 전 펠릿 명중 시 최대 데미지.
@@ -154,8 +168,6 @@ class WeaponStats {
   /// 기본 퍼짐(rad). 단발은 조준선 ±spread, 샷건은 부채꼴 전체 폭.
   final double spread;
 
-  /// 기본 발사 방식.
-  final FireMode fireMode;
   final int pellets;
 
   /// 플레이어 이동 속도 배율.
@@ -170,6 +182,9 @@ class WeaponStats {
 // [잠정] 초기 수치.
 const rifleStandard = WeaponStats(
   id: 'rifle_standard',
+  name: 'K2',
+  pros: '무난',
+  cons: '특출난 점 없음',
   family: WeaponFamily.rifle,
   damage: 13,
   fireInterval: 0.11,
@@ -179,10 +194,12 @@ const rifleStandard = WeaponStats(
   magazine: 30,
   reloadTime: 1.8,
   spread: 0.035,
-  fireMode: FireMode.auto,
 );
 const rifleRapid = WeaponStats(
   id: 'rifle_rapid',
+  name: 'FAMAS',
+  pros: '근거리 강함, 탄창 40',
+  cons: '퍼짐 커서 원거리 약함',
   family: WeaponFamily.rifle,
   damage: 10,
   fireInterval: 0.07,
@@ -192,10 +209,12 @@ const rifleRapid = WeaponStats(
   magazine: 40,
   reloadTime: 2.2,
   spread: 0.05,
-  fireMode: FireMode.auto,
 );
 const riflePrecision = WeaponStats(
   id: 'rifle_precision',
+  name: 'M14',
+  pros: '원거리 정확',
+  cons: '빗나가면 손해, 탄창 15',
   family: WeaponFamily.rifle,
   damage: 26,
   fireInterval: 0.28,
@@ -205,10 +224,12 @@ const riflePrecision = WeaponStats(
   magazine: 15,
   reloadTime: 2.0,
   spread: 0.015,
-  fireMode: FireMode.auto,
 );
 const rifleHeavy = WeaponStats(
   id: 'rifle_heavy',
+  name: 'M249',
+  pros: '가장 빠른 킬',
+  cons: '이동 ×0.75, 재장전 4초, 앉아야 정확',
   family: WeaponFamily.rifle,
   damage: 15,
   fireInterval: 0.10,
@@ -218,11 +239,13 @@ const rifleHeavy = WeaponStats(
   magazine: 80,
   reloadTime: 4.0,
   spread: 0.06,
-  fireMode: FireMode.auto,
   moveSpeed: 0.75,
 );
 const sniperBolt = WeaponStats(
   id: 'sniper_bolt',
+  name: 'TRG-42',
+  pros: '크리티컬이면 한 방',
+  cons: '놓치면 끝, 이동 느림',
   family: WeaponFamily.sniper,
   damage: 90,
   fireInterval: 1.3,
@@ -232,11 +255,13 @@ const sniperBolt = WeaponStats(
   magazine: 5,
   reloadTime: 2.5,
   spread: 0.005,
-  fireMode: FireMode.manual,
   moveSpeed: 0.85,
 );
 const sniperSemi = WeaponStats(
   id: 'sniper_semi',
+  name: 'SVD',
+  pros: '연속 사격',
+  cons: '한 방 없음',
   family: WeaponFamily.sniper,
   damage: 40,
   fireInterval: 0.45,
@@ -246,11 +271,13 @@ const sniperSemi = WeaponStats(
   magazine: 10,
   reloadTime: 2.4,
   spread: 0.01,
-  fireMode: FireMode.manual,
   moveSpeed: 0.9,
 );
 const sniperLight = WeaponStats(
   id: 'sniper_light',
+  name: 'VSS',
+  pros: '이동 중에도 정확',
+  cons: '사거리 짧음',
   family: WeaponFamily.sniper,
   damage: 60,
   fireInterval: 0.9,
@@ -260,11 +287,13 @@ const sniperLight = WeaponStats(
   magazine: 6,
   reloadTime: 2.2,
   spread: 0.008,
-  fireMode: FireMode.manual,
   moveSpreadScale: 0.5,
 );
 const shotgunPump = WeaponStats(
   id: 'shotgun_pump',
+  name: 'M870',
+  pros: '근거리 안정',
+  cons: '사거리 260',
   family: WeaponFamily.shotgun,
   damage: 88,
   fireInterval: 0.8,
@@ -274,11 +303,13 @@ const shotgunPump = WeaponStats(
   magazine: 6,
   reloadTime: 2.2,
   spread: 0.25,
-  fireMode: FireMode.auto,
   pellets: 8,
 );
 const shotgunAuto = WeaponStats(
   id: 'shotgun_auto',
+  name: 'M1014',
+  pros: '근거리 최속',
+  cons: '퍼짐 큼, 사거리 200',
   family: WeaponFamily.shotgun,
   damage: 48,
   fireInterval: 0.28,
@@ -288,11 +319,13 @@ const shotgunAuto = WeaponStats(
   magazine: 8,
   reloadTime: 2.6,
   spread: 0.35,
-  fireMode: FireMode.auto,
   pellets: 8,
 );
 const shotgunDouble = WeaponStats(
   id: 'shotgun_double',
+  name: 'SAWED-OFF',
+  pros: '근접 역전 한 방',
+  cons: '탄창 2, 재장전 2.6초',
   family: WeaponFamily.shotgun,
   damage: 110,
   fireInterval: 0.25,
@@ -302,11 +335,13 @@ const shotgunDouble = WeaponStats(
   magazine: 2,
   reloadTime: 2.6,
   spread: 0.30,
-  fireMode: FireMode.auto,
   pellets: 10,
 );
 const pistol = WeaponStats(
   id: 'pistol',
+  name: 'M9',
+  pros: '주무기 재장전 중 대안',
+  cons: '약함',
   family: WeaponFamily.pistol,
   damage: 15,
   fireInterval: 0.3,
@@ -316,11 +351,22 @@ const pistol = WeaponStats(
   magazine: 12,
   reloadTime: 1.2,
   spread: 0.03,
-  fireMode: FireMode.auto,
 );
 
-/// 처음 들고 시작하는 주무기(홈 화면에도 보인다). 등급은 E.
+/// 기본 지급 무기(decisions 6장). 등급은 E.
 const startingPrimary = rifleStandard;
+const startingSecondary = pistol;
+
+/// 기본 지급이 아닌 무기의 E등급 가격(골드, decisions 9장).
+const weaponPrice = 20000;
+
+/// id로 무기 찾기. 없는 id면 null(옛 데이터 등).
+WeaponStats? weaponById(String id) {
+  for (final w in weapons) {
+    if (w.id == id) return w;
+  }
+  return null;
+}
 
 const weapons = <WeaponStats>[
   rifleStandard,
@@ -472,6 +518,7 @@ class BotLevel {
     required this.aimError,
     required this.hideHp,
     required this.jumpPerSecond,
+    required this.weapon,
   });
 
   /// 상대를 보고 첫 발까지(초).
@@ -485,6 +532,11 @@ class BotLevel {
 
   /// 교전 중 초당 점프 확률.
   final double jumpPerSecond;
+
+  /// 봇 주무기(라이플만: 봇 AI가 라이플 거리 기준). 2026-10-12 측정(서 있는 나를 10초,
+  /// 250/400px): 봇은 옆걸음하며 쏴서 정확한 M14가 가장 세고, M249는 가까우면 세고
+  /// 멀면 퍼짐 때문에 약하다. FAMAS는 봇에게 가장 약해서 안 쓴다.
+  final WeaponStats weapon;
 }
 
 const botLevels = <BotDifficulty, BotLevel>{
@@ -493,18 +545,21 @@ const botLevels = <BotDifficulty, BotLevel>{
     aimError: 0.25,
     hideHp: 30,
     jumpPerSecond: 0.1,
+    weapon: rifleStandard,
   ),
   BotDifficulty.normal: BotLevel(
     reaction: 0.35,
     aimError: 0.05,
     hideHp: 40,
     jumpPerSecond: 0.25,
+    weapon: rifleHeavy,
   ),
   BotDifficulty.hard: BotLevel(
     reaction: 0.2,
     aimError: 0.0,
     hideHp: 50,
     jumpPerSecond: 0.4,
+    weapon: riflePrecision,
   ),
 };
 

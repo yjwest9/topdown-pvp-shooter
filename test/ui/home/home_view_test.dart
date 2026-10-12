@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:topsoldier/data/models/holiday.dart';
 import 'package:topsoldier/data/repositories/auth_repository.dart';
 import 'package:topsoldier/data/repositories/profile_repository.dart';
@@ -16,6 +17,7 @@ void main() {
       ..physicalSize = const Size(740, 360)
       ..devicePixelRatio = 1;
     addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
     final db = FakeRtdbService();
     await ProfileRepository(db).create('u', '가나다라마바사아자차카타');
     await db.update('users/u', {'gold': 123456789, 'diamond': 99999});

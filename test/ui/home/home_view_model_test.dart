@@ -65,6 +65,53 @@ void main() {
     expect(c.read(homeProvider).profile.nickname, 'B2');
   });
 
+  test(
+    'existing user without weapons gets K2 + M9 equipped, only once',
+    () async {
+      final db = FakeRtdbService();
+      await ProfileRepository(db).create('u', 'A'); // 무기 기능 전에 만든 프로필
+      final c = home(db);
+      await pumpEventQueue();
+      await pumpEventQueue();
+
+      final p = c.read(homeProvider).profile;
+      expect(p.hasLoadout, true);
+      expect(
+        p.weapons.map((w) => w.weaponId),
+        unorderedEquals(['rifle_standard', 'pistol']),
+      );
+      expect(((await db.get('users/u/weapons'))! as Map).length, 2);
+    },
+  );
+
+  test('profile card: win rate and K/D, also with 0 matches', () async {
+    final db = FakeRtdbService();
+    await ProfileRepository(db).create('u', 'A');
+    final c = home(db);
+    await pumpEventQueue();
+    expect(
+      c.read(homeProvider).record,
+      containsAll([('승률', '0%'), ('K/D', '0.00')]),
+    );
+
+    await db.update('users/u/stats', {
+      'matches': 4,
+      'wins': 3,
+      'kills': 9,
+      'deaths': 6,
+    });
+    await pumpEventQueue();
+    expect(
+      c.read(homeProvider).record,
+      containsAll([
+        ('총 판수', '4'),
+        ('승 / 패', '3 / 1'),
+        ('승률', '75%'),
+        ('K/D', '1.50'),
+      ]),
+    );
+  });
+
   test('event banner only on a holiday', () async {
     final none = home(FakeRtdbService());
     final day = home(

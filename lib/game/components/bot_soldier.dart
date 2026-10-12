@@ -69,6 +69,7 @@ class BotSoldier extends Component with HasGameReference<SoldierGame> {
       angle: pi / 2,
       highWalls: map.highWalls,
       lowCrates: map.lowCrates,
+      primaryWeapon: level.weapon,
     );
     unawaited(_writeFullHp());
   }

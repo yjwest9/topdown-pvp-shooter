@@ -37,7 +37,15 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     this.minimapRotates = true,
     this.onMinimapRotatesChanged,
     this.bot,
+    this.primary = startingPrimary,
+    this.secondary = startingSecondary,
+    this.primaryFireMode = FireMode.auto,
+    this.secondaryFireMode = FireMode.auto,
   }) : random = random ?? Random();
+
+  /// 로드아웃(decisions 6장). 숫자키 1~0 변경은 훈련소에서만.
+  final WeaponStats primary;
+  final WeaponStats secondary;
 
   /// null이면 오프라인 훈련소(표적 있음). 있으면 1대1(표적 없음).
   final MatchSync? match;
@@ -65,8 +73,9 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   /// 탄 퍼짐·미스·크리 랜덤. 테스트는 Random(seed)를 넣는다.
   final Random random;
 
-  /// 무기별 발사 방식. 저장과 설정 화면은 나중.
-  final fireModes = {for (final w in weapons) w.id: w.fireMode};
+  /// 주무기·보조무기 칸의 발사 방식(설정).
+  FireMode primaryFireMode;
+  FireMode secondaryFireMode;
 
   /// 사격 버튼을 누르고 있음(터치).
   bool fireButtonHeld = false;
@@ -96,6 +105,8 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
       angle: _spawnAngle,
       highWalls: map.highWalls,
       lowCrates: map.lowCrates,
+      primaryWeapon: primary,
+      secondaryWeapon: secondary,
     );
     dummies = [
       if (match == null)
@@ -166,10 +177,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
           index: i,
           weapon: () => primary ? player.primary : player.secondary,
           active: () => player.usingPrimary == primary,
-          fireMode: () =>
-              fireModes[(primary ? player.primary : player.secondary)
-                  .weapon
-                  .id]!,
+          fireMode: () => primary ? primaryFireMode : secondaryFireMode,
           onTap: () => player.selectSlot(primary: primary),
         ),
     ];
@@ -272,7 +280,8 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
         ),
   ];
 
-  FireMode get _fireMode => fireModes[player.weapon.weapon.id]!;
+  FireMode get _fireMode =>
+      player.usingPrimary ? primaryFireMode : secondaryFireMode;
 
   bool get _triggerHeld =>
       fireButtonHeld || _keys.contains(LogicalKeyboardKey.arrowUp);
@@ -372,7 +381,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     ..._weaponKeys,
   };
 
-  /// 1~9, 0 = 주무기 10종(weapons 앞 10개).
+  /// 1~9, 0 = 주무기 10종(weapons 앞 10개). 훈련소에서만(디버그).
   static final _weaponKeys = [
     LogicalKeyboardKey.digit1,
     LogicalKeyboardKey.digit2,
@@ -409,7 +418,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
       if (key == LogicalKeyboardKey.keyQ) player.swapWeapon();
       if (key == LogicalKeyboardKey.keyR) player.weapon.reload();
       final slot = _weaponKeys.indexOf(key);
-      if (slot >= 0) player.selectPrimary(weapons[slot]);
+      if (slot >= 0 && match == null) player.selectPrimary(weapons[slot]);
     }
 
     // WASD가 아닌 키(Space, C 등)는 이동값을 건드리지 않는다. 터치 조이스틱을

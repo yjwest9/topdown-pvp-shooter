@@ -15,4 +15,18 @@ void main() {
     await SettingsRepository(PrefsService()).setMinimapRotates(false);
     expect(await SettingsRepository(PrefsService()).minimapRotates(), isFalse);
   });
+
+  test('sensitivity and primary/secondary fire mode are saved', () async {
+    final repo = SettingsRepository(PrefsService());
+    expect(await repo.sensitivity(), isNull);
+    expect(await repo.fireAuto(primary: true), isNull);
+
+    await repo.setSensitivity(5.7);
+    await repo.setFireAuto(primary: true, auto: false);
+
+    final again = SettingsRepository(PrefsService());
+    expect(await again.sensitivity(), 5.7);
+    expect(await again.fireAuto(primary: true), false);
+    expect(await again.fireAuto(primary: false), isNull);
+  });
 }

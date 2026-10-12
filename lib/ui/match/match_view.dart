@@ -5,14 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/match_stats.dart';
-import '../../data/repositories/settings_repository.dart';
+import '../../data/repositories/profile_repository.dart';
 import '../../game/net/match_sync.dart';
 import '../../game/soldier_game.dart';
 import '../../rules/balance.dart';
 import '../../rules/match.dart';
 import '../../rules/rewards.dart';
+import '../loadout/loadout_view_model.dart';
 import '../result/result_view.dart';
 import '../result/result_view_model.dart';
+import '../settings/settings_view_model.dart';
 
 /// 게임 화면. [match]가 없으면 오프라인 훈련소.
 // ponytail: 뷰모델 없음. 할 일이 나가기뿐이고 그건 MatchSync가 한다. 화면 상태가 늘면 분리.
@@ -38,28 +40,32 @@ class MatchView extends ConsumerStatefulWidget {
 
 class _MatchViewState extends ConsumerState<MatchView> {
   final _gameKey = GlobalKey<RiverpodAwareGameWidgetState<SoldierGame>>();
-  late final _game = SoldierGame(
-    match: widget.match,
-    bot: widget.bot,
-    onMinimapRotatesChanged: (rotates) => unawaited(
-      ref.read(settingsRepositoryProvider).setMinimapRotates(rotates),
-    ),
-  );
+
+  /// 감도·발사 방식·미니맵은 설정(홈에서 미리 읽어 둠), 무기는 로드아웃.
+  /// 못 읽었으면(오프라인 등) 기본값. 게임 중에 설정을 바꿔도 다음 매치부터.
+  late final _game = () {
+    final settings = ref.read(settingsProvider).value ?? const SettingsState();
+    final loadout = equippedWeapons(ref.read(profileProvider).value);
+    return SoldierGame(
+      match: widget.match,
+      bot: widget.bot,
+      sensitivity: settings.sensitivity,
+      primaryFireMode: settings.primaryFireMode,
+      secondaryFireMode: settings.secondaryFireMode,
+      minimapRotates: settings.minimapRotates,
+      primary: loadout.primary,
+      secondary: loadout.secondary,
+      onMinimapRotatesChanged: (rotates) => unawaited(
+        ref.read(settingsProvider.notifier).setMinimapRotates(rotates),
+      ),
+    );
+  }();
   String? _message;
   bool _exiting = false;
 
   @override
   void initState() {
     super.initState();
-    // 미니맵은 1대1에만 있다(훈련소는 설정을 읽지 않는다).
-    if (widget.match != null) {
-      unawaited(
-        ref
-            .read(settingsRepositoryProvider)
-            .minimapRotates()
-            .then((rotates) => _game.minimapRotates = rotates),
-      );
-    }
     widget.match?.onMatchEnd = (stats, {required opponentLeft}) async {
       if (opponentLeft) {
         setState(() => _message = '상대가 나갔습니다');

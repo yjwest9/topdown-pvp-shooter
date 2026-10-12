@@ -33,6 +33,19 @@ class HomeState {
 
   /// 경험치 바 0~1.
   double get expRatio => profile.exp / expToNext(profile.level);
+
+  /// 프로필 카드(전적). 친선전 포함.
+  List<(String, String)> get record {
+    final p = profile;
+    return [
+      ('레벨', 'Lv.${p.level}  (${p.exp} / ${expToNext(p.level)} EXP)'),
+      ('총 판수', '${p.matches}'),
+      ('승 / 패', '${p.wins} / ${p.matches - p.wins}'),
+      ('승률', '${(winRate(wins: p.wins, matches: p.matches) * 100).round()}%'),
+      ('킬 / 데스', '${p.kills} / ${p.deaths}'),
+      ('K/D', kdRatio(kills: p.kills, deaths: p.deaths).toStringAsFixed(2)),
+    ];
+  }
 }
 
 final homeProvider = NotifierProvider<HomeViewModel, HomeState>(
@@ -53,9 +66,28 @@ class HomeViewModel extends Notifier<HomeState> {
   /// 닉네임 입력 창의 기본값.
   String get defaultNickname => _auth.nickname;
 
+  bool _granting = false;
+
   @override
   HomeState build() {
     final p = ref.watch(profileProvider);
+    // 새 유저·기존 유저 모두 로드아웃이 없으면 기본 무기 지급(decisions 6장).
+    if (p.value case final profile? when !profile.hasLoadout && !_granting) {
+      _granting = true;
+      Future.microtask(() async {
+        try {
+          await ref
+              .read(profileRepositoryProvider)
+              .grantStarter(
+                await _auth.signIn(),
+                primary: startingPrimary.id,
+                secondary: startingSecondary.id,
+              );
+        } finally {
+          _granting = false;
+        }
+      });
+    }
     return HomeState(
       profile: p.value ?? Profile(nickname: _auth.nickname),
       needsNickname: p.hasValue && p.value == null,

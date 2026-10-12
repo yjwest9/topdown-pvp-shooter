@@ -7,4 +7,10 @@ class PrefsService {
 
   Future<void> setBool(String key, bool value) async =>
       (await SharedPreferences.getInstance()).setBool(key, value);
+
+  Future<double?> getDouble(String key) async =>
+      (await SharedPreferences.getInstance()).getDouble(key);
+
+  Future<void> setDouble(String key, double value) async =>
+      (await SharedPreferences.getInstance()).setDouble(key, value);
 }

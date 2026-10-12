@@ -1,10 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../services/app_info_service.dart';
 import '../services/prefs_service.dart';
 
 final settingsRepositoryProvider = Provider(
   (ref) => SettingsRepository(PrefsService()),
 );
+
+/// 설정 화면에 보이는 앱 버전.
+final appVersionProvider = FutureProvider((ref) => AppInfoService().version());
 
 /// 기기에 저장하는 사용자 설정.
 class SettingsRepository {
@@ -21,4 +25,22 @@ class SettingsRepository {
 
   Future<void> setMinimapRotates(bool value) =>
       _prefs.setBool(_minimapRotatesKey, value);
+
+  static const _sensitivityKey = 'sensitivity';
+
+  /// 시점 감도. 저장한 적 없으면 null(기본값은 규칙이 정한다).
+  Future<double?> sensitivity() => _prefs.getDouble(_sensitivityKey);
+
+  Future<void> setSensitivity(double value) =>
+      _prefs.setDouble(_sensitivityKey, value);
+
+  /// 주무기·보조무기 칸의 발사 방식: true 자동, false 수동. 저장한 적 없으면 null.
+  Future<bool?> fireAuto({required bool primary}) =>
+      _prefs.getBool(primary ? 'fire_auto_primary' : 'fire_auto_secondary');
+
+  Future<void> setFireAuto({required bool primary, required bool auto}) =>
+      _prefs.setBool(
+        primary ? 'fire_auto_primary' : 'fire_auto_secondary',
+        auto,
+      );
 }

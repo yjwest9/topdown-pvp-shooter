@@ -130,6 +130,18 @@ void main() {
   );
 
   botTester(db).testGameWidget(
+    'bot carries its difficulty weapon (normal = M249)',
+    verify: (game, tester) async {
+      await run(game, tester, 0.1);
+      expect(
+        botOf(game).body.primary.weapon,
+        botLevels[BotDifficulty.normal]!.weapon,
+      );
+      expect(botLevels[BotDifficulty.normal]!.weapon, rifleHeavy);
+    },
+  );
+
+  botTester(db).testGameWidget(
     'killed bot comes back after the respawn delay with full hp',
     verify: (game, tester) async {
       await run(game, tester, 0.5);

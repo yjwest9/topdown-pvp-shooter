@@ -11,8 +11,15 @@ import 'package:topsoldier/game/components/bullet.dart';
 import 'package:topsoldier/game/soldier_game.dart';
 import 'package:topsoldier/rules/balance.dart';
 
-GameTester<SoldierGame> gameTester({double sensitivity = 5}) => GameTester(
-  () => SoldierGame(sensitivity: sensitivity, random: Random(7)),
+GameTester<SoldierGame> gameTester({
+  double sensitivity = 5,
+  FireMode primaryFireMode = FireMode.auto,
+}) => GameTester(
+  () => SoldierGame(
+    sensitivity: sensitivity,
+    random: Random(7),
+    primaryFireMode: primaryFireMode,
+  ),
   createGameWidget: (game) =>
       RiverpodAwareGameWidget(key: GlobalKey(), game: game),
   pumpWidget: (widget, tester) =>
@@ -48,7 +55,7 @@ void main() {
     verify: (game, tester) async {
       place(game, 0);
       game.turnBy(100);
-      expect(game.player.angle, closeTo(0.75, 1e-9));
+      expect(game.player.angle, closeTo(100 * turnPerPixel, 1e-9));
     },
   );
 
@@ -57,7 +64,7 @@ void main() {
     verify: (game, tester) async {
       place(game, 0);
       game.turnBy(100);
-      expect(game.player.angle, closeTo(1.5, 1e-9));
+      expect(game.player.angle, closeTo(2 * 100 * turnPerPixel, 1e-9));
     },
   );
 
@@ -590,10 +597,10 @@ void main() {
     },
   );
 
-  gameTester().testGameWidget(
-    'touch: hold FIRE (manual weapon) shoots, dragging it turns',
+  gameTester(primaryFireMode: FireMode.manual).testGameWidget(
+    'touch: hold FIRE (primary set to MANUAL) shoots, dragging it turns',
     verify: (game, tester) async {
-      key(game, LogicalKeyboardKey.digit5); // 볼트액션, 수동
+      key(game, LogicalKeyboardKey.digit5); // 볼트액션(주무기 칸 = 수동)
       place(game, pi / 2);
       final size = game.size;
       final fire = await tester.startGesture(Offset(size.x - 70, size.y - 82));
@@ -603,7 +610,7 @@ void main() {
       await fire.moveBy(const Offset(50, 0));
       await fire.moveBy(const Offset(50, 0));
       expect(game.fireButtonHeld, isTrue);
-      expect(game.player.angle, closeTo(pi / 2 + 0.75, 1e-3));
+      expect(game.player.angle, closeTo(pi / 2 + 100 * turnPerPixel, 1e-3));
       run(game, sniperBolt.fireInterval + 0.1);
       expect(game.player.weapon.ammo, 3);
       await fire.up();

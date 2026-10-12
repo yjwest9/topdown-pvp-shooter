@@ -47,7 +47,16 @@
         "level": { ".validate": "newData.isNumber() && newData.val() >= 1" },
         "exp": { ".validate": "newData.isNumber() && newData.val() >= 0" },
         "gold": { ".validate": "newData.isNumber() && newData.val() >= 0" },
-        "diamond": { ".validate": "newData.isNumber() && newData.val() >= 0" }
+        "diamond": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+        "weapons": {
+          "$id": {
+            ".validate": "newData.hasChildren(['weaponId', 'grade', 'level']) && newData.child('weaponId').isString() && newData.child('weaponId').val().matches(/^(rifle_standard|rifle_rapid|rifle_precision|rifle_heavy|sniper_bolt|sniper_semi|sniper_light|shotgun_pump|shotgun_auto|shotgun_double|pistol)$/) && newData.child('grade').val() === 'E' && newData.child('level').isNumber() && newData.child('level').val() >= 0 && newData.child('level').val() <= 5"
+          }
+        },
+        "loadout": {
+          "primary": { ".validate": "newData.isString() && newData.parent().parent().child('weapons/' + newData.val()).exists()" },
+          "secondary": { ".validate": "newData.isString() && newData.parent().parent().child('weapons/' + newData.val()).exists()" }
+        }
       }
     },
     "matchmaking": {

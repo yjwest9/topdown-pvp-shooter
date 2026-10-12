@@ -3,21 +3,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/models/profile.dart';
 import '../../game/net/match_sync.dart';
 import '../../rules/balance.dart';
 import '../../rules/rewards.dart';
 import '../format.dart';
+import '../loadout/loadout_view.dart';
+import '../loadout/loadout_view_model.dart';
 import '../lobby/lobby_view.dart';
 import '../match/match_view.dart';
 import '../matchmaking/matchmaking_view.dart';
+import '../settings/settings_view.dart';
+import '../settings/settings_view_model.dart';
+import '../style.dart';
 import 'home_view_model.dart';
-
-// 게임 팔레트(맵 바닥 올리브, 앰버 강조).
-const _bg = Color(0xFF232B22);
-const _panel = Color(0xFF3A4A3A);
-const _amber = Color(0xFFE8B33A);
-const _light = Color(0xFFE3E6D8);
-const _soldier = Color(0xFF4FA3E0);
+import 'nickname_form.dart';
 
 /// 홈(가로). 첫 실행이면 닉네임 입력부터.
 class HomeView extends ConsumerWidget {
@@ -26,11 +26,13 @@ class HomeView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(homeProvider);
+    // 설정은 매치를 열 때 바로 쓰도록 미리 읽어 둔다.
+    ref.watch(settingsProvider);
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: bgColor,
       body: SafeArea(
         child: s.needsNickname
-            ? const Center(child: _NicknameForm(first: true))
+            ? const Center(child: NicknameForm(first: true))
             : _Home(s),
       ),
     );
@@ -105,6 +107,10 @@ class _Home extends ConsumerWidget {
     if (bot != null && context.mounted) await _playBot(context, ref, bot);
   }
 
+  void _open(BuildContext context, Widget page) => unawaited(
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page)),
+  );
+
   void _soon(BuildContext context, String name) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -119,12 +125,15 @@ class _Home extends ConsumerWidget {
         if (s.showEventBanner)
           Container(
             width: double.infinity,
-            color: _amber,
+            color: amberColor,
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Text(
               '${s.holiday!.name} · 공휴일 보상 $holidayRewardMultiplier배!',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: _bg, fontWeight: FontWeight.w900),
+              style: const TextStyle(
+                color: bgColor,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         Expanded(
@@ -132,7 +141,7 @@ class _Home extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: Row(
               children: [
-                const Expanded(flex: 3, child: _Character()),
+                Expanded(flex: 3, child: _Character(s.profile)),
                 const SizedBox(width: 24),
                 Expanded(
                   flex: 2,
@@ -142,8 +151,8 @@ class _Home extends ConsumerWidget {
                     children: [
                       FilledButton(
                         style: FilledButton.styleFrom(
-                          backgroundColor: _amber,
-                          foregroundColor: _bg,
+                          backgroundColor: amberColor,
+                          foregroundColor: bgColor,
                           padding: const EdgeInsets.symmetric(vertical: 22),
                           textStyle: const TextStyle(
                             fontSize: 24,
@@ -191,7 +200,7 @@ class _Home extends ConsumerWidget {
           ),
         ),
         Container(
-          color: _panel,
+          color: panelColor,
           child: Row(
             children: [
               for (final (icon, name) in [
@@ -202,8 +211,12 @@ class _Home extends ConsumerWidget {
               ])
                 Expanded(
                   child: TextButton.icon(
-                    style: TextButton.styleFrom(foregroundColor: _light),
-                    onPressed: () => _soon(context, name),
+                    style: TextButton.styleFrom(foregroundColor: lightColor),
+                    onPressed: () => switch (name) {
+                      '무기' => _open(context, const LoadoutView()),
+                      '설정' => _open(context, const SettingsView()),
+                      _ => _soon(context, name),
+                    },
                     icon: Icon(icon, size: 18),
                     label: Text(name),
                   ),
@@ -221,23 +234,62 @@ class _TopBar extends StatelessWidget {
 
   final HomeState s;
 
+  /// 프로필 카드: 전적 + 닉네임 변경.
+  void _showCard(BuildContext context) => unawaited(
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(s.profile.nickname),
+        content: SizedBox(
+          width: 300,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final (label, value) in s.record)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [Text(label), Text(value)],
+                  ),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              unawaited(
+                showDialog<void>(
+                  context: context,
+                  builder: (_) =>
+                      const AlertDialog(content: NicknameForm(first: false)),
+                ),
+              );
+            },
+            child: const Text('닉네임 변경'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('닫기'),
+          ),
+        ],
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final p = s.profile;
     return Container(
-      color: _panel,
+      color: panelColor,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
         children: [
           Flexible(
             child: InkWell(
-              onTap: () => unawaited(
-                showDialog<void>(
-                  context: context,
-                  builder: (_) =>
-                      const AlertDialog(content: _NicknameForm(first: false)),
-                ),
-              ),
+              onTap: () => _showCard(context),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -246,41 +298,51 @@ class _TopBar extends StatelessWidget {
                       p.nickname,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: _light,
+                        color: lightColor,
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.edit, size: 14, color: _light),
+                  const Icon(Icons.edit, size: 14, color: lightColor),
                 ],
               ),
             ),
           ),
           const SizedBox(width: 16),
-          Text(
-            'Lv.${p.level}',
-            style: const TextStyle(color: _amber, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 120,
-            child: LinearProgressIndicator(
-              value: s.expRatio,
-              minHeight: 6,
-              color: _amber,
-              backgroundColor: _bg,
+          InkWell(
+            onTap: () => _showCard(context),
+            child: Row(
+              children: [
+                Text(
+                  'Lv.${p.level}',
+                  style: const TextStyle(
+                    color: amberColor,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 120,
+                  child: LinearProgressIndicator(
+                    value: s.expRatio,
+                    minHeight: 6,
+                    color: amberColor,
+                    backgroundColor: bgColor,
+                  ),
+                ),
+              ],
             ),
           ),
           const Spacer(),
-          const Icon(Icons.monetization_on, size: 18, color: _amber),
+          const Icon(Icons.monetization_on, size: 18, color: amberColor),
           const SizedBox(width: 4),
-          Text(commas(p.gold), style: const TextStyle(color: _light)),
+          Text(commas(p.gold), style: const TextStyle(color: lightColor)),
           const SizedBox(width: 16),
           const Icon(Icons.diamond, size: 18, color: Color(0xFF7FD4F0)),
           const SizedBox(width: 4),
-          Text(commas(p.diamond), style: const TextStyle(color: _light)),
+          Text(commas(p.diamond), style: const TextStyle(color: lightColor)),
         ],
       ),
     );
@@ -289,7 +351,9 @@ class _TopBar extends StatelessWidget {
 
 /// 내 병사(게임 속 모양을 크게) + 주무기 이름과 등급 배지.
 class _Character extends StatelessWidget {
-  const _Character();
+  const _Character(this.profile);
+
+  final Profile profile;
 
   @override
   Widget build(BuildContext context) {
@@ -306,25 +370,12 @@ class _Character extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-              decoration: BoxDecoration(
-                border: Border.all(color: _amber, width: 2),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                Grade.e.name.toUpperCase(),
-                style: const TextStyle(
-                  color: _amber,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
+            GradeBadge(profile.byId(profile.primaryId)?.grade ?? 'E'),
             const SizedBox(width: 8),
             Text(
-              startingPrimary.id.replaceAll('_', ' ').toUpperCase(),
+              equippedWeapons(profile).primary.name,
               style: const TextStyle(
-                color: _light,
+                color: lightColor,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1,
               ),
@@ -350,7 +401,7 @@ class _SoldierPainter extends CustomPainter {
         r,
         Paint()..color = const Color(0x59000000),
       )
-      ..drawCircle(c, r, Paint()..color = _soldier)
+      ..drawCircle(c, r, Paint()..color = soldierColor)
       ..drawLine(
         c,
         c - Offset(0, r * 1.5),
@@ -363,77 +414,4 @@ class _SoldierPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SoldierPainter oldDelegate) => false;
-}
-
-/// 닉네임 입력. [first]면 첫 실행(프로필 만들기), 아니면 바꾸기(대화상자).
-class _NicknameForm extends ConsumerStatefulWidget {
-  const _NicknameForm({required this.first});
-
-  final bool first;
-
-  @override
-  ConsumerState<_NicknameForm> createState() => _NicknameFormState();
-}
-
-class _NicknameFormState extends ConsumerState<_NicknameForm> {
-  late final _input = TextEditingController(
-    text: widget.first
-        ? ref.read(homeProvider.notifier).defaultNickname
-        : ref.read(homeProvider).profile.nickname,
-  );
-  String? _error;
-  bool _busy = false;
-
-  @override
-  void dispose() {
-    _input.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    setState(() => _busy = true);
-    final error = await ref
-        .read(homeProvider.notifier)
-        .saveNickname(_input.text);
-    if (!mounted) return;
-    setState(() {
-      _busy = false;
-      _error = error;
-    });
-    if (error == null && !widget.first) Navigator.of(context).pop();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 320,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            widget.first ? '닉네임을 정해 주세요' : '닉네임 변경',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _input,
-            autofocus: true,
-            maxLength: nicknameMax,
-            decoration: InputDecoration(
-              helperText: '$nicknameMin~$nicknameMax자, 한글·영문·숫자',
-              errorText: _error,
-            ),
-            onSubmitted: (_) => unawaited(_save()),
-          ),
-          const SizedBox(height: 8),
-          FilledButton(
-            onPressed: _busy ? null : () => unawaited(_save()),
-            child: Text(widget.first ? '시작하기' : '저장'),
-          ),
-        ],
-      ),
-    );
-  }
 }
