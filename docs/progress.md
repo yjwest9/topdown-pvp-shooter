@@ -2,6 +2,11 @@
 
 작업이 끝날 때마다 맨 위에 추가한다. (날짜 / 한 것 / 다음 할 일 / 막힌 것)
 
+## 2026-10-12 (0.1.2+3 업로드 준비 — chore/release-0.1.2)
+- 한 것: 로컬 에뮬레이터에서 규칙 전체 41개 다시 통과. 실서버 규칙과 비교: 기존 rooms 규칙은 그대로, rooms/$code 삭제·matchmaking 대기석·users(프로필·무기·로드아웃) 추가만 → 사용자 확인 후 `firebase deploy --only database`. 실서버 최소 확인(테스트 익명 계정): users 쓰기·읽기 200, 골드 음수·남의 users 읽기 401, 대기석 앉기·지우기 200. 확인 데이터와 테스트 계정 삭제(users·대기석 비어 있음). version 0.1.2+3, `flutter build appbundle --release --dart-define-from-file=.env.local` → 서명된 app-release.aab 53.3MB. 테스트 324개.
+- 다음: 사용자 확인 후 main 병합 + 태그 v0.1.2, Play Console 업로드(데이터 보안: 닉네임=개인 정보 > 이름 추가, 개인정보처리방침 gist에 닉네임·게임 진행 정보 추가, 출시 노트), 실서버 빠른 대전 1판 확인(에뮬레이터 릴리스 앱 + 크롬 실서버).
+- 막힌 것: 없음. 닉네임 프로필을 "계정"으로 볼지에 따라 Play의 계정 삭제 요구가 걸릴 수 있음(구글 로그인 때 계정 삭제 기능과 함께 정리).
+
 ## 2026-10-12 (줄바꿈 통일 + 무기 강화 — chore/line-endings, feat/weapon-upgrade, 병합 전)
 - 줄바꿈: 사용자 도구에 13개 파일이 바뀐 것으로 보임 → 확인해 보니 저장소(인덱스)는 모두 LF, 작업 파일 141개가 CRLF(내용 같음). 원인은 이 PC Git의 시스템 설정 core.autocrlf=true(Git for Windows 기본) 때문에 브랜치 전환·병합 때마다 CRLF로 써짐 + 다른 도구는 그 설정을 안 써서 차이로 보임. 사용자 확인 후 `.gitattributes`에 `* text=auto eol=lf` 추가, 작업 파일 LF로 되돌림(내용 변경 없음). 브랜치를 오가도 CRLF가 다시 안 생기는 것 확인.
 - 강화: decisions 7·9장 반영. 규칙(테스트 먼저) `rules/upgrade.dart` upgradeCost·upgradeChance·tryUpgrade(성공/실패/골드 부족/최대)·withLevel. 저장소 upgrade(확률은 밖에서, 트랜잭션은 골드·단계 확인 후 차감·+1). 테스트용 가짜 DB에 트랜잭션을 두 번 도는 옵션. 무기 화면 강화 영역 + 연출(성공 빛남·실패 흔들림, 1.1초), 목록·홈·HUD 이름 옆 "+N", TTK·데미지도 단계 반영. 게임: WeaponState에 등급·단계, 내 총알에 gradeMultiplier(봇·상대 총알은 1.0). DB 규칙(level 그대로 또는 +1, 새 무기 0, 종류 고정) 에뮬레이터 REST 41개 확인. 테스트 324개, 배율 전달·단계 확인 코드를 빼면 실패 확인. 킬 로그 무기 이름의 "+N"은 킬 기록에 단계가 없어서 안 넣음.
