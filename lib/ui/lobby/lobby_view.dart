@@ -46,6 +46,7 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
   Widget build(BuildContext context) {
     final vm = ref.read(lobbyProvider.notifier);
     ref.listen(lobbyProvider, (prev, next) {
+      if (prev?.code == null && next.code != null) _codeInput.clear();
       if (prev?.started != true && next.started) {
         unawaited(
           _play(
