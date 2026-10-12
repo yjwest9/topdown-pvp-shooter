@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'dart:ui';
 
 import 'package:flame/components.dart';
@@ -7,17 +6,17 @@ import 'package:flame/events.dart';
 import '../../rules/minimap_view.dart';
 import '../soldier_game.dart';
 
-/// 왼쪽 위 미니맵(발로란트식). 배경 판 없이 반투명한 회색 맵 모양만 떠 있어 게임이 비쳐
-/// 보인다. 벽은 진한 회색 + 밝은 테두리, 내 표시는 화살표 + 시야 부채꼴. 글자는 없다.
+/// 왼쪽 위 원형 미니맵(발로란트식). 맵 전체가 원 안에 들어간다. 걸을 수 있는 곳만
+/// 반투명 회색으로 그리고 바깥(벽)은 비워서 게임이 비쳐 보인다. 내 표시는 화살표 + 시야.
 /// 두 가지 모드(눌러서 전환, 설정에도 있음):
-/// - 회전: 동그란 창. 내 주변이 확대되고 내가 보는 쪽이 위. 시점을 돌리면 맵도 돈다.
-/// - 고정: 맵 전체. 시점을 돌려도 맵은 그대로, 내 진영이 늘 아래(B팀은 180도 뒤집음).
-/// 진영은 옅은 파랑(내 쪽)/빨강(상대 쪽). 상대 위치는 그리지 않는다.
+/// - 회전: 원 안에서 맵 전체가 돌아 내가 보는 쪽이 늘 위.
+/// - 고정: 맵이 돌지 않는다. 내 진영이 늘 아래(B팀은 180도 뒤집음).
+/// 진영은 옅은 파랑(내 쪽)/빨강(상대 쪽). 글자와 상대 위치는 그리지 않는다.
 class Minimap extends PositionComponent
     with HasGameReference<SoldierGame>, TapCallbacks {
   Minimap({required super.position}) : super(size: Vector2.all(side));
 
-  /// 미니맵 한 변(px).
+  /// 미니맵 지름(px).
   static const side = 150.0;
 
   static final _disc = Paint()..color = const Color(0x40000000);
@@ -25,22 +24,17 @@ class Minimap extends PositionComponent
     ..color = const Color(0x40FFFFFF)
     ..style = PaintingStyle.stroke
     ..strokeWidth = 1.5;
-  static final _floor = Paint()..color = const Color(0x8CC9CDD3);
-  static final _floorEdge = Paint()
-    ..color = const Color(0xB3EEF0F2)
-    ..style = PaintingStyle.stroke;
-  static final _wall = Paint()..color = const Color(0xE6474C54);
-  static final _wallEdge = Paint()
-    ..color = const Color(0x80EEF0F2)
-    ..style = PaintingStyle.stroke;
-  static final _crate = Paint()..color = const Color(0xB38D939B);
-  static final _mine = Paint()..color = const Color(0x404FA3E0);
-  static final _enemy = Paint()..color = const Color(0x40E0563F);
-  static final _view = Paint()..color = const Color(0x40FFFFFF);
+  static final _floor = Paint()..color = const Color(0x99C9CDD3);
+  static final _cut = Paint()..blendMode = BlendMode.clear;
+  static final _crate = Paint()..color = const Color(0xCC8D939B);
+  static final _mine = Paint()..color = const Color(0x554FA3E0);
+  static final _enemy = Paint()..color = const Color(0x55E0563F);
+  static final _view = Paint()..color = const Color(0x55FFFFFF);
   static final _me = Paint()..color = const Color(0xFF5DE0C8);
   static final _meEdge = Paint()
     ..color = const Color(0xFFFFFFFF)
-    ..style = PaintingStyle.stroke;
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.2;
 
   @override
   void onTapUp(TapUpEvent event) => game.toggleMinimapMode();
@@ -49,63 +43,46 @@ class Minimap extends PositionComponent
   void render(Canvas canvas) {
     final map = game.map;
     final myTeam = game.match!.team;
-    final rotating = game.minimapRotates;
     final p = game.player;
-    // 고정 모드에서 맵 전체가 들어가는 배율. 회전 모드는 여기에 확대를 곱한다.
-    final k = min(side / map.width, side / map.height);
-    final zoom = rotating ? minimapZoom : 1.0;
+    // 맵에서 가장 먼 걸을 수 있는 곳까지가 원 안에 들어오는 배율.
+    final k = (side / 2 - 3) / map.reach;
     final rotation = minimapRotation(
-      rotating: rotating,
+      rotating: game.minimapRotates,
       teamA: game.isTeamA,
       playerAngle: p.angle,
     );
-    final me = Offset(p.position.x * k, p.position.y * k);
     Rect r(({double left, double top, double right, double bottom}) b) =>
         Rect.fromLTRB(b.left * k, b.top * k, b.right * k, b.bottom * k);
     const c = Offset(side / 2, side / 2);
-    final line = 1 / zoom; // 확대해도 선 굵기는 같게
+    final whole = Rect.fromLTWH(0, 0, map.width * k, map.height * k);
 
-    canvas.save();
-    if (rotating) {
-      canvas
-        ..drawCircle(c, side / 2, _disc)
-        ..clipPath(
-          Path()..addOval(Rect.fromCircle(center: c, radius: side / 2)),
-        );
-    }
     canvas
+      ..drawCircle(c, side / 2, _disc)
+      ..save()
       ..translate(c.dx, c.dy)
       ..rotate(rotation)
-      ..scale(zoom);
-    // 회전 모드는 내가 중심, 고정 모드는 맵 전체가 중심.
-    final center = rotating
-        ? me
-        : Offset(map.width * k / 2, map.height * k / 2);
-    canvas.translate(-center.dx, -center.dy);
-
-    final floor = Rect.fromLTWH(0, 0, map.width * k, map.height * k);
-    canvas
-      ..drawRect(floor, _floor)
-      ..drawRect(floor, _floorEdge..strokeWidth = line);
+      ..translate(-whole.width / 2, -whole.height / 2)
+      // 바닥을 칠하고 벽 자리를 지워서 걸을 수 있는 모양만 남긴다.
+      ..saveLayer(whole, Paint())
+      ..drawRect(whole, _floor);
+    for (final w in map.highWalls) {
+      canvas.drawRect(r(w), _cut);
+    }
     for (final b in map.bases) {
       canvas.drawRect(r(b.area), b.team == myTeam ? _mine : _enemy);
     }
     for (final cr in map.lowCrates) {
       canvas.drawRect(r(cr), _crate);
     }
-    for (final w in map.highWalls) {
-      canvas
-        ..drawRect(r(w), _wall)
-        ..drawRect(r(w), _wallEdge..strokeWidth = line);
-    }
+    canvas.restore(); // saveLayer
 
-    // 내 표시: 시야 부채꼴 + 화살표(확대해도 같은 크기).
-    final reach = 30 / zoom;
+    // 내 표시: 시야 부채꼴 + 화살표.
+    final me = Offset(p.position.x * k, p.position.y * k);
     canvas.drawPath(
       Path()
         ..moveTo(me.dx, me.dy)
         ..arcTo(
-          Rect.fromCircle(center: me, radius: reach),
+          Rect.fromCircle(center: me, radius: 18),
           p.angle - 0.5,
           1.0,
           false,
@@ -113,7 +90,7 @@ class Minimap extends PositionComponent
         ..close(),
       _view,
     );
-    final s = 6 / zoom;
+    const s = 5.0;
     final arrow = Path()
       ..moveTo(s * 1.3, 0)
       ..lineTo(-s, s * 0.85)
@@ -125,9 +102,9 @@ class Minimap extends PositionComponent
       ..translate(me.dx, me.dy)
       ..rotate(p.angle)
       ..drawPath(arrow, _me)
-      ..drawPath(arrow, _meEdge..strokeWidth = line)
+      ..drawPath(arrow, _meEdge)
       ..restore()
-      ..restore();
-    if (rotating) canvas.drawCircle(c, side / 2, _ring);
+      ..restore()
+      ..drawCircle(c, side / 2, _ring);
   }
 }

@@ -106,11 +106,11 @@ void main() {
   );
 
   onlineTester(db).testGameWidget(
-    'host starts at an A spawn of the frontline map, no training dummies',
+    'host starts at an A spawn of the PvP map, no training dummies',
     verify: (game, tester) async {
       final me = (x: game.player.position.x, y: game.player.position.y);
       expect(game.map.spawnsOf('A'), contains(me));
-      expect(game.map.width, 1610);
+      expect(game.map.width, 2170);
       expect(game.dummies, isEmpty);
     },
   );
@@ -282,11 +282,11 @@ void main() {
     'my auto-fire hits the opponent in front (my screen decides)',
     verify: (game, tester) async {
       await setHp('b', 100);
-      // frontline 중앙 길(11열)의 빈 곳에서 북쪽을 본다. 상대는 정면 210px.
+      // 진영 앞 마당(15열)에서 북쪽 가운데 통로를 본다. 상대는 정면 210px.
       game.player
-        ..position = Vector2(805, 1575)
+        ..position = Vector2(1085, 1575)
         ..angle = -pi / 2;
-      await db.set('rooms/$code/states/b', state(805, 1365));
+      await db.set('rooms/$code/states/b', state(1085, 1365));
       db.serverTime += 500;
       for (var i = 0; i < 90; i++) {
         game.update(1 / 60);
@@ -300,7 +300,7 @@ void main() {
     'when I die: dead for 5s, then back at my spawn with full hp + protection',
     verify: (game, tester) async {
       await tester.pump();
-      game.player.position = Vector2(805, 1365);
+      game.player.position = Vector2(1085, 1365);
       game.player.primary.ammo = 3;
       game.player.secondary.ammo = 0;
       await setHp('a', 0);

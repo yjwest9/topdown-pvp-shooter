@@ -1,5 +1,6 @@
 import 'dart:collection';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:topsoldier/game/components/game_map.dart';
@@ -7,10 +8,10 @@ import 'package:topsoldier/rules/balance.dart';
 import 'package:topsoldier/rules/cover.dart';
 import 'package:topsoldier/rules/movement.dart';
 
-/// assets/maps/frontline.tmx를 그대로 읽어서 decisions 11장 조건을 검사한다.
+/// assets/maps/outpost.tmx를 그대로 읽어서 decisions 11장 조건을 검사한다.
 void main() {
   final map = GameMap.fromTmx(
-    File('assets/maps/frontline.tmx').readAsStringSync(),
+    File('assets/maps/outpost.tmx').readAsStringSync(),
   );
   final w = map.width, h = map.height;
   const cell = GameMap.gridSize;
@@ -23,8 +24,8 @@ void main() {
   );
   String other(String team) => team == 'A' ? 'B' : 'A';
 
-  test('size is a multiple of the 70px grid', () {
-    expect((w, h), (1610, 2590));
+  test('size: 31 x 31 cells of 70px', () {
+    expect((w, h), (2170, 2170));
   });
 
   test('180° rotational symmetry for every wall, crate, spawn and base', () {
@@ -131,6 +132,21 @@ void main() {
           isTrue,
           reason: '${s.team} spawn ${s.pos} cannot reach the enemy base',
         );
+      }
+    },
+  );
+
+  test(
+    'roughly round: every walkable cell fits a circle about the map size',
+    () {
+      // 미니맵 원 반지름 = reach. 네모 맵이면 w/2 × 1.41, 이 맵은 둥글게 깎아서 1.05 안.
+      expect(map.reach, lessThanOrEqualTo(w / 2 * 1.05));
+      for (var row = 0; row < rows; row++) {
+        for (var c = 0; c < cols; c++) {
+          if (blocked[row][c]) continue;
+          final dx = (c + 0.5) * cell - w / 2, dy = (row + 0.5) * cell - h / 2;
+          expect(sqrt(dx * dx + dy * dy) < map.reach, isTrue);
+        }
       }
     },
   );

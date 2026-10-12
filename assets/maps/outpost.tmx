@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="31" height="31" tilewidth="70" tileheight="70" infinite="0" nextlayerid="5" nextobjectid="9999">
+ <objectgroup id="1" name="walls">
+  <object id="1" x="0" y="0" width="2170" height="140"/>
+  <object id="2" x="0" y="140" width="770" height="350"/>
+  <object id="3" x="1400" y="140" width="770" height="350"/>
+  <object id="4" x="770" y="280" width="280" height="70"/>
+  <object id="5" x="1120" y="280" width="280" height="70"/>
+  <object id="6" x="840" y="420" width="490" height="70"/>
+  <object id="7" x="0" y="490" width="630" height="210"/>
+  <object id="8" x="2030" y="490" width="140" height="560"/>
+  <object id="9" x="0" y="700" width="140" height="420"/>
+  <object id="10" x="700" y="700" width="280" height="210"/>
+  <object id="11" x="1190" y="700" width="630" height="210"/>
+  <object id="12" x="350" y="910" width="420" height="140"/>
+  <object id="13" x="1400" y="910" width="420" height="70"/>
+  <object id="14" x="0" y="2030" width="2170" height="140"/>
+  <object id="15" x="1400" y="1680" width="770" height="350"/>
+  <object id="16" x="0" y="1680" width="770" height="350"/>
+  <object id="17" x="1120" y="1820" width="280" height="70"/>
+  <object id="18" x="770" y="1820" width="280" height="70"/>
+  <object id="19" x="840" y="1680" width="490" height="70"/>
+  <object id="20" x="1540" y="1470" width="630" height="210"/>
+  <object id="21" x="0" y="1120" width="140" height="560"/>
+  <object id="22" x="2030" y="1050" width="140" height="420"/>
+  <object id="23" x="1190" y="1260" width="280" height="210"/>
+  <object id="24" x="350" y="1260" width="630" height="210"/>
+  <object id="25" x="1400" y="1120" width="420" height="140"/>
+  <object id="26" x="350" y="1190" width="420" height="70"/>
+ </objectgroup>
+ <objectgroup id="2" name="crates">
+  <object id="27" x="700" y="560" width="70" height="70"/>
+  <object id="28" x="1400" y="560" width="70" height="70"/>
+  <object id="29" x="490" y="840" width="70" height="70"/>
+  <object id="30" x="1960" y="840" width="70" height="70"/>
+  <object id="31" x="840" y="910" width="70" height="70"/>
+  <object id="32" x="1260" y="910" width="70" height="70"/>
+  <object id="33" x="280" y="980" width="70" height="70"/>
+  <object id="34" x="980" y="1050" width="140" height="70"/>
+  <object id="35" x="1400" y="1540" width="70" height="70"/>
+  <object id="36" x="700" y="1540" width="70" height="70"/>
+  <object id="37" x="1610" y="1260" width="70" height="70"/>
+  <object id="38" x="140" y="1260" width="70" height="70"/>
+  <object id="39" x="1260" y="1190" width="70" height="70"/>
+  <object id="40" x="840" y="1190" width="70" height="70"/>
+  <object id="41" x="1820" y="1120" width="70" height="70"/>
+  <object id="42" x="1050" y="1050" width="140" height="70"/>
+ </objectgroup>
+ <objectgroup id="4" name="bases">
+  <object id="43" x="770" y="1750" width="630" height="280">
+   <properties>
+    <property name="team" value="A"/>
+   </properties>
+  </object>
+  <object id="44" x="770" y="140" width="630" height="280">
+   <properties>
+    <property name="team" value="B"/>
+   </properties>
+  </object>
+ </objectgroup>
+ <objectgroup id="3" name="spawns">
+  <object id="45" x="875" y="1995">
+   <properties>
+    <property name="team" value="A"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="46" x="1085" y="1995">
+   <properties>
+    <property name="team" value="A"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="47" x="1295" y="1995">
+   <properties>
+    <property name="team" value="A"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="48" x="1295" y="175">
+   <properties>
+    <property name="team" value="B"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="49" x="1085" y="175">
+   <properties>
+    <property name="team" value="B"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="50" x="875" y="175">
+   <properties>
+    <property name="team" value="B"/>
+   </properties>
+   <point/>
+  </object>
+ </objectgroup>
+</map>

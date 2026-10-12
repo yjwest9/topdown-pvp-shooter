@@ -2,7 +2,7 @@ import 'game_map.dart';
 
 export 'game_map.dart' show MapBlock;
 
-/// 하드코딩 훈련소 맵(1400², 표적 4개). PvP는 frontline(Tiled).
+/// 하드코딩 훈련소 맵(1400², 표적 4개). PvP는 outpost(Tiled).
 class TestMap extends GameMap {
   TestMap() : super(width: mapSize, height: mapSize, blocks: _blocks);
 

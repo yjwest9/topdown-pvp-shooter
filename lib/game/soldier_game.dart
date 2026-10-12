@@ -101,7 +101,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     // PvP는 진영 맵(Tiled), 훈련소는 하드코딩 테스트 맵 + 표적.
     map = match == null
         ? TestMap()
-        : GameMap.fromTmx(await assets.readFile('maps/frontline.tmx'));
+        : GameMap.fromTmx(await assets.readFile('maps/outpost.tmx'));
     final spawn = _pickSpawn();
     player = Player(
       position: Vector2(spawn.x, spawn.y),

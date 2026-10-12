@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flame/components.dart';
@@ -69,6 +70,40 @@ class GameMap extends Component {
     for (final b in blocks)
       if (b.low) b.box,
   ];
+
+  /// 맵 가운데에서 걸을 수 있는 칸(높은 벽이 없는 칸)의 가장 먼 모서리까지 거리.
+  /// 미니맵 원이 이 반지름으로 맵 전체를 담는다.
+  late final double reach = () {
+    var far = 0.0;
+    final cols = (width / gridSize).ceil(), rows = (height / gridSize).ceil();
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        final cell = (
+          left: c * gridSize,
+          top: r * gridSize,
+          right: (c + 1) * gridSize,
+          bottom: (r + 1) * gridSize,
+        );
+        final walled = highWalls.any(
+          (w) =>
+              w.left < cell.right &&
+              cell.left < w.right &&
+              w.top < cell.bottom &&
+              cell.top < w.bottom,
+        );
+        if (walled) continue;
+        for (final (x, y) in [
+          (cell.left, cell.top),
+          (cell.right, cell.top),
+          (cell.left, cell.bottom),
+          (cell.right, cell.bottom),
+        ]) {
+          far = max(far, sqrt(pow(x - width / 2, 2) + pow(y - height / 2, 2)));
+        }
+      }
+    }
+    return far;
+  }();
 
   List<Vec> spawnsOf(String team) => [
     for (final s in spawns)
