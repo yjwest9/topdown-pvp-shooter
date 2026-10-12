@@ -8,8 +8,10 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:topsoldier/game/components/bullet.dart';
+import 'package:topsoldier/game/components/kill_feedback.dart';
 import 'package:topsoldier/game/soldier_game.dart';
 import 'package:topsoldier/rules/balance.dart';
+import 'package:topsoldier/rules/combat.dart';
 
 GameTester<SoldierGame> gameTester({
   double sensitivity = 5,
@@ -107,17 +109,22 @@ void main() {
   );
 
   gameTester().testGameWidget(
-    'compass needle points to world north on screen',
+    'killing a training dummy shows the kill banner, then it fades',
     verify: (game, tester) async {
-      place(game, 0); // facing east -> north is screen left
-      game.update(0);
-      final north = game.camera.localToGlobal(Vector2(700, 900));
-      final me = game.camera.localToGlobal(Vector2(700, 1000));
-      final screenDir = north - me;
-      // 바늘은 위쪽(0,-1)을 기준으로 angle만큼 회전
-      final needle = Vector2(sin(game.compass.angle), -cos(game.compass.angle));
-      expect(needle.x, closeTo(screenDir.normalized().x, 1e-3));
-      expect(needle.y, closeTo(screenDir.normalized().y, 1e-3));
+      final dummy = game.hitTargets.first;
+      dummy.onHit(
+        const HitResult(miss: false, crit: false, damage: 30),
+        rifleStandard,
+      );
+      expect(game.killBanner.showing, isFalse);
+      dummy.onHit(
+        const HitResult(miss: false, crit: false, damage: 999),
+        rifleStandard,
+      );
+      expect(game.killBanner.showing, isTrue);
+      expect(game.killBanner.victim, '표적');
+      game.update(KillBanner.duration + 0.1);
+      expect(game.killBanner.showing, isFalse);
     },
   );
 

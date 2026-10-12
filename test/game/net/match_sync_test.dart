@@ -240,6 +240,7 @@ void main() {
       await tester.pump();
       expect((await db.get('rooms/$code/hp/b') as Map)['value'], 87);
       expect(await db.get('rooms/$code/kills'), isNull);
+      expect(game.killBanner.showing, isFalse); // 안 죽었으면 처치 표시 없음
     },
   );
 
@@ -256,6 +257,9 @@ void main() {
       expect((kills.single as Map)['killer'], 'a');
       expect((kills.single as Map)['victim'], 'b');
       expect(await db.get('rooms/$code/score/A'), 1);
+      // 처치 표시
+      expect(game.killBanner.showing, isTrue);
+      expect(game.killBanner.victim, game.match!.nameOf('b'));
 
       // 이미 0이면 더 깎거나 킬을 또 세지 않는다.
       game.match!.hit('b', hit13, rifleStandard);

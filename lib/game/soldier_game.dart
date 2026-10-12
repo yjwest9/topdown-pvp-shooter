@@ -15,9 +15,9 @@ import '../rules/movement.dart';
 import '../rules/spawn.dart';
 import 'components/bot_soldier.dart';
 import 'components/bullet.dart';
-import 'components/compass.dart';
 import 'components/fire_button.dart';
 import 'components/game_map.dart';
+import 'components/kill_feedback.dart';
 import 'components/match_hud.dart';
 import 'components/minimap.dart';
 import 'components/player.dart';
@@ -54,7 +54,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   final BotDifficulty? bot;
 
   /// 시점 감도 1~10.
-  final double sensitivity;
+  double sensitivity;
 
   /// 미니맵이 내 방향으로 도는지(true) 내 진영이 늘 아래인 고정인지(false).
   bool minimapRotates;
@@ -70,6 +70,9 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     onMinimapRotatesChanged?.call(minimapRotates);
   }
 
+  /// 내가 처치했다(표적이 쓰러짐, 상대 체력을 0으로 만듦): 처치 표시.
+  void confirmKill(String victim) => killBanner.show(victim);
+
   /// 탄 퍼짐·미스·크리 랜덤. 테스트는 Random(seed)를 넣는다.
   final Random random;
 
@@ -82,7 +85,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
 
   late final GameMap map;
   late final Player player;
-  late final Compass compass;
+  late final KillBanner killBanner;
   late final TextComponent stanceLabel;
   late final List<TargetDummy> dummies;
 
@@ -123,16 +126,17 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
       if (bot case final b?) {
         await add(BotSoldier(match: match!, level: botLevels[b]!));
       }
-      // 나침반(20~68) → 나가기 버튼(Flutter, 76~150) 오른쪽.
-      minimap = Minimap(position: Vector2(156, 8));
+      // 왼쪽 위. 그 오른쪽에 설정 버튼(Flutter, MatchView).
+      minimap = Minimap(position: Vector2(8, 8));
       await camera.viewport.addAll([MatchHud(match!), minimap!]);
     }
 
     // 플레이어가 화면 가로 중앙, 세로 66% 지점.
     camera.viewfinder.anchor = const Anchor(0.5, 0.66);
-    compass = Compass(position: Vector2(44, 44));
+    killBanner = KillBanner();
     stanceLabel = TextComponent(
-      position: Vector2(16, 84),
+      // 미니맵(1대1에만) 아래, 없으면 왼쪽 위.
+      position: Vector2(12, minimap == null ? 52 : Minimap.side + 16),
       textRenderer: TextPaint(
         style: const TextStyle(
           color: Color(0xFFE8B33A),
@@ -197,7 +201,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
       ),
       ...buttons,
       fireButton,
-      compass,
+      killBanner,
       stanceLabel,
     ]);
     _syncCamera();
@@ -267,7 +271,10 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
           body: d.coverBody,
           stance: d.stance,
           protected: false,
-          onHit: (h, _) => d.takeDamage(h.damage),
+          onHit: (h, _) {
+            d.takeDamage(h.damage);
+            if (d.dead) confirmKill('표적');
+          },
         ),
     for (final r in match?.remotes.values ?? const <RemotePlayer>[])
       if (r.targetable)
@@ -346,7 +353,6 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     camera.viewfinder
       ..position = player.position
       ..angle = player.angle + pi / 2;
-    compass.angle = -camera.viewfinder.angle;
   }
 
   bool get _shiftHeld =>

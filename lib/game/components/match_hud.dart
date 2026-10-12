@@ -61,7 +61,9 @@ class MatchHud extends Component with HasGameReference<SoldierGame> {
     for (final (i, k) in sync.killLog.indexed) {
       _log.render(
         canvas,
-        '${sync.nameOf(k.killer)} ▸ ${sync.nameOf(k.victim)}  ${k.weapon}'
+        // 웹에서 드문 기호(▸)는 글꼴이 늦게 와서 깨진 채 남는다. ASCII만.
+        '${sync.nameOf(k.killer)} > ${sync.nameOf(k.victim)}  '
+        '${weaponById(k.weapon)?.name ?? k.weapon}'
         '${k.crit ? '  CRIT' : ''}',
         Vector2(size.x - 16, 84 + i * 16.0),
         anchor: Anchor.topRight,

@@ -10,6 +10,7 @@ import '../../rules/cover.dart';
 import '../../rules/movement.dart';
 import '../soldier_game.dart';
 import 'floating_text.dart';
+import 'kill_feedback.dart';
 
 /// 총알이 맞힐 수 있는 대상(훈련 표적, 상대). [key]는 같은 대상인지 가리는 용도.
 typedef HitTarget = ({
@@ -100,6 +101,7 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
       }
       t.onHit(hit, weapon);
       game.world.add(FloatingText.damage(hit.damage, at: at, crit: hit.crit));
+      if (this.targets == null) game.world.add(HitMarker(position: at)); // 내 총알
       return _stop(const Color(0xFFE0563F));
     }
 

@@ -56,20 +56,66 @@ Future<FakeRtdbService> openMatch(WidgetTester tester, MatchMode mode) async {
   return db;
 }
 
+/// 게임 안 설정 버튼 → 나가기.
+Future<void> exitViaSettings(WidgetTester tester) async {
+  await tester.tap(find.byTooltip('설정'));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
+  await tester.tap(find.text('나가기'));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
+}
+
 void main() {
+  testWidgets('no exit button on screen: exit is inside the settings', (
+    tester,
+  ) async {
+    await openMatch(tester, MatchMode.custom);
+    expect(find.text('나가기'), findsNothing);
+    await tester.tap(find.byTooltip('설정'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('나가기'), findsOneWidget);
+    await tester.tap(find.text('계속하기'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(MatchView), findsOneWidget);
+  });
+
+  testWidgets('in-game settings apply right away (sensitivity, fire mode)', (
+    tester,
+  ) async {
+    await openMatch(tester, MatchMode.custom);
+    final game = tester
+        .widget<RiverpodAwareGameWidget<SoldierGame>>(
+          find.byType(RiverpodAwareGameWidget<SoldierGame>),
+        )
+        .game!;
+    await tester.tap(find.byTooltip('설정'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    tester.widget<Slider>(find.byType(Slider)).onChanged!(8.3);
+    await tester.pump();
+    expect(game.sensitivity, 8.3);
+    await tester.tap(find.text('MANUAL').first); // 주무기
+    await tester.pump();
+    expect(game.primaryFireMode, FireMode.manual);
+    expect(game.secondaryFireMode, FireMode.auto);
+  });
+
   testWidgets('quick match: leaving asks first, then records a loss with '
       'no reward', (tester) async {
     final db = await openMatch(tester, MatchMode.pvp);
 
-    await tester.tap(find.text('나가기'));
-    await tester.pump();
+    await exitViaSettings(tester);
     expect(find.text('지금 나가면 패배로 기록됩니다.'), findsOneWidget);
     await tester.tap(find.text('계속하기'));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(MatchView), findsOneWidget); // 안 나감
 
-    await tester.tap(find.text('나가기'));
-    await tester.pump();
+    await exitViaSettings(tester);
     await tester.tap(find.text('나가기').last); // 확인 창의 버튼
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
@@ -84,8 +130,7 @@ void main() {
     tester,
   ) async {
     final db = await openMatch(tester, MatchMode.custom);
-    await tester.tap(find.text('나가기'));
-    await tester.pump();
+    await exitViaSettings(tester);
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.byType(MatchView), findsNothing);

@@ -317,6 +317,7 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
     );
     if (r == null || !isKill(r.before, r.after)) return;
     _kills++;
+    if (!_closed) game.confirmKill(nameOf(victim));
     await rooms.recordKill(
       code,
       NetKill(killer: uid, victim: victim, weapon: weapon.id, crit: h.crit),

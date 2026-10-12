@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/match_stats.dart';
 import '../../data/repositories/profile_repository.dart';
+import '../../game/components/minimap.dart';
 import '../../game/net/match_sync.dart';
 import '../../game/soldier_game.dart';
 import '../../rules/balance.dart';
@@ -73,6 +74,15 @@ class _MatchViewState extends ConsumerState<MatchView> {
       }
       await _exit(result: stats);
     };
+  }
+
+  /// 게임 안 설정: 감도·발사 방식·미니맵은 바로 적용(저장도), 나가기. 게임은 멈추지 않는다.
+  Future<void> _openSettings() async {
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (_) => _InGameSettings(_game),
+    );
+    if (leave == true && mounted) await _leave();
   }
 
   /// 나가기 버튼·뒤로 가기. 빠른 대전이면 확인 후 패배로 기록하고 나간다.
@@ -143,17 +153,15 @@ class _MatchViewState extends ConsumerState<MatchView> {
       body: Stack(
         children: [
           RiverpodAwareGameWidget<SoldierGame>(key: _gameKey, game: _game),
-          // 나침반 오른쪽. Flame HUD처럼 화면 모서리 기준이라 SafeArea를 쓰지 않는다
-          // (SafeArea가 카메라 구멍만큼 밀어서 폰에서 엉뚱한 자리에 보였다).
+          // 미니맵(1대1에만) 오른쪽, 없으면 왼쪽 위. Flame HUD처럼 화면 모서리 기준이라
+          // SafeArea를 쓰지 않는다(카메라 구멍만큼 밀려서 폰에서 엉뚱한 자리에 보였다).
           Positioned(
-            left: 76,
+            left: widget.match == null ? 4 : Minimap.side + 12,
             top: 4,
-            child: TextButton(
-              onPressed: () => unawaited(_leave()),
-              child: const Text(
-                '나가기',
-                style: TextStyle(color: Color(0xFFE3E6D8)),
-              ),
+            child: IconButton(
+              tooltip: '설정',
+              onPressed: () => unawaited(_openSettings()),
+              icon: const Icon(Icons.settings, color: Color(0xFFE3E6D8)),
             ),
           ),
           if (_message != null)
@@ -176,6 +184,104 @@ class _MatchViewState extends ConsumerState<MatchView> {
             ),
         ],
       ),
+    );
+  }
+}
+
+class _InGameSettings extends ConsumerWidget {
+  const _InGameSettings(this.game);
+
+  final SoldierGame game;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(settingsProvider).value ?? const SettingsState();
+    final vm = ref.read(settingsProvider.notifier);
+    return AlertDialog(
+      title: const Text('설정'),
+      contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+      content: SizedBox(
+        width: 420,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  const SizedBox(width: 90, child: Text('감도')),
+                  Expanded(
+                    child: Slider(
+                      value: s.sensitivity,
+                      min: minSensitivity,
+                      max: maxSensitivity,
+                      divisions:
+                          ((maxSensitivity - minSensitivity) / sensitivityStep)
+                              .round(),
+                      label: s.sensitivity.toStringAsFixed(1),
+                      onChanged: (v) {
+                        unawaited(vm.setSensitivity(v));
+                        game.sensitivity = v;
+                      },
+                    ),
+                  ),
+                  Text(s.sensitivity.toStringAsFixed(1)),
+                ],
+              ),
+              for (final (primary, label) in [(true, '주무기'), (false, '보조무기')])
+                Row(
+                  children: [
+                    SizedBox(width: 90, child: Text(label)),
+                    SegmentedButton<FireMode>(
+                      showSelectedIcon: false,
+                      segments: const [
+                        ButtonSegment(
+                          value: FireMode.auto,
+                          label: Text('AUTO'),
+                        ),
+                        ButtonSegment(
+                          value: FireMode.manual,
+                          label: Text('MANUAL'),
+                        ),
+                      ],
+                      selected: {
+                        primary ? s.primaryFireMode : s.secondaryFireMode,
+                      },
+                      onSelectionChanged: (v) {
+                        unawaited(vm.setFireMode(v.first, primary: primary));
+                        if (primary) {
+                          game.primaryFireMode = v.first;
+                        } else {
+                          game.secondaryFireMode = v.first;
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              if (game.match != null)
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('미니맵 회전'),
+                  value: s.minimapRotates,
+                  onChanged: (v) {
+                    unawaited(vm.setMinimapRotates(v));
+                    game.minimapRotates = v;
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: TextButton.styleFrom(foregroundColor: const Color(0xFFE0563F)),
+          child: const Text('나가기'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('계속하기'),
+        ),
+      ],
     );
   }
 }
