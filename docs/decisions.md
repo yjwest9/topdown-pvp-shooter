@@ -207,7 +207,21 @@ Open API 1개 이상 / 푸시 알림 1개 이상 / Firebase / REST·JSON / MVVM 
   rooms/{code}/shots/{id}    연출용
   rooms/{code}/kills/{id}    { killer, victim, weapon, crit, t }
   rooms/{code}/score         { A, B } (트랜잭션)
+  matchmaking/1v1/waiting    { uid, roomId, name, t, takenBy? } (빠른 매칭 대기석)
   ```
+- **매칭**(2026-10-12): 방 코드 입장은 그대로 두고 **빠른 대전 1대1**을 추가한다.
+  - RTDB 대기석 하나 + 트랜잭션으로 짝짓기. 별도 서버 없음.
+  - 매칭으로 만든 방은 4자리 코드가 아니라 push 키를 방 ID로 쓴다(코드 공간 낭비 방지).
+  - 판정(순수 함수 `decideQuickMatch`, 판정과 쓰기는 대기석 트랜잭션 하나 안에서):
+    - 비었거나 t가 15초 넘게 오래됨 → 내가 앉음(claim). 내 방, 내가 방장(A팀)
+    - 내가 이미 앉아 있음 → 계속 대기(wait)
+    - 남이 앉아 있고 takenBy 없음 → takenBy = 나(take). 그 방에 입장(B팀)
+    - 남이 앉아 있고 takenBy 있음 → 0.5초 뒤 재시도(retry)
+  - 대기하는 쪽은 5초마다 t를 갱신한다. takenBy가 생기면 대기석을 지우고 상대 입장을 기다린다. 상대가 들어오면 "상대를 찾았습니다!" 3초 카운트다운 뒤 방장이 자동 시작(시작 버튼 없음).
+  - 취소: 대기석과 내 방을 지운다. 앱이 꺼지면 onDisconnect로 내 대기석과 방을 지우고, 매칭이 성사되면 그 onDisconnect를 취소한다.
+  - 30초를 기다려도 상대가 없으면 "봇과 대전" 버튼이 나타난다. 누를 때만 매칭을 취소하고 보통 난이도 봇전으로 간다(자동으로 넘어가지 않음).
+  - 방 정리: 마지막 사람이 나가면 방 전체를 지운다(빠른 매칭 방, 코드 방 둘 다). 나갈 때 내 onDisconnect도 취소한다(안 하면 나중에 끊길 때 `connected=false`를 써서 빈 방이 다시 생긴다).
+  - DB 규칙: 대기석은 비었거나·내 것이거나·t가 15초보다 오래됐을 때만 새로 앉기. takenBy는 비어 있을 때 한 번, 값은 내 uid만. 삭제는 uid가 나일 때만. 방 전체 삭제는 그 방 참가자만.
 - **Firestore**: `users/{uid}` { nickname, gold, diamond, lastAdAt(서버 시간), fcmToken, stats }, `users/{uid}/weapons/{id}`, `users/{uid}/characters/{id}`, `matches/{id}`, `config/balance`(밸런스·경제 설정).
 - 로그인 [잠정]: 익명 로그인 + 닉네임.
 - 테스트: 에뮬레이터 1개 + 크롬 1개로 1대1, 나머지는 봇. Firebase 로컬 에뮬레이터 사용.

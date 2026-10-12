@@ -22,6 +22,9 @@ abstract class RtdbService {
   /// 자동 id 자식으로 추가.
   Future<void> push(String path, Object? value);
 
+  /// [push]가 쓰는 것과 같은 새 자동 id(쓰지는 않음).
+  String newKey(String path);
+
   /// [update]가 지금 값으로 새 값을 만든다([txAbort]면 중단). 서버 값이 바뀌어 있으면
   /// 다시 부른다. [value]는 끝났을 때 값.
   Future<({bool committed, Object? value})> transaction(
@@ -38,6 +41,9 @@ abstract class RtdbService {
   /// 접속이 끊기면 서버가 대신 실행.
   Future<void> setOnDisconnect(String path, Object? value);
   Future<void> removeOnDisconnect(String path);
+
+  /// [path]와 그 아래에 걸어 둔 내 onDisconnect를 모두 취소.
+  Future<void> cancelOnDisconnect(String path);
 }
 
 class FirebaseRtdbService implements RtdbService {
@@ -58,6 +64,9 @@ class FirebaseRtdbService implements RtdbService {
 
   @override
   Future<void> push(String path, Object? value) => _ref(path).push().set(value);
+
+  @override
+  String newKey(String path) => _ref(path).push().key!;
 
   @override
   Future<({bool committed, Object? value})> transaction(
@@ -88,4 +97,8 @@ class FirebaseRtdbService implements RtdbService {
   @override
   Future<void> removeOnDisconnect(String path) =>
       _ref(path).onDisconnect().remove();
+
+  @override
+  Future<void> cancelOnDisconnect(String path) =>
+      _ref(path).onDisconnect().cancel();
 }

@@ -57,14 +57,7 @@ class RoomRepository {
       final code = newRoomCode(_random);
       final created = await _db.transaction(
         '${_room(code)}/meta',
-        (current) => current != null
-            ? txAbort
-            : {
-                'hostUid': uid,
-                'status': RoomMeta.waiting,
-                'mode': 'pvp1v1',
-                'map': 'test',
-              },
+        (current) => current != null ? txAbort : _newMeta(uid),
       );
       if (!created.committed) continue;
       await _db.update('${_room(code)}/meta', {'createdAt': serverTimestamp});
@@ -73,6 +66,13 @@ class RoomRepository {
     }
     throw const RoomException('방을 만들지 못했습니다. 다시 시도해 주세요.');
   }
+
+  Map<String, Object?> _newMeta(String uid) => {
+    'hostUid': uid,
+    'status': RoomMeta.waiting,
+    'mode': 'pvp1v1',
+    'map': 'test',
+  };
 
   Future<void> joinRoom(
     String code, {
@@ -98,14 +98,18 @@ class RoomRepository {
     required String name,
     required String team,
   }) async {
-    final room = _room(code);
-    await _db.setOnDisconnect('$room/players/$uid/connected', false);
-    await _db.removeOnDisconnect('$room/states/$uid');
-    await _db.set('$room/players/$uid', {
+    await _armDisconnect(code, uid);
+    await _db.set('${_room(code)}/players/$uid', {
       'name': name,
       'connected': true,
       'team': team,
     });
+  }
+
+  Future<void> _armDisconnect(String code, String uid) async {
+    final room = _room(code);
+    await _db.setOnDisconnect('$room/players/$uid/connected', false);
+    await _db.removeOnDisconnect('$room/states/$uid');
   }
 
   /// 방장만. 둘 다 meta를 보고 게임 화면으로 간다. 시각은 서버 시간 추정값.
@@ -124,10 +128,93 @@ class RoomRepository {
     {'status': RoomMeta.ended, 'winner': winner},
   );
 
+  /// 나간다. 마지막 사람이면 방 전체를 지운다(decisions 13장). 내 onDisconnect도 취소한다
+  /// (안 하면 나중에 끊길 때 `connected=false`를 써서 빈 방이 다시 생긴다).
   Future<void> leave(String code, String uid) async {
-    await _db.set('${_room(code)}/players/$uid/connected', false);
-    await _db.remove('${_room(code)}/states/$uid');
+    final room = _room(code);
+    await _db.cancelOnDisconnect(room);
+    await _db.set('$room/players/$uid/connected', false);
+    await _db.remove('$room/states/$uid');
+    // ponytail: 둘이 동시에 나가면 둘 다 지울 수 있다(같은 결과). 둘 다 앱이 꺼지면 방이 남는다.
+    final players = _players(await _db.get('$room/players'));
+    if (!players.any((p) => p.connected)) await _db.remove(room);
   }
+
+  // ---------------------------------------------------------- 빠른 매칭 (13장)
+
+  static const _slot = 'matchmaking/1v1/waiting';
+
+  /// 빠른 매칭용 방. 4자리 코드 대신 push 키가 방 ID. 나는 방장(A팀).
+  /// 매칭 전에 앱이 꺼지면 방이 지워진다([keepRoom]으로 취소).
+  Future<String> createQuickRoom({
+    required String uid,
+    required String name,
+  }) async {
+    final id = _db.newKey('rooms');
+    await _db.set('${_room(id)}/meta', {
+      ..._newMeta(uid),
+      'createdAt': serverTimestamp,
+    });
+    await _enter(id, uid: uid, name: name, team: RoomMeta.teamA);
+    await _db.removeOnDisconnect(_room(id));
+    return id;
+  }
+
+  /// 매칭됨: 끊겨도 방을 지우지 않는다(나만 `connected=false`).
+  Future<void> keepRoom(String code, String uid) async {
+    await _db.cancelOnDisconnect(_room(code));
+    await _armDisconnect(code, uid);
+  }
+
+  /// 매칭 전 취소: 방 전체를 지운다.
+  Future<void> deleteRoom(String code) async {
+    await _db.cancelOnDisconnect(_room(code));
+    await _db.remove(_room(code));
+  }
+
+  /// 대기석 트랜잭션. [next]가 지금 자리로 새 자리를 정한다(null이면 그대로 둠).
+  /// 서버 값이 바뀌어 있으면 다시 부른다. 끝났을 때 자리를 돌려준다.
+  Future<WaitingSlot?> claimSlot(
+    WaitingSlot? Function(WaitingSlot? current) next,
+  ) async {
+    final r = await _db.transaction(
+      _slot,
+      (cur) =>
+          next(cur == null ? null : WaitingSlot.fromJson(cur))?.toJson() ??
+          txAbort,
+    );
+    return r.value == null ? null : WaitingSlot.fromJson(r.value);
+  }
+
+  /// 앉은 뒤: 앱이 꺼지면 내 자리를 지운다(DB 규칙상 내 자리일 때만 지워진다).
+  Future<void> removeSlotOnDisconnect() => _db.removeOnDisconnect(_slot);
+
+  /// 아직 내 자리이고 아무도 안 잡았으면 t를 갱신(살아 있다는 표시).
+  Future<void> heartbeat(String uid, int serverNow) =>
+      _db.transaction(_slot, (cur) {
+        if (cur == null) return txAbort;
+        final s = WaitingSlot.fromJson(cur);
+        if (s.uid != uid || s.takenBy != null) return txAbort;
+        return WaitingSlot(
+          uid: s.uid,
+          roomId: s.roomId,
+          name: s.name,
+          t: serverNow,
+        ).toJson();
+      });
+
+  /// 내 자리면 지운다. onDisconnect도 취소.
+  Future<void> leaveSlot(String uid) async {
+    await _db.cancelOnDisconnect(_slot);
+    await _db.transaction(
+      _slot,
+      (cur) =>
+          cur != null && WaitingSlot.fromJson(cur).uid == uid ? null : txAbort,
+    );
+  }
+
+  Stream<WaitingSlot?> slot() =>
+      _db.watch(_slot).map((v) => v == null ? null : WaitingSlot.fromJson(v));
 
   Stream<RoomMeta?> meta(String code) => _db
       .watch('${_room(code)}/meta')

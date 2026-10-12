@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../game/net/match_sync.dart';
 import '../../rules/balance.dart';
 import '../match/match_view.dart';
+import '../matchmaking/matchmaking_view.dart';
 import 'lobby_view_model.dart';
 
 class LobbyView extends ConsumerStatefulWidget {
@@ -40,6 +41,13 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
       MatchSync(rooms: room.rooms, code: room.code, uid: 'me', isHost: true),
       bot: bot,
     );
+  }
+
+  /// 빠른 대전. 30초 넘게 못 찾아 "봇과 대전"을 누르면 보통 봇전으로.
+  Future<void> _quickMatch() async {
+    final bot = await Navigator.of(context)
+        .push<bool>(MaterialPageRoute(builder: (_) => const MatchmakingView()));
+    if (bot == true && mounted) await _playBot(BotDifficulty.normal);
   }
 
   @override
@@ -98,6 +106,18 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
             ),
           ],
           const SizedBox(height: 24),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              textStyle: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            onPressed: s.busy ? null : () => unawaited(_quickMatch()),
+            child: const Text('빠른 대전 1대1'),
+          ),
+          const SizedBox(height: 12),
           FilledButton(
             onPressed: () => unawaited(_play(null)),
             child: const Text('훈련소'),

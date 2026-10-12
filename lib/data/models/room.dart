@@ -221,3 +221,44 @@ class NetShot {
     'weapon': weapon,
   };
 }
+
+/// `matchmaking/1v1/waiting`. 빠른 매칭 대기석 하나(decisions 13장).
+class WaitingSlot {
+  const WaitingSlot({
+    required this.uid,
+    required this.roomId,
+    required this.name,
+    required this.t,
+    this.takenBy,
+  });
+
+  factory WaitingSlot.fromJson(Object? json) {
+    final m = _map(json);
+    return WaitingSlot(
+      uid: m['uid'] as String,
+      roomId: m['roomId'] as String,
+      name: m['name'] as String? ?? '',
+      t: _i(m['t']),
+      takenBy: m['takenBy'] as String?,
+    );
+  }
+
+  /// 앉은 사람(방장).
+  final String uid;
+  final String roomId;
+  final String name;
+
+  /// 마지막으로 살아 있다고 알린 서버 시간(ms).
+  final int t;
+
+  /// 이 자리를 잡은 상대. 없으면 아직 기다리는 중.
+  final String? takenBy;
+
+  Map<String, Object?> toJson() => {
+    'uid': uid,
+    'roomId': roomId,
+    'name': name,
+    't': t,
+    'takenBy': ?takenBy,
+  };
+}

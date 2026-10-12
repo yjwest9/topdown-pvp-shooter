@@ -92,6 +92,8 @@ void main() {
       game.update(1 / 15);
       await tester.pump();
       expect(await db.get('rooms/$code/states/a'), isNotNull);
+      // 상대가 남아 있다(혼자면 마지막 사람이라 방이 통째로 지워진다).
+      await db.set('rooms/$code/players/b', {'connected': true});
 
       await game.match!.leave();
       for (var i = 0; i < 30; i++) {

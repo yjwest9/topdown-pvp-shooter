@@ -3,6 +3,7 @@
     "rooms": {
       ".read": "auth != null",
       "$code": {
+        ".write": "auth != null && !newData.exists() && data.child('players/' + auth.uid).exists()",
         "meta": {
           ".write": "auth != null && (data.exists() ? data.child('hostUid').val() === auth.uid : newData.child('hostUid').val() === auth.uid)"
         },
@@ -35,6 +36,14 @@
           "$team": {
             ".write": "auth != null && ($team === 'A' || $team === 'B') && root.child('rooms/' + $code + '/players/' + auth.uid).exists() && newData.val() === (data.exists() ? data.val() : 0) + 1"
           }
+        }
+      }
+    },
+    "matchmaking": {
+      "1v1": {
+        "waiting": {
+          ".read": "auth != null",
+          ".write": "auth != null && ((!newData.exists() && data.child('uid').val() === auth.uid) || (newData.child('uid').val() === auth.uid && newData.child('t').isNumber() && newData.child('t').val() <= now + 5000 && (((!data.exists() || data.child('t').val() < now - 15000) && !newData.child('takenBy').exists()) || (data.child('uid').val() === auth.uid && (!newData.child('takenBy').exists() || newData.child('takenBy').val() === data.child('takenBy').val())))) || (data.exists() && data.child('uid').val() !== auth.uid && !data.child('takenBy').exists() && newData.child('takenBy').val() === auth.uid && newData.child('uid').val() === data.child('uid').val() && newData.child('roomId').val() === data.child('roomId').val() && newData.child('name').val() === data.child('name').val() && newData.child('t').val() === data.child('t').val()))"
         }
       }
     }

@@ -62,7 +62,10 @@ class LocalRtdbService implements RtdbService {
 
   @override
   Future<void> push(String path, Object? value) =>
-      set('$path/id${_pushId++}', value);
+      set('$path/${newKey(path)}', value);
+
+  @override
+  String newKey(String path) => 'id${_pushId++}';
 
   @override
   Future<({bool committed, Object? value})> transaction(
@@ -103,4 +106,7 @@ class LocalRtdbService implements RtdbService {
 
   @override
   Future<void> removeOnDisconnect(String path) async {}
+
+  @override
+  Future<void> cancelOnDisconnect(String path) async {}
 }

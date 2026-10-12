@@ -55,6 +55,23 @@ void main() {
     expect(await db.get('rooms/$code/states/host'), isNull);
   });
 
+  test('leave: the room is deleted when the last player leaves', () async {
+    final db = FakeRtdbService();
+    final repo = RoomRepository(db);
+    final code = await repo.createRoom(uid: 'a', name: 'A');
+    await repo.joinRoom(code, uid: 'b', name: 'B');
+
+    await repo.leave(code, 'a');
+    expect(await db.get('rooms/$code/players/a/connected'), false);
+
+    await repo.leave(code, 'b');
+    expect(await db.get('rooms/$code'), isNull);
+
+    // 나간 뒤 끊겨도 빈 방이 다시 생기지 않는다(onDisconnect 취소).
+    db.disconnect();
+    expect(await db.get('rooms/$code'), isNull);
+  });
+
   test('join: missing code throws', () async {
     final repo = RoomRepository(FakeRtdbService());
     expect(

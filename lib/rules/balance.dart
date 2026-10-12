@@ -394,6 +394,24 @@ const stateSendHz = 15;
 /// 상대 상태를 이만큼(ms) 늦게 재생하며 보간한다.
 const interpolationDelayMs = 100;
 
+// ------------------------------------------------- 빠른 매칭 (13장)
+
+/// 대기석 t가 이보다(ms) 오래되면 버려진 자리로 보고 새로 앉는다.
+/// database.rules.json의 `now - 15000`과 같아야 한다.
+const quickMatchStaleMs = 15000;
+
+/// 대기하는 쪽이 t를 갱신하는 간격.
+const quickMatchHeartbeat = Duration(seconds: 5);
+
+/// 이미 누가 잡은 자리면 이만큼 뒤에 다시 본다.
+const quickMatchRetry = Duration(milliseconds: 500);
+
+/// 이만큼 기다려도 상대가 없으면 "봇과 대전" 버튼을 보여 준다.
+const quickMatchBotOffer = Duration(seconds: 30);
+
+/// 상대를 찾은 뒤 시작까지 카운트다운(초).
+const quickMatchCountdown = 3;
+
 // ------------------------------------------------- 매치 (11장, 12장) [잠정]
 
 /// 팀 데스매치 시간.

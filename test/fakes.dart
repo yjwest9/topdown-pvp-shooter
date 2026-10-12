@@ -100,7 +100,10 @@ class FakeRtdbService implements RtdbService {
 
   @override
   Future<void> push(String path, Object? value) async =>
-      _write('$path/id${_pushId++}', value);
+      _write('$path/${newKey(path)}', value);
+
+  @override
+  String newKey(String path) => 'id${_pushId++}';
 
   @override
   Future<({bool committed, Object? value})> transaction(
@@ -117,7 +120,8 @@ class FakeRtdbService implements RtdbService {
   Stream<Object?> watch(String path) => Stream.multi((c) {
     c.add(_read(path));
     final sub = _changed.stream.listen((_) => c.addSync(_read(path)));
-    c.onCancel = sub.cancel;
+    // Future를 돌려주면 .first가 루트 존의 취소 완료를 기다려서 가짜 시간(testWidgets) 안에서 안 끝난다.
+    c.onCancel = () => unawaited(sub.cancel());
   });
 
   @override
@@ -133,7 +137,8 @@ class FakeRtdbService implements RtdbService {
 
     emitNew();
     final sub = _changed.stream.listen((_) => emitNew());
-    c.onCancel = sub.cancel;
+    // Future를 돌려주면 .first가 루트 존의 취소 완료를 기다려서 가짜 시간(testWidgets) 안에서 안 끝난다.
+    c.onCancel = () => unawaited(sub.cancel());
   });
 
   @override
@@ -143,4 +148,9 @@ class FakeRtdbService implements RtdbService {
   @override
   Future<void> removeOnDisconnect(String path) async =>
       onDisconnect[path] = null;
+
+  /// 클라이언트 구분이 없어서 다른 사람이 건 것도 같이 지운다.
+  @override
+  Future<void> cancelOnDisconnect(String path) async =>
+      onDisconnect.removeWhere((k, _) => k == path || k.startsWith('$path/'));
 }
