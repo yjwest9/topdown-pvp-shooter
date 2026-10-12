@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/room.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../data/repositories/profile_repository.dart';
 import '../../data/repositories/room_repository.dart';
 import '../../rules/balance.dart';
 import '../../rules/matchmaking.dart';
@@ -78,6 +79,12 @@ class MatchmakingViewModel extends Notifier<MatchmakingState> {
   Timer? _beat;
   Timer? _count;
 
+  /// 누가 내 자리를 잡은 뒤 상대가 안 오면 다시 찾기.
+  Timer? _noShow;
+
+  /// 내 방 참가자(방을 새로 만들면 바꿔 단다).
+  StreamSubscription<Object?>? _roomSub;
+
   String? _uid;
   String _name = '';
 
@@ -109,13 +116,12 @@ class MatchmakingViewModel extends Notifier<MatchmakingState> {
     });
     try {
       final uid = _uid = await _auth.signIn();
-      _name = _auth.nickname;
+      _name = myNickname(ref);
       if (_closed) return;
       final room = _myRoom = await rooms.createQuickRoom(uid: uid, name: _name);
       state = state.copyWith(uid: uid);
-      _subs
-        ..add(rooms.slot().listen(_onSlot))
-        ..add(rooms.players(room).listen(_onMyRoomPlayers));
+      _subs.add(rooms.slot().listen(_onSlot));
+      _roomSub = rooms.players(room).listen(_onMyRoomPlayers);
       await _attempt();
     } catch (e) {
       _stopTimers();
@@ -169,8 +175,6 @@ class MatchmakingViewModel extends Notifier<MatchmakingState> {
             );
             return;
           case QuickMatchAction.take:
-            // ponytail: 잡은 직후 취소하거나 앱이 꺼지면 방장은 상대를 계속 기다린다.
-            // 잡힌 뒤 몇 초 안에 상대가 안 오면 다시 찾게 하면 된다.
             if (_closed) return;
             try {
               await rooms.joinRoom(slot!.roomId, uid: uid, name: _name);
@@ -201,6 +205,10 @@ class MatchmakingViewModel extends Notifier<MatchmakingState> {
         _sitting = false;
         _stopBeat();
         unawaited(rooms.leaveSlot(_uid!));
+        _noShow = Timer(
+          quickMatchTakenTimeout,
+          () => unawaited(_searchAgain()),
+        );
       }
       return;
     }
@@ -208,6 +216,19 @@ class MatchmakingViewModel extends Notifier<MatchmakingState> {
     _sitting = false;
     _stopBeat();
     unawaited(_attempt());
+  }
+
+  /// 잡은 사람이 안 왔다(취소·앱 종료) → 내 방을 지우고 새 방으로 다시 찾는다.
+  /// 늦게 온 사람은 없는 방이라 입장에 실패하고 스스로 다시 찾는다.
+  Future<void> _searchAgain() async {
+    if (_matched || _closed) return;
+    final old = _myRoom!;
+    unawaited(_roomSub?.cancel());
+    await rooms.deleteRoom(old);
+    final room = _myRoom = await rooms.createQuickRoom(uid: _uid!, name: _name);
+    if (_closed) return rooms.deleteRoom(room);
+    _roomSub = rooms.players(room).listen(_onMyRoomPlayers);
+    await _attempt();
   }
 
   void _onMyRoomPlayers(List<RoomPlayer> ps) {
@@ -228,6 +249,7 @@ class MatchmakingViewModel extends Notifier<MatchmakingState> {
     if (_matched) return;
     _matched = true;
     _clock?.cancel();
+    _noShow?.cancel();
     state = state.copyWith(roomId: roomId, isHost: host, opponent: opponent);
     unawaited(rooms.keepRoom(roomId, _uid!));
     _subs.add(
@@ -257,7 +279,7 @@ class MatchmakingViewModel extends Notifier<MatchmakingState> {
       await rooms.leaveSlot(uid); // 대기석을 보고 있는 동안 지운다
       if (room != null) await rooms.deleteRoom(room);
     }
-    for (final s in _subs) {
+    for (final s in [..._subs, ?_roomSub]) {
       unawaited(s.cancel());
     }
     _subs.clear();
@@ -271,6 +293,7 @@ class MatchmakingViewModel extends Notifier<MatchmakingState> {
   void _stopTimers() {
     _clock?.cancel();
     _count?.cancel();
+    _noShow?.cancel();
     _stopBeat();
   }
 }

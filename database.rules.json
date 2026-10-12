@@ -39,6 +39,17 @@
         }
       }
     },
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "nickname": { ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 12" },
+        "level": { ".validate": "newData.isNumber() && newData.val() >= 1" },
+        "exp": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+        "gold": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+        "diamond": { ".validate": "newData.isNumber() && newData.val() >= 0" }
+      }
+    },
     "matchmaking": {
       "1v1": {
         "waiting": {

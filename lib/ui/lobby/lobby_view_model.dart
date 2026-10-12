@@ -2,10 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/models/holiday.dart';
 import '../../data/models/room.dart';
 import '../../data/repositories/auth_repository.dart';
-import '../../data/repositories/event_repository.dart';
+import '../../data/repositories/profile_repository.dart';
 import '../../data/repositories/room_repository.dart';
 import '../../rules/balance.dart';
 
@@ -57,11 +56,6 @@ class LobbyState {
   );
 }
 
-/// 오늘이 공휴일이면 그 공휴일(매치 보상 2배 이벤트). 앱 실행 중 한 번만 묻는다.
-final holidayProvider = FutureProvider<Holiday?>(
-  (ref) => ref.read(eventRepositoryProvider).todayHoliday(DateTime.now()),
-);
-
 final lobbyProvider = NotifierProvider<LobbyViewModel, LobbyState>(
   LobbyViewModel.new,
 );
@@ -77,14 +71,6 @@ class LobbyViewModel extends Notifier<LobbyState> {
     ref.onDispose(_cancel);
     return const LobbyState();
   }
-
-  /// 봇전 방(기기 안 메모리 DB, 로그인 없음). 이미 시작한 상태로 온다.
-  Future<({RoomRepository rooms, String code})> botRoom() =>
-      RoomRepository.botRoom(
-        uid: 'me',
-        name: _auth.nickname,
-        durationMs: matchDurationMs,
-      );
 
   Future<void> createRoom() => _enter((uid, name) async {
     final code = await rooms.createRoom(uid: uid, name: name);
@@ -109,7 +95,7 @@ class LobbyViewModel extends Notifier<LobbyState> {
     state = state.copyWith(busy: true);
     try {
       final uid = await _auth.signIn();
-      final room = await go(uid, _auth.nickname);
+      final room = await go(uid, myNickname(ref));
       state = LobbyState(uid: uid, code: room.code, isHost: room.host);
       _watch(room.code);
     } on RoomException catch (e) {

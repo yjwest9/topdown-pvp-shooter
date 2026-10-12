@@ -9,17 +9,28 @@ import '../../data/repositories/settings_repository.dart';
 import '../../game/net/match_sync.dart';
 import '../../game/soldier_game.dart';
 import '../../rules/balance.dart';
+import '../../rules/match.dart';
+import '../../rules/rewards.dart';
 import '../result/result_view.dart';
+import '../result/result_view_model.dart';
 
 /// 게임 화면. [match]가 없으면 오프라인 훈련소.
 // ponytail: 뷰모델 없음. 할 일이 나가기뿐이고 그건 MatchSync가 한다. 화면 상태가 늘면 분리.
 class MatchView extends ConsumerStatefulWidget {
-  const MatchView({super.key, this.match, this.bot});
+  const MatchView({
+    super.key,
+    this.match,
+    this.bot,
+    this.mode = MatchMode.training,
+  });
 
   final MatchSync? match;
 
   /// 봇전 난이도. [match]는 메모리 DB 방.
   final BotDifficulty? bot;
+
+  /// 보상·나가기 규칙(빠른 대전만 중간에 나가면 패배).
+  final MatchMode mode;
 
   @override
   ConsumerState<MatchView> createState() => _MatchViewState();
@@ -58,6 +69,37 @@ class _MatchViewState extends ConsumerState<MatchView> {
     };
   }
 
+  /// 나가기 버튼·뒤로 가기. 빠른 대전이면 확인 후 패배로 기록하고 나간다.
+  Future<void> _leave() async {
+    final match = widget.match;
+    if (match != null && widget.mode == MatchMode.pvp) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          content: const Text('지금 나가면 패배로 기록됩니다.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('계속하기'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('나가기'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true || !mounted || _exiting) return;
+      unawaited(
+        saveMatchResult(
+          ref,
+          ResultViewModel(match.statsFor(MatchResult.lose), forfeit: true),
+        ),
+      );
+    }
+    await _exit();
+  }
+
   /// 방을 나간다. [result]가 있으면(매치 끝) 결과 화면으로, 없으면(중간에 나감) 로비로.
   Future<void> _exit({MatchStats? result}) async {
     if (_exiting) return;
@@ -70,7 +112,9 @@ class _MatchViewState extends ConsumerState<MatchView> {
     } else {
       unawaited(
         nav.pushReplacement(
-          MaterialPageRoute<void>(builder: (_) => ResultView(stats: result)),
+          MaterialPageRoute<void>(
+            builder: (_) => ResultView(stats: result, mode: widget.mode),
+          ),
         ),
       );
     }
@@ -82,7 +126,7 @@ class _MatchViewState extends ConsumerState<MatchView> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) unawaited(_exit());
+        if (!didPop) unawaited(_leave());
       },
       child: _body(),
     );
@@ -99,7 +143,7 @@ class _MatchViewState extends ConsumerState<MatchView> {
             left: 76,
             top: 4,
             child: TextButton(
-              onPressed: () => unawaited(_exit()),
+              onPressed: () => unawaited(_leave()),
               child: const Text(
                 '나가기',
                 style: TextStyle(color: Color(0xFFE3E6D8)),

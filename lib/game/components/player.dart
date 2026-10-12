@@ -72,7 +72,7 @@ class Player extends PositionComponent {
       _owned.putIfAbsent(w, () => WeaponState(w));
 
   /// 로드아웃: 주무기 + 보조(권총).
-  late WeaponState primary = _own(rifleStandard);
+  late WeaponState primary = _own(startingPrimary);
   late final WeaponState secondary = _own(pistol);
   bool usingPrimary = true;
 

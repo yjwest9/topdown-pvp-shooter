@@ -1,8 +1,9 @@
 import '../../rules/match.dart';
 
-/// 한 판의 내 기록. 결과 화면에 보여 준다(전적 저장은 다음).
+/// 한 판의 내 기록. 결과 화면에 보여 주고 보상·전적으로 저장한다.
 class MatchStats {
   const MatchStats({
+    required this.matchId,
     required this.result,
     this.kills = 0,
     this.deaths = 0,
@@ -11,6 +12,8 @@ class MatchStats {
     this.crits = 0,
   });
 
+  /// 이 매치를 가리키는 값(방 + 끝나는 시각). 보상이 두 번 더해지지 않게.
+  final String matchId;
   final MatchResult result;
   final int kills;
   final int deaths;

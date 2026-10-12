@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'data/services/firebase_setup.dart';
 import 'data/services/push_service.dart';
-import 'ui/lobby/lobby_view.dart';
+import 'ui/home/home_view.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,7 +31,7 @@ class TopSoldierApp extends StatelessWidget {
       title: 'TOP SOLDIER',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
-      home: const LobbyView(),
+      home: const HomeView(),
     );
   }
 }

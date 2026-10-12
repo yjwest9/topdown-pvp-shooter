@@ -166,18 +166,19 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
   void _finish(MatchResult result, {bool opponentLeft = false}) {
     if (_finished || _closed) return;
     _finished = true;
-    onMatchEnd?.call(
-      MatchStats(
-        result: result,
-        kills: _kills,
-        deaths: _deaths,
-        shots: _shots,
-        hits: _hits,
-        crits: _crits,
-      ),
-      opponentLeft: opponentLeft,
-    );
+    onMatchEnd?.call(statsFor(result), opponentLeft: opponentLeft);
   }
+
+  /// 지금까지의 내 기록. 중간에 나갈 때도 쓴다(패배 기록).
+  MatchStats statsFor(MatchResult result) => MatchStats(
+    matchId: '$code-$_endsAt',
+    result: result,
+    kills: _kills,
+    deaths: _deaths,
+    shots: _shots,
+    hits: _hits,
+    crits: _crits,
+  );
 
   @override
   void update(double dt) {

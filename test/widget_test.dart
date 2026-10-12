@@ -5,11 +5,11 @@ import 'package:topsoldier/game/soldier_game.dart';
 import 'package:topsoldier/main.dart';
 
 void main() {
-  testWidgets('lobby → 훈련소 opens the offline game without Firebase', (
+  testWidgets('home → 훈련소 opens the offline game without Firebase', (
     tester,
   ) async {
     await tester.pumpWidget(const ProviderScope(child: TopSoldierApp()));
-    expect(find.text('방 만들기'), findsOneWidget);
+    expect(find.text('빠른 대전'), findsOneWidget);
 
     await tester.tap(find.text('훈련소'));
     await tester.pump();

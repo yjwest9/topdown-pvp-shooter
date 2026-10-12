@@ -129,4 +129,28 @@ void main() {
     expect(stateOf(a).offerBot, true);
     a.dispose();
   });
+
+  testWidgets('taken but nobody comes within 10 seconds → search again '
+      'with a new room', (tester) async {
+    final db = FakeRtdbService();
+    final a = player('a', db);
+    await tester.pump();
+    final oldRoom = ((await db.get(slotPath))! as Map)['roomId'];
+
+    // 누가 잡았지만(takenBy) 방에 들어오지 않는다.
+    await db.update(slotPath, {'takenBy': 'ghost'});
+    expect(await db.get(slotPath), isNull); // 잡히면 대기석을 비움
+
+    await tester.pump(quickMatchTakenTimeout - const Duration(seconds: 1));
+    expect(await db.get(slotPath), isNull);
+    expect(await db.get('rooms/$oldRoom'), isNotNull);
+
+    await tester.pump(const Duration(seconds: 1));
+    final slot = (await db.get(slotPath))! as Map;
+    expect(slot['uid'], 'a');
+    expect(slot['roomId'], isNot(oldRoom));
+    expect(await db.get('rooms/$oldRoom'), isNull);
+    expect(stateOf(a).found, false);
+    a.dispose();
+  });
 }

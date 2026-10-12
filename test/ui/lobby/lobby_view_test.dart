@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:topsoldier/data/repositories/auth_repository.dart';
 import 'package:topsoldier/data/repositories/room_repository.dart';
 import 'package:topsoldier/ui/lobby/lobby_view.dart';
-import 'package:topsoldier/ui/lobby/lobby_view_model.dart';
 
 import '../../fakes.dart';
 
@@ -19,7 +18,6 @@ void main() {
             AuthRepository(FakeAuthService('b')),
           ),
           roomRepositoryProvider.overrideWithValue(RoomRepository(db)),
-          holidayProvider.overrideWith((ref) => null),
         ],
         child: const MaterialApp(home: LobbyView()),
       ),

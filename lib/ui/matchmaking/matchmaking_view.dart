@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../game/net/match_sync.dart';
+import '../../rules/rewards.dart';
 import '../match/match_view.dart';
 import 'matchmaking_view_model.dart';
 
@@ -20,6 +21,7 @@ class MatchmakingView extends ConsumerWidget {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute<void>(
               builder: (_) => MatchView(
+                mode: MatchMode.pvp,
                 match: MatchSync(
                   rooms: vm.rooms,
                   code: next.roomId!,

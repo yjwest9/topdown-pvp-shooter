@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../game/net/match_sync.dart';
-import '../../rules/balance.dart';
+import '../../rules/rewards.dart';
 import '../match/match_view.dart';
-import '../matchmaking/matchmaking_view.dart';
 import 'lobby_view_model.dart';
 
 class LobbyView extends ConsumerStatefulWidget {
@@ -25,29 +25,22 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
     super.dispose();
   }
 
-  Future<void> _play(MatchSync? match, {BotDifficulty? bot}) async {
+  Future<void> _play(MatchSync match) async {
+    // 결과 화면에서 홈으로 가면 이 화면도 닫히므로 미리 잡아 둔다.
+    final vm = ref.read(lobbyProvider.notifier);
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => MatchView(match: match, bot: bot),
+        builder: (_) => MatchView(match: match, mode: MatchMode.custom),
       ),
     );
-    if (match != null) ref.read(lobbyProvider.notifier).backToMenu();
+    vm.backToMenu();
   }
 
-  Future<void> _playBot(BotDifficulty bot) async {
-    final room = await ref.read(lobbyProvider.notifier).botRoom();
+  Future<void> _copy(String code) async {
+    await Clipboard.setData(ClipboardData(text: code));
     if (!mounted) return;
-    await _play(
-      MatchSync(rooms: room.rooms, code: room.code, uid: 'me', isHost: true),
-      bot: bot,
-    );
-  }
-
-  /// 빠른 대전. 30초 넘게 못 찾아 "봇과 대전"을 누르면 보통 봇전으로.
-  Future<void> _quickMatch() async {
-    final bot = await Navigator.of(context)
-        .push<bool>(MaterialPageRoute(builder: (_) => const MatchmakingView()));
-    if (bot == true && mounted) await _playBot(BotDifficulty.normal);
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('방 코드 $code 를 복사했습니다')));
   }
 
   @override
@@ -70,12 +63,19 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
     });
     final s = ref.watch(lobbyProvider);
 
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: s.code == null ? _menu(s, vm) : _waitingRoom(s, vm),
+    // 뒤로 가면 대기실도 나간다.
+    return PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) unawaited(vm.leaveRoom());
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('방 만들기 · 코드 입장')),
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: s.code == null ? _menu(s, vm) : _waitingRoom(s, vm),
+            ),
           ),
         ),
       ),
@@ -89,60 +89,6 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'TOP SOLDIER',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900),
-          ),
-          if (ref.watch(holidayProvider).value case final h?) ...[
-            const SizedBox(height: 8),
-            Text(
-              '오늘은 ${h.name}! 매치 보상 $holidayRewardMultiplier배 이벤트',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFFE8B33A),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-          const SizedBox(height: 24),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              textStyle: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            onPressed: s.busy ? null : () => unawaited(_quickMatch()),
-            child: const Text('빠른 대전 1대1'),
-          ),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: () => unawaited(_play(null)),
-            child: const Text('훈련소'),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Text('봇전'),
-              const SizedBox(width: 12),
-              for (final (bot, label) in [
-                (BotDifficulty.easy, '쉬움'),
-                (BotDifficulty.normal, '보통'),
-                (BotDifficulty.hard, '어려움'),
-              ]) ...[
-                Expanded(
-                  child: FilledButton.tonal(
-                    onPressed: () => unawaited(_playBot(bot)),
-                    child: Text(label),
-                  ),
-                ),
-                if (bot != BotDifficulty.hard) const SizedBox(width: 8),
-              ],
-            ],
-          ),
-          const SizedBox(height: 12),
           FilledButton.tonal(
             onPressed: s.busy ? null : () => unawaited(vm.createRoom()),
             child: const Text('방 만들기'),
@@ -188,13 +134,24 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
       mainAxisSize: MainAxisSize.min,
       children: [
         const Text('방 코드'),
-        Text(
-          s.code!,
-          style: const TextStyle(
-            fontSize: 56,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 8,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              s.code!,
+              style: const TextStyle(
+                fontSize: 56,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 8,
+              ),
+            ),
+            const SizedBox(width: 8),
+            OutlinedButton.icon(
+              onPressed: () => unawaited(_copy(s.code!)),
+              icon: const Icon(Icons.copy, size: 18),
+              label: const Text('복사'),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         for (final p in s.players)

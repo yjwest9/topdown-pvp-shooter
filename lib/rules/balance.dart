@@ -319,6 +319,9 @@ const pistol = WeaponStats(
   fireMode: FireMode.auto,
 );
 
+/// 처음 들고 시작하는 주무기(홈 화면에도 보인다). 등급은 E.
+const startingPrimary = rifleStandard;
+
 const weapons = <WeaponStats>[
   rifleStandard,
   rifleRapid,
@@ -425,6 +428,34 @@ const respawnDelay = 5.0;
 
 /// 부활 직후 무적(ms).
 const spawnProtectionMs = 3000;
+
+// ------------------------------------------------- 매치 보상·레벨 (9장) [잠정]
+
+/// 매치 골드. 무승부는 패배와 같게.
+const winGold = 5000;
+const loseGold = 2500;
+const killGold = 200;
+
+/// 매치 경험치.
+const winExp = 100;
+const loseExp = 50;
+const killExp = 10;
+
+/// 봇전 보상 비율(훈련소는 0).
+const botRewardRate = 0.5;
+
+/// 다음 레벨까지 필요한 경험치 = [levelExpBase] + [levelExpStep] × (현재 레벨 − 1).
+const levelExpBase = 100;
+const levelExpStep = 50;
+
+/// 닉네임 길이.
+const nicknameMin = 2;
+const nicknameMax = 12;
+
+// ------------------------------------------------- 빠른 매칭 재탐색 (13장)
+
+/// 누가 내 자리를 잡고 이만큼 안에 방에 안 들어오면 새 방으로 다시 찾는다.
+const quickMatchTakenTimeout = Duration(seconds: 10);
 
 // ------------------------------------------------- 이벤트 (1장, 9장)
 
