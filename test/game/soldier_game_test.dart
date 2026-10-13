@@ -353,6 +353,80 @@ void main() {
     },
   );
 
+  gameTester().testGameWidget(
+    'android emulator: held W arrives as down/up pairs -> keeps walking, '
+    'stops shortly after the last pair',
+    verify: (game, tester) async {
+      place(game, -pi / 2);
+      game.dummies.clear();
+      void tap(LogicalKeyboardKey k) {
+        for (final e in [
+          KeyDownEvent(
+            physicalKey: PhysicalKeyboardKey.keyA,
+            logicalKey: k,
+            timeStamp: Duration.zero,
+          ),
+          KeyUpEvent(
+            physicalKey: PhysicalKeyboardKey.keyA,
+            logicalKey: k,
+            timeStamp: Duration.zero,
+          ),
+        ]) {
+          game.onKeyEvent(e, const {});
+        }
+      }
+
+      // 첫 누름 → 0.5초 쉼(키 반복 지연) → 0.03초마다 누름·뗌 (1초)
+      final y0 = game.player.position.y;
+      tap(LogicalKeyboardKey.keyW);
+      for (var i = 0; i < 30; i++) {
+        game.update(1 / 60);
+      }
+      for (var i = 0; i < 33; i++) {
+        tap(LogicalKeyboardKey.keyW);
+        game.update(0.03);
+      }
+      expect(
+        y0 - game.player.position.y,
+        closeTo(walkSpeed * 1.49, 5),
+        reason: 'walks the whole 1.5s without stopping',
+      );
+
+      // 마지막 누름 뒤 잠깐 뒤엔 멈춘다.
+      for (var i = 0; i < 12; i++) {
+        game.update(1 / 60);
+      }
+      final y1 = game.player.position.y;
+      game.update(1 / 60);
+      expect(game.player.position.y, y1);
+    },
+  );
+
+  gameTester().testGameWidget(
+    'android emulator: held arrow (down/up pairs) keeps turning',
+    verify: (game, tester) async {
+      place(game, 0);
+      for (var i = 0; i < 16; i++) {
+        for (final e in [
+          const KeyDownEvent(
+            physicalKey: PhysicalKeyboardKey.arrowRight,
+            logicalKey: LogicalKeyboardKey.arrowRight,
+            timeStamp: Duration.zero,
+          ),
+          const KeyUpEvent(
+            physicalKey: PhysicalKeyboardKey.arrowRight,
+            logicalKey: LogicalKeyboardKey.arrowRight,
+            timeStamp: Duration.zero,
+          ),
+        ]) {
+          game.onKeyEvent(e, const {});
+        }
+        game.update(0.03);
+      }
+      expect(game.player.angle, closeTo(3.0 * 0.48, 0.05));
+    },
+  );
+
   // ---------------------------------------------------------------- 사격
 
   void key(SoldierGame game, LogicalKeyboardKey k) => game.onKeyEvent(

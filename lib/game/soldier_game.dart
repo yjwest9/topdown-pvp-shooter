@@ -4,6 +4,7 @@ import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 import 'package:flame/input.dart';
 import 'package:flame_riverpod/flame_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -96,6 +97,14 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   late final List<TargetDummy> dummies;
 
   final _keys = <LogicalKeyboardKey>{};
+
+  /// 안드로이드 에뮬레이터는 PC 키를 누르고 있으면 누름·뗌을 반복해서 보낸다(테스트용 우회).
+  /// 그래서 안드로이드에선 뗌을 바로 믿지 않고, 이 시간(초) 안에 다시 안 눌릴 때 뗀다.
+  /// 첫 누름 뒤엔 PC 키 반복 지연(보통 0.5초)보다 길게, 반복이 시작되면 짧게.
+  final _releaseIn = <LogicalKeyboardKey, double>{};
+  final _repeating = <LogicalKeyboardKey>{};
+  static const _firstReleaseDelay = 0.6;
+  static const _repeatReleaseDelay = 0.12;
   bool _touchRun = false;
 
   /// 1대1에만 있다. 눌러도 조이스틱·회전이 시작되지 않게 터치 층에 알린다.
@@ -250,6 +259,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
 
   @override
   void update(double dt) {
+    _expireKeyReleases(dt);
     // 죽어 있는 동안은 움직이거나 쏘지 못한다.
     if (match?.isDead ?? false) {
       player
@@ -419,9 +429,21 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   ) {
     final key = event.logicalKey;
     if (!_gameKeys.contains(key)) return KeyEventResult.ignored;
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      if (event is KeyDownEvent && _releaseIn.remove(key) != null) {
+        _repeating.add(key);
+        return KeyEventResult.handled; // 반복 누름: 점프·앉기를 다시 하지 않는다
+      }
+      if (event is KeyUpEvent) {
+        _releaseIn[key] = _repeating.contains(key)
+            ? _repeatReleaseDelay
+            : _firstReleaseDelay;
+      }
+    }
     _keys
       ..clear()
-      ..addAll(keysPressed);
+      ..addAll(keysPressed)
+      ..addAll(_releaseIn.keys);
 
     if (event is KeyDownEvent) {
       if (key == LogicalKeyboardKey.space) player.body.jump();
@@ -438,15 +460,34 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
 
     // WASD가 아닌 키(Space, C 등)는 이동값을 건드리지 않는다. 터치 조이스틱을
     // 쥔 채 Space/C를 눌러도 계속 가야 한다.
-    if (_moveKeys.contains(key)) {
-      double axis(LogicalKeyboardKey plus, LogicalKeyboardKey minus) =>
-          (_keys.contains(plus) ? 1.0 : 0.0) -
-          (_keys.contains(minus) ? 1.0 : 0.0);
-      player
-        ..forward = axis(LogicalKeyboardKey.keyW, LogicalKeyboardKey.keyS)
-        ..strafe = axis(LogicalKeyboardKey.keyD, LogicalKeyboardKey.keyA);
-    }
+    if (_moveKeys.contains(key)) _syncMoveKeys();
     _syncRun();
     return KeyEventResult.handled;
+  }
+
+  void _syncMoveKeys() {
+    double axis(LogicalKeyboardKey plus, LogicalKeyboardKey minus) =>
+        (_keys.contains(plus) ? 1.0 : 0.0) -
+        (_keys.contains(minus) ? 1.0 : 0.0);
+    player
+      ..forward = axis(LogicalKeyboardKey.keyW, LogicalKeyboardKey.keyS)
+      ..strafe = axis(LogicalKeyboardKey.keyD, LogicalKeyboardKey.keyA);
+  }
+
+  /// 미뤄 둔 뗌([_releaseIn])이 시간이 다 되면 진짜로 뗀다.
+  void _expireKeyReleases(double dt) {
+    if (_releaseIn.isEmpty) return;
+    final done = [
+      for (final e in _releaseIn.entries)
+        if ((_releaseIn[e.key] = e.value - dt) <= 0) e.key,
+    ];
+    if (done.isEmpty) return;
+    for (final k in done) {
+      _releaseIn.remove(k);
+      _repeating.remove(k);
+      _keys.remove(k);
+    }
+    if (done.any(_moveKeys.contains)) _syncMoveKeys();
+    _syncRun();
   }
 }
