@@ -72,6 +72,24 @@ void main() {
     expect(await db.get('rooms/$code'), isNull);
   });
 
+  test(
+    'leave: no error when the other player deleted the room first',
+    () async {
+      final db = _RacingDb();
+      final repo = RoomRepository(db);
+      final code = await repo.createRoom(uid: 'a', name: 'A');
+      await repo.joinRoom(code, uid: 'b', name: 'B');
+      await db.set('rooms/$code/players/a/connected', false);
+      // b가 나가는 중간에 a가 방을 지운다(실제 2026-10-13 실서버에서 겪음).
+      db.beforeRemove = (path) async {
+        if (path == 'rooms/$code/states/b') await db.remove('rooms/$code');
+      };
+
+      await repo.leave(code, 'b');
+      expect(await db.get('rooms/$code/players'), isNull);
+    },
+  );
+
   test('join: missing code throws', () async {
     final repo = RoomRepository(FakeRtdbService());
     expect(
@@ -126,4 +144,22 @@ void main() {
     await r.rooms.damage(r.code, 'me', (cur) => cur.value - 13);
     expect((await next)['me']!.value, 87);
   });
+}
+
+/// 실제 DB 규칙처럼 참가자가 없는(이미 지워진) 방을 지우면 거부한다. [beforeRemove]로 끼어들기.
+class _RacingDb extends FakeRtdbService {
+  Future<void> Function(String path)? beforeRemove;
+
+  @override
+  Future<void> remove(String path) async {
+    final hook = beforeRemove;
+    beforeRemove = null;
+    await hook?.call(path);
+    final players = await get('$path/players');
+    if (RegExp(r'^rooms/[^/]+$').hasMatch(path) &&
+        (players is! Map || players.isEmpty)) {
+      throw Exception('permission_denied');
+    }
+    await super.remove(path);
+  }
 }

@@ -135,9 +135,14 @@ class RoomRepository {
     await _db.cancelOnDisconnect(room);
     await _db.set('$room/players/$uid/connected', false);
     await _db.remove('$room/states/$uid');
-    // ponytail: 둘이 동시에 나가면 둘 다 지울 수 있다(같은 결과). 둘 다 앱이 꺼지면 방이 남는다.
+    // ponytail: 둘 다 앱이 꺼지면 방이 남는다.
     final players = _players(await _db.get('$room/players'));
-    if (!players.any((p) => p.connected)) await _db.remove(room);
+    if (players.any((p) => p.connected)) return;
+    try {
+      await _db.remove(room);
+    } catch (_) {
+      // 상대가 먼저 지웠으면 규칙이 거부한다(참가자가 없는 방). 이미 지워졌으니 그대로.
+    }
   }
 
   // ---------------------------------------------------------- 빠른 매칭 (13장)

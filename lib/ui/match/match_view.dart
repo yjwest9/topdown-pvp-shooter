@@ -122,7 +122,10 @@ class _MatchViewState extends ConsumerState<MatchView> {
   Future<void> _exit({MatchStats? result}) async {
     if (_exiting) return;
     _exiting = true;
-    await widget.match?.leave();
+    // 네트워크 오류로 나가기가 실패해도 화면은 넘어간다(안 그러면 0초에서 멈춤).
+    try {
+      await widget.match?.leave();
+    } catch (_) {}
     if (!mounted) return;
     final nav = Navigator.of(context);
     if (result == null) {
