@@ -21,9 +21,13 @@ class FakeAdService implements AdService {
   bool loads;
   bool earn;
   int shown = 0;
+  int loadCalls = 0;
 
   @override
-  Future<bool> load() async => supported && loads;
+  Future<bool> load() async {
+    loadCalls++;
+    return supported && loads;
+  }
 
   @override
   Future<bool> show() async {

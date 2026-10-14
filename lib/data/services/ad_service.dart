@@ -15,10 +15,17 @@ class AdService {
   Future<InitializationStatus>? _init;
   RewardedAd? _ad;
 
+  Future<bool>? _loading;
+
   /// 광고 하나를 미리 불러 둔다. 이미 있으면 그대로 true, 실패하면 false.
+  /// 불러오는 중에 또 부르면(홈 → 바로 상점) 같은 요청을 기다린다.
   Future<bool> load() async {
     if (!supported) return false;
     if (_ad != null) return true;
+    return _loading ??= _load().whenComplete(() => _loading = null);
+  }
+
+  Future<bool> _load() async {
     final done = Completer<bool>();
     try {
       await (_init ??= MobileAds.instance.initialize());

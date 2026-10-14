@@ -1,15 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:topsoldier/data/models/holiday.dart';
+import 'package:topsoldier/data/repositories/ad_repository.dart';
 import 'package:topsoldier/data/repositories/auth_repository.dart';
 import 'package:topsoldier/data/repositories/profile_repository.dart';
 import 'package:topsoldier/ui/home/home_view_model.dart';
 
 import '../../fakes.dart';
 
-ProviderContainer home(FakeRtdbService db, {Holiday? holiday}) {
+ProviderContainer home(
+  FakeRtdbService db, {
+  Holiday? holiday,
+  FakeAdService? ads,
+}) {
   final c = ProviderContainer(
     overrides: [
+      adRepositoryProvider.overrideWithValue(
+        AdRepository(ads ?? FakeAdService()),
+      ),
       authRepositoryProvider.overrideWithValue(
         AuthRepository(FakeAuthService('u')),
       ),
@@ -23,6 +31,18 @@ ProviderContainer home(FakeRtdbService db, {Holiday? holiday}) {
 }
 
 void main() {
+  test('opening home preloads one ad, not again when the profile changes '
+      '(상점에서 바로 누를 수 있게)', () async {
+    final db = FakeRtdbService();
+    final ads = FakeAdService();
+    final c = home(db, ads: ads);
+    await pumpEventQueue();
+    await c.read(homeProvider.notifier).saveNickname('탑솔져');
+    await pumpEventQueue();
+    expect(c.read(homeProvider).profile.nickname, '탑솔져');
+    expect(ads.loadCalls, 1);
+  });
+
   test(
     'first run: no profile → nickname form, then the profile shows',
     () async {

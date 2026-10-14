@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:topsoldier/data/models/holiday.dart';
+import 'package:topsoldier/data/repositories/ad_repository.dart';
 import 'package:topsoldier/data/repositories/auth_repository.dart';
 import 'package:topsoldier/data/repositories/profile_repository.dart';
 import 'package:topsoldier/ui/home/home_view.dart';
@@ -24,6 +25,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          adRepositoryProvider.overrideWithValue(AdRepository(FakeAdService())),
           authRepositoryProvider.overrideWithValue(
             AuthRepository(FakeAuthService('u')),
           ),

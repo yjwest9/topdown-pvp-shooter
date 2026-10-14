@@ -72,6 +72,12 @@ void main() {
       expect(end(a: 3, b: 1), MatchOutcome.ongoing);
     });
 
+    test('match is 3 minutes, first to 7 kills (decisions 12장)', () {
+      expect(matchDurationMs, 180000);
+      expect(end(a: 6, b: 6), MatchOutcome.ongoing);
+      expect(end(a: 7, b: 6), MatchOutcome.aWins);
+    });
+
     test('first to $killsToWin kills wins', () {
       expect(end(a: killsToWin, b: 5), MatchOutcome.aWins);
       expect(end(a: 2, b: killsToWin), MatchOutcome.bWins);

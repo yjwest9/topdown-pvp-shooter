@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/holiday.dart';
 import '../../data/models/profile.dart';
+import '../../data/repositories/ad_repository.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/event_repository.dart';
 import '../../data/repositories/profile_repository.dart';
@@ -67,9 +70,15 @@ class HomeViewModel extends Notifier<HomeState> {
   String get defaultNickname => _auth.nickname;
 
   bool _granting = false;
+  bool _adPreloaded = false;
 
   @override
   HomeState build() {
+    // 상점에서 바로 누를 수 있게 광고를 미리 불러 둔다(매치 밖, decisions 10장).
+    if (!_adPreloaded) {
+      _adPreloaded = true;
+      unawaited(ref.read(adRepositoryProvider).load());
+    }
     final p = ref.watch(profileProvider);
     // 새 유저·기존 유저 모두 로드아웃이 없으면 기본 무기 지급(decisions 6장).
     if (p.value case final profile? when !profile.hasLoadout && !_granting) {
