@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:topsoldier/data/repositories/room_repository.dart';
+import 'package:topsoldier/game/components/bullet.dart';
 import 'package:topsoldier/game/net/match_sync.dart';
 import 'package:topsoldier/game/soldier_game.dart';
 import 'package:topsoldier/rules/appearance.dart';
@@ -90,6 +91,21 @@ void main() {
       await tester.pump();
       game.update(1 / 60);
       expect(game.match!.characterOf('b').id, 'assault');
+      expect(game.match!.remotes['b']!.pose, Pose.silencer); // 저격총
+      await db.set('rooms/1234/states/b', {
+        'x': 1085.0,
+        'y': 1365.0,
+        'a': 1.0,
+        'stance': 'standing',
+        'up': 0.0,
+        'weapon': 'sniper_bolt',
+        'rl': true,
+        't': {'.sv': 'timestamp'},
+      });
+      db.serverTime += 500;
+      await tester.pump();
+      game.update(1 / 60);
+      expect(game.match!.remotes['b']!.pose, Pose.reload); // 상대 재장전
       renderOnce(game); // 돌격병 + 저격총(silencer) 포즈로 상대를 그린다
     },
   );
@@ -112,4 +128,23 @@ void main() {
       expect(game.player.position, isA<Vector2>());
     },
   );
+
+  test('tracer colour: my bullet vs opponent (cosmetic) and bot bullets', () {
+    Bullet b({bool hits = true, List<HitTarget> Function()? targets}) => Bullet(
+      position: Vector2.zero(),
+      angle: 0,
+      weapon: rifleStandard,
+      shooter: (
+        pos: (x: 0, y: 0),
+        crouching: false,
+        airborne: false,
+        onCrate: false,
+      ),
+      hitsTargets: hits,
+      targets: targets,
+    );
+    expect(b().mine, true);
+    expect(b(hits: false).mine, false); // 상대가 쏜 총알(내 화면 연출)
+    expect(b(targets: () => const []).mine, false); // 봇 총알
+  });
 }

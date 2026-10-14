@@ -68,6 +68,19 @@ void main() {
   );
 
   onlineTester(db).testGameWidget(
+    'my state says whether I am reloading (rl), so the opponent sees it',
+    verify: (game, tester) async {
+      game.player.weapon.ammo = 5;
+      game.player.weapon.reload();
+      for (var i = 0; i < 10; i++) {
+        game.update(1 / 60);
+        await tester.pump();
+      }
+      expect((await db.get('rooms/$code/states/a') as Map)['rl'], true);
+    },
+  );
+
+  onlineTester(db).testGameWidget(
     'does not pile up state writes while the server does not answer',
     verify: (game, tester) async {
       db.hold = Completer<void>();

@@ -145,6 +145,7 @@ class NetState {
     required this.stance,
     required this.up,
     required this.weapon,
+    this.reloading = false,
     this.t = 0,
   });
 
@@ -157,6 +158,7 @@ class NetState {
       stance: m['stance'] as String,
       up: _d(m['up']),
       weapon: m['weapon'] as String,
+      reloading: m['rl'] as bool? ?? false,
       t: _i(m['t']),
     );
   }
@@ -176,6 +178,9 @@ class NetState {
   /// 든 무기 id.
   final String weapon;
 
+  /// 재장전 중(상대 화면의 reload 포즈, decisions 3장). 옛 앱은 안 보내서 false.
+  final bool reloading;
+
   /// 서버 시간(ms). 보낼 때는 무시되고 서버가 채운다.
   final int t;
 
@@ -186,6 +191,7 @@ class NetState {
     'stance': stance,
     'up': up,
     'weapon': weapon,
+    'rl': reloading,
   };
 }
 

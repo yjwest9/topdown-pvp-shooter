@@ -120,17 +120,21 @@ class Player extends PositionComponent with HasGameReference<SoldierGame> {
     ..color = const Color(0xFF4FA3E0)
     ..style = PaintingStyle.stroke
     ..strokeWidth = 3;
-  static final _muzzle = Paint()
-    ..color = const Color(0xFFFFFFFF)
-    ..strokeWidth = 4;
   static final _shadow = Paint()..color = const Color(0x59000000);
   static final _faded = Paint()..color = const Color(0x59000000);
+  // 밝은 바닥에서도 보이게 어두운 테두리(굵게) 위에 밝은 선(가늘게)을 겹친다.
+  static final _aimEdge = Paint()
+    ..color = const Color(0x73000000)
+    ..strokeWidth = 4;
   static final _aimLine = Paint()
-    ..color = const Color(0x47E8B33A)
-    ..strokeWidth = 1.5;
+    ..color = const Color(0xE6FFE08A)
+    ..strokeWidth = 2;
+  static final _spreadEdge = Paint()
+    ..color = const Color(0x4D000000)
+    ..strokeWidth = 3;
   static final _spreadLine = Paint()
-    ..color = const Color(0x38E8B33A)
-    ..strokeWidth = 1;
+    ..color = const Color(0x99FFE08A)
+    ..strokeWidth = 1.2;
   static final _crouchRing = Paint()
     ..color = const Color(0x99E3E6D8)
     ..style = PaintingStyle.stroke
@@ -209,8 +213,7 @@ class Player extends PositionComponent with HasGameReference<SoldierGame> {
       ..translate(c.dx, c.dy)
       ..scale(scale)
       ..drawCircle(Offset.zero, playerRadius, _teamFill)
-      ..drawCircle(Offset.zero, playerRadius, _teamRing)
-      ..drawLine(Offset.zero, const Offset(playerRadius + 10, 0), _muzzle);
+      ..drawCircle(Offset.zero, playerRadius, _teamRing);
     game.art.drawSoldier(
       canvas,
       game.character.id,
@@ -226,17 +229,21 @@ class Player extends PositionComponent with HasGameReference<SoldierGame> {
   /// 정면 점선(사거리까지) + 현재 퍼짐 폭 두 줄. 로컬 +x = 정면.
   void _renderAim(Canvas canvas, Offset c) {
     final range = weapon.weapon.range;
-    for (var d = 30.0; d < range; d += 14) {
-      canvas.drawLine(
-        c + Offset(d, 0),
-        c + Offset(min(d + 6, range), 0),
-        _aimLine,
-      );
+    for (final paint in [_aimEdge, _aimLine]) {
+      for (var d = 30.0; d < range; d += 14) {
+        canvas.drawLine(
+          c + Offset(d, 0),
+          c + Offset(min(d + 6, range), 0),
+          paint,
+        );
+      }
     }
     final h = spreadHalfAngle(weapon.weapon, stance);
-    for (final a in [-h, h]) {
-      final dir = Offset(cos(a), sin(a));
-      canvas.drawLine(c + dir * 30, c + dir * range * 0.93, _spreadLine);
+    for (final paint in [_spreadEdge, _spreadLine]) {
+      for (final a in [-h, h]) {
+        final dir = Offset(cos(a), sin(a));
+        canvas.drawLine(c + dir * 30, c + dir * range * 0.93, paint);
+      }
     }
   }
 }

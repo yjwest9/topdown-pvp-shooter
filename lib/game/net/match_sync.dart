@@ -255,6 +255,7 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
               stance: p.stance.name,
               up: p.lift,
               weapon: p.weapon.weapon.id,
+              reloading: p.weapon.reloading,
             ),
           )
           .whenComplete(() => _stateInFlight = false),

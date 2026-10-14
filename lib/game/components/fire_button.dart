@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/text.dart';
-import 'package:flutter/painting.dart' show FontWeight, TextStyle;
+import 'package:flutter/painting.dart' show FontWeight, Shadow, TextStyle;
 
 /// 수동 무기 사격 버튼. 누르는 순간부터 사격(탭 다운).
 /// 누른 채 끌면 탭이 취소되고 [TouchControls]가 드래그로 이어받아 사격 + 회전.
@@ -19,11 +19,16 @@ class FireButton extends PositionComponent with TapCallbacks {
 
   bool held = false;
 
-  static final _idle = Paint()..color = const Color(0x59E0563F);
-  static final _on = Paint()..color = const Color(0xBFE0563F);
+  static final _idle = Paint()..color = const Color(0xA6B8402C);
+  static final _on = Paint()..color = const Color(0xE6E0563F);
+  static final _edge = Paint()
+    ..color = const Color(0xB3E3E6D8)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.5;
   static final _text = TextPaint(
     style: const TextStyle(
       color: Color(0xFFE3E6D8),
+      shadows: [Shadow(color: Color(0xCC000000), blurRadius: 3)],
       fontSize: 13,
       fontWeight: FontWeight.bold,
     ),
@@ -57,7 +62,9 @@ class FireButton extends PositionComponent with TapCallbacks {
   @override
   void render(Canvas canvas) {
     if (!visible()) return;
-    canvas.drawCircle((size / 2).toOffset(), radius, held ? _on : _idle);
+    canvas
+      ..drawCircle((size / 2).toOffset(), radius, held ? _on : _idle)
+      ..drawCircle((size / 2).toOffset(), radius, _edge);
     _text.render(canvas, 'FIRE', size / 2, anchor: Anchor.center);
   }
 }

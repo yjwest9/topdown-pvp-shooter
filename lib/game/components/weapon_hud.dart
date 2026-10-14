@@ -3,11 +3,13 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/text.dart';
-import 'package:flutter/painting.dart' show FontWeight, TextStyle;
+import 'package:flutter/painting.dart' show FontWeight, Shadow, TextStyle;
 
+import '../../rules/appearance.dart';
 import '../../rules/balance.dart';
 import '../../rules/upgrade.dart';
 import '../../rules/weapon_state.dart';
+import '../weapon_art.dart';
 
 /// 오른쪽 위 무기 슬롯 버튼(주무기 / 보조무기). 누르면 그 무기를 든다.
 /// 무기 이름, 탄약 "28 / 30", 발사 방식, 재장전 중엔 진행 바.
@@ -32,10 +34,11 @@ class WeaponSlot extends PositionComponent with TapCallbacks {
   final FireMode Function() fireMode;
   final void Function() onTap;
 
-  static final _idle = Paint()..color = const Color(0x24E3E6D8);
-  static final _on = Paint()..color = const Color(0x59E8B33A);
+  // 밝은 바닥에서도 보이게 어두운 반투명 바탕.
+  static final _idle = Paint()..color = const Color(0x991A221B);
+  static final _on = Paint()..color = const Color(0xBF2E2A16);
   static final _edge = Paint()
-    ..color = const Color(0x4DE3E6D8)
+    ..color = const Color(0x80E3E6D8)
     ..style = PaintingStyle.stroke
     ..strokeWidth = 1.5;
   static final _edgeOn = Paint()
@@ -43,11 +46,16 @@ class WeaponSlot extends PositionComponent with TapCallbacks {
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2;
   static final _small = TextPaint(
-    style: const TextStyle(color: Color(0xFF98A089), fontSize: 9),
+    style: const TextStyle(
+      color: Color(0xFFB8C0A8),
+      fontSize: 9,
+      shadows: [Shadow(color: Color(0xCC000000), blurRadius: 3)],
+    ),
   );
   static final _name = TextPaint(
     style: const TextStyle(
       color: Color(0xFFE3E6D8),
+      shadows: [Shadow(color: Color(0xCC000000), blurRadius: 3)],
       fontSize: 11,
       fontWeight: FontWeight.w600,
     ),
@@ -55,6 +63,7 @@ class WeaponSlot extends PositionComponent with TapCallbacks {
   static final _ammo = TextPaint(
     style: const TextStyle(
       color: Color(0xFFE8B33A),
+      shadows: [Shadow(color: Color(0xCC000000), blurRadius: 3)],
       fontSize: 15,
       fontWeight: FontWeight.bold,
     ),
@@ -86,6 +95,12 @@ class WeaponSlot extends PositionComponent with TapCallbacks {
     _small.render(canvas, '$label · $mode', Vector2(8, 4));
     _name.render(canvas, withLevel(w.weapon.name, w.level), Vector2(8, 16));
     _ammo.render(canvas, '${w.ammo} / ${w.weapon.magazine}', Vector2(8, 31));
+    // 오른쪽 아래에 든 총 그림(decisions 17장).
+    paintWeapon(
+      canvas,
+      const Rect.fromLTWH(slotW - 62, 24, 56, 26),
+      weaponLook(w.weapon.id),
+    );
     if (w.reloading) {
       const barW = slotW - 16;
       canvas

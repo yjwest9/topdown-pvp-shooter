@@ -10,7 +10,7 @@ double lerpAngle(double a, double b, double f) {
 }
 
 /// 시간순 [buffer]에서 서버 시간 [t]의 상태. 두 스냅샷 사이는 보간,
-/// 범위 밖이면 가장 가까운 끝 값(외삽 안 함). 자세·무기는 앞 스냅샷 값.
+/// 범위 밖이면 가장 가까운 끝 값(외삽 안 함). 자세·무기·재장전은 앞 스냅샷 값.
 NetState? sample(List<NetState> buffer, int t) {
   if (buffer.isEmpty) return null;
   if (t <= buffer.first.t) return buffer.first;
@@ -26,6 +26,7 @@ NetState? sample(List<NetState> buffer, int t) {
       stance: a.stance,
       up: a.up + (b.up - a.up) * f,
       weapon: a.weapon,
+      reloading: a.reloading,
       t: t,
     );
   }

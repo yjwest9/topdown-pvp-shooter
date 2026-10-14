@@ -292,6 +292,7 @@ class BotSoldier extends Component with HasGameReference<SoldierGame> {
           stance: body.stance.name,
           up: body.lift,
           weapon: body.weapon.weapon.id,
+          reloading: body.weapon.reloading,
         ),
       ),
     );

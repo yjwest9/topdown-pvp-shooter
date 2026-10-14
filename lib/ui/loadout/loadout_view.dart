@@ -10,6 +10,7 @@ import '../../rules/upgrade.dart';
 import '../format.dart';
 import '../style.dart';
 import '../upgrade_widgets.dart';
+import '../weapon_art_view.dart';
 import 'loadout_view_model.dart';
 
 /// 무기 화면(홈 아래 메뉴 "무기"): 계열 탭, 목록, 상세·구매·장착.
@@ -59,7 +60,8 @@ class LoadoutView extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(
-              width: 200,
+              // 총 그림이 들어가서 조금 넓게(이름이 한 줄에 들어가게).
+              width: 240,
               child: ListView(
                 children: [
                   for (final w in s.list) _WeaponTile(w, s, () => vm.select(w)),
@@ -87,15 +89,33 @@ class _WeaponTile extends StatelessWidget {
     final owned = s.owns(w);
     return ListTile(
       dense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+      horizontalTitleGap: 8,
       selected: s.selected == w,
       selectedTileColor: panelColor,
       onTap: onTap,
-      leading: Icon(
-        owned ? Icons.gps_fixed : Icons.lock,
-        color: owned ? lightColor : lightColor.withValues(alpha: 0.4),
+      // 총 그림. 안 산 무기는 흐리게 + 자물쇠.
+      leading: SizedBox(
+        width: 56,
+        height: 28,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            WeaponArt(w.id, width: 56, height: 28, dim: !owned),
+            if (!owned)
+              Icon(
+                Icons.lock,
+                size: 16,
+                color: lightColor.withValues(alpha: 0.8),
+              ),
+          ],
+        ),
       ),
       title: Text(
         withLevel(w.name, s.levelOf(w)),
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.fade,
         style: TextStyle(
           fontWeight: FontWeight.w800,
           color: owned ? lightColor : lightColor.withValues(alpha: 0.4),
@@ -191,6 +211,7 @@ class _Detail extends StatelessWidget {
                       const GradeBadge('E'),
                     ],
                   ),
+                  WeaponArt(w.id, width: 220, height: 64, dim: !s.owns(w)),
                   Text(
                     'TTK $ttkText초 (체력 100, 전부 명중)',
                     style: const TextStyle(fontSize: 12),

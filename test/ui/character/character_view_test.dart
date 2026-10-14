@@ -49,8 +49,8 @@ void main() {
     expect(buttonWith(tester, '장착 중').onPressed, isNull);
     expect(find.text('강화 1단계마다 체력 +2'), findsOneWidget);
     expect(find.text('강화 +0 → +1'), findsOneWidget);
-    // 미보유 셋은 가격
-    expect(find.text('100 다이아'), findsNWidgets(3));
+    // 미보유 셋은 위쪽 탭에 자물쇠(화면 구성을 바꿔 목록의 가격 대신).
+    expect(find.byIcon(Icons.lock), findsNWidgets(3));
   });
 
   testWidgets('unowned: [구매], disabled when diamonds are short', (

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,8 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../rules/balance.dart';
 import '../../rules/character.dart';
 import '../../rules/upgrade.dart';
-import '../character_portrait.dart';
+import '../character_figure.dart';
 import '../format.dart';
+import '../loadout/loadout_view_model.dart';
 import '../style.dart';
 import '../upgrade_widgets.dart';
 import 'character_view_model.dart';
@@ -26,7 +28,8 @@ String _pct(double v) => '${(v * 100).round()}%';
     ? ('회피', (x) => _pct(x.evasion), '+${_pct(c.evasionPerLevel)}p')
     : ('크리티컬', (x) => _pct(x.crit), '+${_pct(c.critPerLevel)}p');
 
-/// 캐릭터 화면(홈 아래 메뉴 "캐릭터", decisions 8장): 목록, 능력치, 구매·장착·강화.
+/// 캐릭터 화면(홈 아래 메뉴 "캐릭터", decisions 8장): 위쪽 탭으로 고르고, 왼쪽에 서 있는
+/// 모습, 가운데 능력치, 오른쪽 구매·장착·강화.
 class CharacterView extends ConsumerWidget {
   const CharacterView({super.key});
 
@@ -52,70 +55,64 @@ class CharacterView extends ConsumerWidget {
         ],
       ),
       body: SafeArea(
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // 캐릭터 고르기 탭. 장착 = 체크, 미보유 = 자물쇠.
             SizedBox(
-              width: 200,
+              height: 44,
               child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 2),
                 children: [
                   for (final c in characters)
-                    _CharacterTile(c, s, () => vm.select(c)),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        showCheckmark: false,
+                        avatar: s.isEquipped(c)
+                            ? const Icon(
+                                Icons.check,
+                                size: 16,
+                                color: amberColor,
+                              )
+                            : s.owns(c)
+                            ? null
+                            : const Icon(Icons.lock, size: 14),
+                        label: Text(withLevel(c.name, s.levelOf(c))),
+                        selected: s.selected == c,
+                        onSelected: (_) => vm.select(c),
+                      ),
+                    ),
                 ],
               ),
             ),
-            const VerticalDivider(width: 1),
-            Expanded(child: _Detail(s, vm)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CharacterTile extends StatelessWidget {
-  const _CharacterTile(this.c, this.s, this.onTap);
-
-  final CharacterStats c;
-  final CharacterState s;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final owned = s.owns(c);
-    final color = owned ? lightColor : lightColor.withValues(alpha: 0.4);
-    return ListTile(
-      dense: true,
-      selected: s.selected == c,
-      selectedTileColor: panelColor,
-      onTap: onTap,
-      // 보유는 그림, 미보유는 흐린 그림 위에 자물쇠.
-      leading: SizedBox(
-        width: 40,
-        height: 40,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            CharacterPortrait(c.id, size: 30, dim: !owned),
-            if (!owned) Icon(Icons.lock, size: 18, color: color),
-          ],
-        ),
-      ),
-      title: Text(
-        withLevel(c.name, s.levelOf(c)),
-        style: TextStyle(fontWeight: FontWeight.w800, color: color),
-      ),
-      trailing: s.isEquipped(c)
-          ? const Text(
-              '장착',
-              style: TextStyle(color: amberColor, fontWeight: FontWeight.w900),
-            )
-          : owned
-          ? null
-          : Text(
-              '$characterPrice 다이아',
-              style: TextStyle(color: lightColor.withValues(alpha: 0.5)),
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 정면에서 서 있는 큰 그림 + 장착 주무기(decisions 8장).
+                  SizedBox(
+                    width: 190,
+                    child: LayoutBuilder(
+                      builder: (context, box) => Center(
+                        child: CharacterFigure(
+                          s.selected.id,
+                          weaponId: equippedWeapons(s.profile).primary.id,
+                          height: min(box.maxHeight - 16, box.maxWidth * 1.6),
+                          dim: !s.owns(s.selected),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const VerticalDivider(width: 1),
+                  Expanded(child: _Detail(s, vm)),
+                ],
+              ),
             ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -189,8 +186,6 @@ class _Detail extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 14),
-                      CharacterPortrait(base.id, size: 52, dim: !owned),
                     ],
                   ),
                   const SizedBox(height: 4),

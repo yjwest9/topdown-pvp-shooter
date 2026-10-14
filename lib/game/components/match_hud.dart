@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flame/components.dart';
-import 'package:flutter/painting.dart' show FontWeight, TextStyle;
+import 'package:flutter/painting.dart' show FontWeight, Shadow, TextStyle;
 
 import '../../rules/balance.dart';
 import '../net/match_sync.dart';
@@ -15,7 +15,12 @@ class MatchHud extends Component with HasGameReference<SoldierGame> {
   final MatchSync sync;
 
   static TextPaint _text(double size, {Color color = _light}) => TextPaint(
-    style: TextStyle(color: color, fontSize: size, fontWeight: FontWeight.w700),
+    style: TextStyle(
+      color: color,
+      fontSize: size,
+      fontWeight: FontWeight.w700,
+      shadows: const [Shadow(color: Color(0xCC000000), blurRadius: 3)],
+    ),
   );
 
   static const _light = Color(0xFFE3E6D8);

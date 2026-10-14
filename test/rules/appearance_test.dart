@@ -65,4 +65,30 @@ void main() {
     expect(File('assets/images/LICENSE-kenney.txt').existsSync(), true);
     expect(File('pubspec.yaml').readAsStringSync(), contains('assets/images/'));
   });
+
+  group('weapon looks (decisions 17장: 무기마다 코드로 그림)', () {
+    test('every weapon has its own look, no two alike', () {
+      final looks = [for (final w in weapons) weaponLook(w.id)];
+      expect(looks.toSet(), hasLength(weapons.length));
+      for (final w in weapons) {
+        expect(weaponLooks.containsKey(w.id), true, reason: w.id);
+      }
+    });
+    test('family shapes: pistol is a pistol, double barrel has two, snipers scoped', () {
+      expect(weaponLook('pistol').pistol, true);
+      expect(weaponLook('shotgun_double').barrels, 2);
+      for (final w in weapons.where((w) => w.family == WeaponFamily.sniper)) {
+        expect(weaponLook(w.id).optic, isNot(Optic.none), reason: w.id);
+      }
+    });
+  });
+
+  test('every character has a front look (홈·캐릭터 화면, decisions 8장)', () {
+    for (final c in characters) {
+      expect(characterLooks.containsKey(c.id), true, reason: c.id);
+    }
+    expect(characterLook('nope'), characterLook('basic'));
+    expect(characterLook('basic').helmet, true);
+    expect(characterLook('marksman').sunglasses, true);
+  });
 }

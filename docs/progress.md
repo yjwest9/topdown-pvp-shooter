@@ -2,6 +2,13 @@
 
 작업이 끝날 때마다 맨 위에 추가한다. (날짜 / 한 것 / 다음 할 일 / 막힌 것)
 
+## 2026-10-15 (그래픽 피드백 — feat/ingame-graphics, 병합 전)
+- 사용자 피드백 6가지: 총구 흰 선 없애기, 밝은 바닥에서 버튼·조준선이 안 보임, 홈·캐릭터 화면은 정면에서 서 있는 모습, 총알 색, 상대 재장전 포즈, 총 그래픽. 사용자가 고름(질문): 정면 캐릭터·총 모두 코드로 그리기, 총알은 팀 색 예광탄. Kenney 팩(Toon Characters, Modular Characters, Shooting Gallery)도 받아서 확인했지만 정면 군인·실제 총 옆모습이 없어서 안 씀. decisions 3·5·8·13·17장 먼저.
+- 한 것: 총구 선 삭제. HUD 둥근 버튼·무기 칸·사격 버튼·조이스틱은 어두운 반투명 바탕 + 밝은 테두리, HUD 글자 그림자, 조준 점선·퍼짐 선은 어두운 테두리 위 밝은 선. 총알 = 흰 중심 + 둘레(내 총알 파랑, 상대·봇 빨강; `Bullet.mine`). 상태에 `rl`(재장전 중) 추가 — 나·봇이 보내고 상대 그림이 reload 포즈(`RemotePlayer.pose`), 옛 앱은 false. 무기 모양 데이터 `weaponLooks`(길이·개머리판·탄창·조준경·양각대·총열 수·불펍·소음기·펌프·색, 11종 모두 다름) + `paintWeapon`(Canvas, Flame·Flutter 공용) → 무기 목록·상세·게임 무기 칸·정면 캐릭터 손. 정면 캐릭터 `CharacterFigure`(옷 색·헬멧·배낭·넥타이·선글라스는 `characterLooks`) → 홈(장착 주무기를 듦), 캐릭터 화면은 구성 변경(위쪽 탭으로 고르고, 왼쪽 큰 정면 그림, 가운데 능력치, 오른쪽 강화·버튼). 무기 목록 폭 200 → 240(이름 한 줄). `CharacterPortrait` 삭제.
+- 확인: 테스트 398개, analyze 0, `flutter build web` 성공. 상대 재장전 반영을 빼면 포즈 테스트 실패 확인. 에뮬레이터 홈·캐릭터·무기 화면, 훈련소(조준선·무기 칸·총알), 어려움 봇전(상대 빨간 원·M249 포즈·빨간 예광탄) 캡처로 확인.
+- 다음: 사용자 확인 후 병합.
+- 막힌 것: 없음. 내가 만든 캐릭터 화면 테스트의 "100 다이아 ×3"(목록 가격)은 목록이 탭으로 바뀌어 "자물쇠 ×3"으로 바꿈. 새 보간 테스트의 기대값 하나는 기존 보간 규칙(같은 시각이면 앞 스냅샷)에 맞춰 고침.
+
 ## 2026-10-14 (인게임 그래픽 — feat/ingame-graphics, 병합 전)
 - 한 것: decisions 3·4·8·17장 먼저(Kenney Top-down Shooter CC0 확정, 캐릭터 그림, 포즈, 팀 구분 = 발밑 원, 맵 타일). kenney.nl에서 받아(2.6MB zip을 따로 풀어 확인) 쓰는 PNG 25개(37KB)만 `assets/images/`에 복사 + `LICENSE-kenney.txt`. 캐릭터: 기본 병사 = Soldier 1(soldier1), 저격수 = Hitman 1(hitman1), 정찰병 = Survivor 1(survivor1), 돌격병 = Man Brown(manBrown) — 모두 팩에 있는 이름 그대로. 포즈: 라이플·M249·샷건 machine, 저격총 silencer, 권총 gun, 재장전 reload, 홈·캐릭터 화면 stand. 타일: 바닥 tile_07·tile_08, 벽 tile_171, 상자 tile_129. 규칙(테스트 먼저) `rules/appearance.dart`(poseFor, characterSprite, artFiles). 게임: `GameArt`(불러오기, 몸 중심 맞춰 그리기), Player·RemotePlayer·TargetDummy의 원을 그림으로(발밑 팀 원 파랑/빨강, 앉기 ×0.85 + 앉기 링, 점프·부활 깜빡임·조준선·체력 바·총구 표시는 그대로), 상대는 방 players의 character로, `GameMap`은 시작할 때 맵 전체를 한 장의 그림으로 미리 그림(2170² 한 장, 벽 긴 그림자·상자 짧은 그림자). 홈 병사·캐릭터 화면 목록·상세에 `CharacterPortrait`.
 - 확인: 테스트 389개(그림 규칙 6 + 게임 루프 3 추가), analyze 0, `flutter build web` 성공. 기존 테스트는 하나도 안 고침. 다만 위젯 테스트의 가짜 시간 안에서는 그림 디코딩이 끝나지 않아서 `test/flutter_test_config.dart`가 테스트마다 그림을 실제 시간에 미리 불러 둠(Flame이 게임이 닫힐 때 공용 캐시를 비우므로 setUp마다). 그림이 이미 있으면 `await` 자체를 건너뛰게 한 이유: 로딩 순서가 프레임 하나 밀려 프레임 수에 맞춘 기존 봇·매치 테스트가 어긋났음. 에뮬레이터·크롬 봇전, 훈련소(상자·표적·재장전·앉기) 화면 직접 확인, 캡처는 `screenshots/ingame-graphics-*.png`.

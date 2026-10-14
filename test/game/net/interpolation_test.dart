@@ -47,4 +47,38 @@ void main() {
     expect(sample(buf, 1500)!.x, 20); // 예측(외삽)은 안 한다
     expect(sample([], 1000), isNull);
   });
+
+  group('reloading flag rl (decisions 3장)', () {
+    NetState r(int t, {required bool reloading}) => NetState(
+      x: 0,
+      y: 0,
+      a: 0,
+      stance: 'standing',
+      up: 0,
+      weapon: 'rifle_standard',
+      reloading: reloading,
+      t: t,
+    );
+
+    test('sent as rl, missing (old app) reads as false', () {
+      expect(r(0, reloading: true).toJson()['rl'], true);
+      final old = NetState.fromJson({
+        'x': 1,
+        'y': 2,
+        'a': 0,
+        'stance': 'standing',
+        'up': 0,
+        'weapon': 'pistol',
+        't': 5,
+      });
+      expect(old.reloading, false);
+      expect(NetState.fromJson(r(5, reloading: true).toJson()).reloading, true);
+    });
+
+    test('between two snapshots it follows the earlier one', () {
+      final buf = [r(1000, reloading: true), r(1100, reloading: false)];
+      expect(sample(buf, 1050)!.reloading, true);
+      expect(sample(buf, 1200)!.reloading, false); // 뒤 스냅샷 이후
+    });
+  });
 }

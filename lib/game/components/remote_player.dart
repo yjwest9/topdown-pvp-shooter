@@ -41,6 +41,12 @@ class RemotePlayer extends PositionComponent
 
   Stance get stance => Stance.values.byName(state?.stance ?? 'standing');
 
+  /// 들고 있는 무기와 재장전 여부로 고른 그림 포즈(decisions 3장).
+  Pose get pose => poseFor(
+    weaponById(state?.weapon ?? '')?.family ?? WeaponFamily.rifle,
+    reloading: state?.reloading ?? false,
+  );
+
   CoverBody get coverBody {
     final airborne = stance == Stance.jumping;
     return (
@@ -76,9 +82,6 @@ class RemotePlayer extends PositionComponent
     ..color = const Color(0xFFE0563F)
     ..style = PaintingStyle.stroke
     ..strokeWidth = 3;
-  static final _muzzle = Paint()
-    ..color = const Color(0xFFFFFFFF)
-    ..strokeWidth = 4;
   static final _crouchRing = Paint()
     ..color = const Color(0x99E3E6D8)
     ..style = PaintingStyle.stroke
@@ -103,15 +106,9 @@ class RemotePlayer extends PositionComponent
       ..translate(playerRadius, playerRadius)
       ..scale(scale)
       ..drawCircle(Offset.zero, playerRadius, _teamFill)
-      ..drawCircle(Offset.zero, playerRadius, _teamRing)
-      ..drawLine(Offset.zero, const Offset(playerRadius + 10, 0), _muzzle);
-    // 상대 캐릭터 그림은 방 players의 character로, 포즈는 들고 있는 무기로.
-    // (상대의 재장전은 네트워크 상태에 없어서 reload 포즈는 내 병사만.)
-    game.art.drawSoldier(
-      canvas,
-      sync.characterOf(uid).id,
-      poseFor(weaponById(state!.weapon)?.family ?? WeaponFamily.rifle),
-    );
+      ..drawCircle(Offset.zero, playerRadius, _teamRing);
+    // 상대 캐릭터 그림은 방 players의 character로, 포즈는 들고 있는 무기와 재장전 여부로.
+    game.art.drawSoldier(canvas, sync.characterOf(uid).id, pose);
     if (crouching) {
       canvas.drawCircle(Offset.zero, playerRadius * 1.25, _crouchRing);
     }

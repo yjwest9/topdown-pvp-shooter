@@ -38,18 +38,19 @@ class TouchControls extends PositionComponent with DragCallbacks {
   final _stickDrag = Vector2.zero();
 
   static final _base = Paint()
-    ..color = const Color(0x55FFFFFF)
+    ..color = const Color(0xCCFFFFFF)
     ..style = PaintingStyle.stroke
-    ..strokeWidth = 2;
+    ..strokeWidth = 2.5;
   static final _runRing = Paint()
-    ..color = const Color(0x40E3E6D8)
+    ..color = const Color(0x99E3E6D8)
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2;
   static final _runRingActive = Paint()
     ..color = const Color(0xCCE8B33A)
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2;
-  static final _knob = Paint()..color = const Color(0x88FFFFFF);
+  static final _knob = Paint()..color = const Color(0xCCFFFFFF);
+  static final _baseFill = Paint()..color = const Color(0x4D1A221B);
 
   @override
   void onGameResize(Vector2 size) {
@@ -127,6 +128,7 @@ class TouchControls extends PositionComponent with DragCallbacks {
     if (_stickPointer == null) return;
     final o = _stickOrigin.toOffset();
     canvas
+      ..drawCircle(o, joystickRadius, _baseFill)
       ..drawCircle(o, joystickRadius, _base)
       ..drawCircle(o + _knobOffset.toOffset(), 20, _knob);
     _dashedArc(

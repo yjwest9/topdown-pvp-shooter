@@ -11,7 +11,7 @@ import '../../rules/character.dart';
 import '../../rules/rewards.dart';
 import '../../rules/upgrade.dart';
 import '../character/character_view.dart';
-import '../character_portrait.dart';
+import '../character_figure.dart';
 import '../format.dart';
 import '../loadout/loadout_view.dart';
 import '../loadout/loadout_view_model.dart';
@@ -358,11 +358,12 @@ class _Character extends StatelessWidget {
       children: [
         Expanded(
           child: LayoutBuilder(
-            // 그림은 위를 보게 돌려서 가로가 세로의 약 1.2배다. 원본이 43px라 너무 키우면 흐려진다.
+            // 정면에서 서 있는 모습 + 장착 주무기(decisions 8장). 벡터라 키워도 선명하다.
             builder: (context, box) => Center(
-              child: CharacterPortrait(
+              child: CharacterFigure(
                 profile.equippedCharacter,
-                size: min(min(box.maxHeight * 0.55, box.maxWidth / 1.25), 150),
+                weaponId: equippedWeapons(profile).primary.id,
+                height: min(box.maxHeight, box.maxWidth * 1.6),
               ),
             ),
           ),

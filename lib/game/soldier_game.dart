@@ -171,6 +171,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
           color: Color(0xFFE8B33A),
           fontSize: 12,
           fontWeight: FontWeight.w600,
+          shadows: [Shadow(color: Color(0xCC000000), blurRadius: 3)],
         ),
       ),
     );

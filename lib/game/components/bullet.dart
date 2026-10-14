@@ -60,10 +60,24 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
   double _traveled = 0;
   final _missed = <Object>{};
 
-  static final _trail = Paint()
-    ..color = const Color(0xFFE8B33A)
+  /// 팀 색 예광탄(decisions 5장): 흰 중심 + 둘레 색. 내 총알 하늘색, 상대·봇 총알 빨강.
+  // 회청색 바닥에서도 보이게 진한 파랑.
+  static final _mineGlow = Paint()
+    ..color = const Color(0xE61E7FE0)
+    ..strokeWidth = 7
+    ..strokeCap = StrokeCap.round;
+  static final _enemyGlow = Paint()
+    ..color = const Color(0xE6E53935)
+    ..strokeWidth = 7
+    ..strokeCap = StrokeCap.round;
+  static final _core = Paint()
+    ..color = const Color(0xFFFFFFFF)
     ..strokeWidth = 2.5
     ..strokeCap = StrokeCap.round;
+
+  /// 내가 쏜 총알: 맞힐 수 있고 대상 목록을 따로 받지 않음(봇 총알은 나를 넘기고,
+  /// 상대 화면 연출용 총알은 못 맞힌다).
+  bool get mine => hitsTargets && targets == null;
 
   @override
   void update(double dt) {
@@ -154,6 +168,12 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
 
   @override
   void render(Canvas canvas) {
-    canvas.drawLine(Offset.zero, const Offset(-14, 0), _trail);
+    canvas
+      ..drawLine(
+        Offset.zero,
+        const Offset(-16, 0),
+        mine ? _mineGlow : _enemyGlow,
+      )
+      ..drawLine(Offset.zero, const Offset(-12, 0), _core);
   }
 }
