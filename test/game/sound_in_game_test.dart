@@ -18,12 +18,7 @@ import 'package:topsoldier/rules/combat.dart';
 import '../fakes.dart';
 
 const code = '1234';
-const _fires = {
-  'fire_rifle.ogg',
-  'fire_sniper.ogg',
-  'fire_shotgun.ogg',
-  'fire_pistol.ogg',
-};
+bool _isFire(String file) => file.startsWith('fire_');
 
 GameTester<SoldierGame> _tester(SoldierGame Function() make) => GameTester(
   make,
@@ -60,10 +55,10 @@ void main() {
   );
 
   for (final (weapon, file) in [
-    (rifleStandard, 'fire_rifle.ogg'),
-    (rifleHeavy, 'fire_rifle.ogg'), // 중기관총형도 라이플 소리
-    (sniperBolt, 'fire_sniper.ogg'),
-    (shotgunPump, 'fire_shotgun.ogg'), // 펠릿 8개여도 소리는 한 번
+    (rifleStandard, 'fire_rifle_standard.ogg'),
+    (rifleHeavy, 'fire_rifle_heavy.ogg'), // 같은 라이플이어도 무기마다 다름
+    (sniperBolt, 'fire_sniper_bolt.ogg'),
+    (shotgunPump, 'fire_shotgun_pump.ogg'), // 펠릿 8개여도 소리는 한 번
   ]) {
     training().testGameWidget(
       'one shot of ${weapon.id} plays $file once, at full volume',
@@ -79,7 +74,7 @@ void main() {
   }
 
   training().testGameWidget(
-    'secondary pistol plays fire_pistol.ogg',
+    'secondary pistol plays its own sound (fire_pistol.ogg)',
     verify: (game, tester) async {
       place(game, 0);
       game.player.selectSlot(primary: false);
@@ -100,7 +95,7 @@ void main() {
       }
       final shots = ammo - game.player.weapon.ammo;
       expect(shots, greaterThan(3));
-      expect(sound.files.where(_fires.contains), hasLength(shots));
+      expect(sound.files.where(_isFire), hasLength(shots));
     },
   );
 
@@ -115,14 +110,26 @@ void main() {
       game.player.weapon.reload(); // RELOAD 버튼·R 키
       game.update(1 / 60);
       game.update(1 / 60);
-      expect(sound.files, ['reload.ogg']); // 재장전 중에는 다시 안 남
+      expect(sound.files, ['reload_rifle.ogg']); // 재장전 중에는 다시 안 남
 
       while (game.player.weapon.reloading) {
         game.update(0.1);
       }
       game.player.weapon.ammo = 0; // 탄이 떨어져 자동 재장전
       game.update(1 / 60);
-      expect(sound.files, ['reload.ogg', 'reload.ogg']);
+      expect(sound.files, ['reload_rifle.ogg', 'reload_rifle.ogg']);
+
+      // 무기 종류마다 재장전 소리가 다르다.
+      sound.plays.clear();
+      game.player.selectPrimary(shotgunPump);
+      game.update(1 / 60);
+      game.player.weapon.ammo = 0;
+      game.update(1 / 60);
+      game.player.selectSlot(primary: false); // 권총
+      game.update(1 / 60);
+      game.player.weapon.ammo = 0;
+      game.update(1 / 60);
+      expect(sound.files, ['reload_shotgun.ogg', 'reload_pistol.ogg']);
     },
   );
 
@@ -193,7 +200,9 @@ void main() {
       game.playEnemyShot(rifleStandard, p + Vector2(0, -150)); // 앞
       game.playEnemyShot(sniperBolt, p + Vector2(0, -3000)); // 화면 밖
       game.playEnemyShot(shotgunPump, p + Vector2(3000, 0)); // 화면 밖
-      expect(sound.plays, [(file: 'fire_rifle.ogg', volume: enemyShotVolume)]);
+      expect(sound.plays, [
+        (file: 'fire_rifle_standard.ogg', volume: enemyShotVolume),
+      ]);
     },
   );
 
@@ -239,7 +248,9 @@ void main() {
       await shot('rifle_standard', p + Vector2(0, -120));
       await shot('sniper_bolt', p + Vector2(0, -4000));
       await shown(tester, game);
-      expect(sound.plays, [(file: 'fire_rifle.ogg', volume: enemyShotVolume)]);
+      expect(sound.plays, [
+        (file: 'fire_rifle_standard.ogg', volume: enemyShotVolume),
+      ]);
     },
   );
 
@@ -253,7 +264,7 @@ void main() {
       }
       await shown(tester, game);
       expect(sound.plays, [
-        (file: 'fire_shotgun.ogg', volume: enemyShotVolume),
+        (file: 'fire_shotgun_pump.ogg', volume: enemyShotVolume),
       ]);
     },
   );
@@ -394,14 +405,14 @@ void main() {
       // 북쪽을 보고 있으면 봇이 정면 340px: 화면 안.
       final fired = await botShots(myAngle: -pi / 2);
       expect(fired, greaterThan(0));
-      final heard = sound.plays.where((p) => _fires.contains(p.file));
+      final heard = sound.plays.where((p) => _isFire(p.file));
       expect(heard, isNotEmpty);
       expect(heard.map((p) => p.volume).toSet(), {enemyShotVolume});
 
       // 남쪽을 보면 봇은 내 뒤 340px: 화면 밖(뒤는 204px까지만 보임).
       final firedBehind = await botShots(myAngle: pi / 2);
       expect(firedBehind, greaterThan(0));
-      expect(sound.files.where(_fires.contains), isEmpty);
+      expect(sound.files.where(_isFire), isEmpty);
     },
   );
 }

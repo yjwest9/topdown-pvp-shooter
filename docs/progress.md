@@ -2,6 +2,13 @@
 
 작업이 끝날 때마다 맨 위에 추가한다. (날짜 / 한 것 / 다음 할 일 / 막힌 것)
 
+## 2026-10-15 (효과음 고침 — 사용자 피드백, feat/sound, 병합 전)
+- 피드백: 라이플 4종·저격 3종·샷건 3종이 서로 똑같고 종류끼리도 비슷함, 권총이 라이플 같음, 재장전 소리가 다 같음. 버그가 아니라 설계(종류 4개 + 재장전 1개)와 소리 선택(모두 "가까이서 한 발"이라 비슷, 크기도 같게 맞춤) 때문. 사용자가 고름(질문): 사격은 무기 11종 모두 다르게, 재장전은 종류별 4개. decisions 17장 먼저 고침.
+- 한 것: 사격 `fire_<무기 id>.ogg` 11개(같은 CC0 총기 라이브러리에서 무기마다 다른 녹음 + 종류별 가공: 샷건 저음 크게, 저격 저음 + 메아리, 권총 저음 깎고 0.3초, VSS 고음 깎아 소음기 느낌), 재장전 `reload_<종류>.ogg` 4개(라이플 SpringySpringo, 권총·샷건 zer0_sol, 저격 BMacZero 클립 소리 이어 붙임, 모두 CC0, 페이지 라이선스 확인). `rules/sound.dart`는 `fireSound(weapon)`·`reloadSound(family)`·`allSounds`로(무기 데이터에 필드를 안 늘리고 파일 이름이 id를 따름). 옛 파일 5개 삭제. 소리 합계 248,212 B. 쓰이지 않는 소리 파일이 남으면 실패하는 테스트 추가.
+- 확인: 테스트 428개, analyze 0, `flutter build web` 성공.
+- 다음: 사용자가 훈련소에서 숫자키 1~0·Q로 무기를 바꿔 가며 들어 보기 → 병합. 그다음 홈 캐릭터 실루엣 택티컬 스타일(새 브랜치).
+- 막힌 것: 귀로 못 들어서 가공 정도는 사용자 확인 필요.
+
 ## 2026-10-15 (효과음 — feat/sound, 병합 전)
 - 한 것: decisions 17장·14장에 효과음 확정(CC0만, `flame_audio` 하나, 소리 목록, 상대 총소리는 화면 안일 때만 50%, 스위치 하나) 먼저 반영. 패키지 `flame_audio ^2.12.2`(→ audioplayers 6.8.1, 기존 패키지 버전은 안 바뀜). 소리 10개 `assets/audio/`(합계 130,694 B) + `CREDITS.md`(파일마다 출처·라이선스). 사격 4종은 The Free Firearm Sound Library(제작팀이 CC0 선언), 재장전은 OpenGameArt Gun reload sounds(CC0), 맞힘·피격·처치·승리·패배는 Kenney(Impact·Interface·Music Jingles, CC0). Kenney 팩에는 실제 총소리가 없어서(레이저·충격음뿐) 총소리만 OpenGameArt에서 받음. OpenGameArt "Gunshot Sounds"(Tabasco)는 페이지는 CC0인데 압축 파일 안 `creativecommons.txt`가 CC-BY 3.0이라 쓰지 않음.
 - 구조: `rules/sound.dart`(`Sfx` 목록 + `fireSfxFor(family)`), `balance.dart`의 `enemyShotVolume = 0.5`, `data/services/sound_service.dart`(파일마다 `AudioPool`, 실패는 조용히 무시), `data/repositories/sound_repository.dart`, `SoldierGame.playSfx`(스위치 하나로 전부 꺼짐)·`playEnemyShot`(`camera.localToGlobal`로 화면 안일 때만). 연결: 내 사격(펠릿 여러 개여도 한 번)·재장전 시작·맞힘(Bullet)·처치(`confirmKill`)·피격(체력 감소)·승리/패배(무승부는 없음)·봇 사격·상대 사격(샷건 펠릿은 100ms 안이면 한 번). 설정 화면·인게임 설정 창에 "효과음" 스위치(기기 저장, 기본 켜짐).

@@ -151,7 +151,7 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
     final now = myHp?.value;
     if (before == null || now == null || now >= before) return;
     hurtFlash = 1;
-    game.playSfx(Sfx.hurt);
+    game.playSfx(Sfx.hurt.file);
     if (now <= 0) {
       _deaths++;
       respawnLeft = respawnDelay;
@@ -175,9 +175,9 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
     _finished = true;
     switch (result) {
       case MatchResult.win:
-        game.playSfx(Sfx.win);
+        game.playSfx(Sfx.win.file);
       case MatchResult.lose:
-        game.playSfx(Sfx.lose);
+        game.playSfx(Sfx.lose.file);
       case MatchResult.draw:
         break;
     }

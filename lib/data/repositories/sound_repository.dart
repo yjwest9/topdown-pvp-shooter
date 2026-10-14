@@ -15,11 +15,9 @@ class SoundRepository {
 
   final SoundService _sound;
 
-  Future<void> load() => _sound.load([
-    for (final s in Sfx.values) (file: s.file, voices: s.voices),
-  ]);
+  Future<void> load() => _sound.load(allSounds);
 
-  /// 기다리지 않고 바로 낸다(게임 루프를 막지 않게).
-  void play(Sfx sfx, {double volume = 1}) =>
-      unawaited(_sound.play(sfx.file, volume));
+  /// [file]은 `rules/sound.dart`가 정한 이름. 기다리지 않고 바로 낸다(게임 루프를 막지 않게).
+  void play(String file, {double volume = 1}) =>
+      unawaited(_sound.play(file, volume));
 }

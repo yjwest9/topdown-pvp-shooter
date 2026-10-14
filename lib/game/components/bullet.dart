@@ -128,7 +128,7 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
       if (this.targets == null) {
         // 내 총알
         game.world.add(HitMarker(position: at));
-        game.playSfx(Sfx.hit);
+        game.playSfx(Sfx.hit.file);
       }
       return _stop(const Color(0xFFE0563F));
     }

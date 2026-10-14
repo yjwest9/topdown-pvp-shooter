@@ -5,19 +5,13 @@ import 'package:topsoldier/rules/balance.dart';
 import 'package:topsoldier/rules/sound.dart';
 
 void main() {
-  const fireSounds = {
-    Sfx.fireRifle,
-    Sfx.fireSniper,
-    Sfx.fireShotgun,
-    Sfx.firePistol,
-  };
-
-  test('every sound key has its file in assets/audio', () {
-    for (final s in Sfx.values) {
+  test('every sound has its file in assets/audio', () {
+    expect(allSounds, isNotEmpty);
+    for (final s in allSounds) {
       expect(
         File('assets/audio/${s.file}').existsSync(),
         isTrue,
-        reason: '${s.name} → assets/audio/${s.file}',
+        reason: 'assets/audio/${s.file}',
       );
     }
   });
@@ -42,18 +36,30 @@ void main() {
     }
   });
 
-  test('every weapon maps to one of the 4 fire sounds', () {
-    expect(weapons, hasLength(11));
-    for (final w in weapons) {
-      expect(fireSounds, contains(fireSfxFor(w.family)), reason: w.id);
+  test('no leftover sound files that nothing plays', () {
+    final used = {for (final s in allSounds) s.file};
+    final files = Directory('assets/audio')
+        .listSync()
+        .whereType<File>()
+        .map((f) => f.uri.pathSegments.last)
+        .where((n) => n.endsWith('.ogg'));
+    for (final f in files) {
+      expect(used, contains(f), reason: '$f is not used');
     }
   });
 
-  test('fire sound follows the weapon family, not the weapon', () {
-    expect(fireSfxFor(rifleHeavy.family), Sfx.fireRifle); // 중기관총형도 라이플
-    expect(fireSfxFor(sniperBolt.family), Sfx.fireSniper);
-    expect(fireSfxFor(shotgunDouble.family), Sfx.fireShotgun);
-    expect(fireSfxFor(pistol.family), Sfx.firePistol);
+  test('all 11 weapons have their own fire sound', () {
+    expect(weapons, hasLength(11));
+    final files = {for (final w in weapons) fireSound(w)};
+    expect(files, hasLength(11)); // 같은 종류(라이플 4종 등)끼리도 다름
+    expect(fireSound(rifleHeavy), 'fire_rifle_heavy.ogg');
+  });
+
+  test('reload sound is one per weapon family', () {
+    final files = {for (final f in WeaponFamily.values) reloadSound(f)};
+    expect(files, hasLength(WeaponFamily.values.length));
+    expect(reloadSound(rifleHeavy.family), reloadSound(rifleStandard.family));
+    expect(reloadSound(sniperBolt.family), isNot(reloadSound(pistol.family)));
   });
 
   test('enemy shots are half as loud as mine', () {
