@@ -2,6 +2,12 @@
 
 작업이 끝날 때마다 맨 위에 추가한다. (날짜 / 한 것 / 다음 할 일 / 막힌 것)
 
+## 2026-10-14 (0.1.4+5 업로드 준비 — main 병합, 사용자 확인 완료, 업로드 전)
+- 한 것: 캐릭터 병합분 main push(6c56acb). 로컬 에뮬레이터에서 `tool/rules_check.sh` 61개 전부 통과. 실서버 규칙과 비교: 바뀐 것은 rooms hp 자기 복구(=== 100 → 90~110 숫자 + 주석), users characters/$id, users equippedCharacter 추가뿐(기존 rooms·matchmaking·users 규칙 그대로, 0.1.3 앱의 hp 100도 범위 안이라 호환) → 사용자 확인 후 `firebase deploy --only database`. version 0.1.4+5, `flutter build appbundle --release --dart-define-from-file=.env.local` → 서명된 app-release.aab 58.0MB. 같은 설정 릴리스 apk를 에뮬레이터에 설치·실행: 살아 있고 크래시 0, 병합된 매니페스트 versionCode 5·0.1.4, AD_ID 권한, 테스트 앱 ID 확인.
+- 0.1.4에 들어감: 7킬 종료, 홈에서 광고 미리 불러오기, 캐릭터(구매·장착·강화·게임 반영).
+- 다음: 실서버 규칙 배포 → 실서버 최소 확인 → 사용자 확인(릴리스 앱) → main 병합·push·태그 v0.1.4, Play Console 업로드.
+- 막힌 것: 없음.
+
 ## 2026-10-14 (캐릭터 — main 병합, 0.1.4용)
 - 한 것: decisions 5·8·9·13·17장 먼저(가격 100다이아, 강화는 골드·무기와 같은 비용·확률, 이름 기본 병사/저격수/정찰병/돌격병, 저장 위치, 명중·크리=쏜 사람·회피=맞는 사람, hp 자기 복구 90~110). 규칙(테스트 먼저): 이름·가격, `characterStats(id, level)`(모르는 id·범위 밖 단계는 기본 병사 +0), 확인 값(+5 체력 110·회피 0.13·이동 1.05·명중 0.13·크리 0.10, 돌격병+5 + 크리 25% 무기 = 상한 0.30, 점프 중 정찰병+5 = 미스 상한 0.20), 모든 캐릭터 +0~+5 체력이 DB 규칙 범위 안. 성장 격차 불변식은 캐릭터 +5 포함 그대로 통과(기본 1.963 / 저격 1.166 / 정찰 1.541 / 돌격 1.370발). 저장소: grantStarterCharacter(기존 유저 포함, 한 번만), buyCharacter(트랜잭션), equipCharacter, upgradeCharacter(무기 강화와 같은 방식). 방 players에 character·characterLevel. 게임: 내 캐릭터 → 최대 체력(시작·부활)·이동 속도·내 총알 명중·크리, 맞는 쪽 회피(상대 = 방 players, 봇·표적 = 기본 병사 +0, 봇 총알은 내 회피), HUD·상대 체력 바는 최대 체력 기준. 캐릭터 화면 `ui/character/`(목록·능력치 5개·구매/장착/강화), 강화 카드·연출은 무기 화면 것을 `ui/upgrade_widgets.dart`로 옮겨 같이 씀. 홈 "캐릭터" 연결(아래 메뉴 모두 화면이 생겨 "준비 중" 분기 삭제), 홈에 장착 캐릭터 이름 +N.
 - DB 규칙: characters/$id(4종, 0~5, 새로 0, 그대로/+1), equippedCharacter('basic' 또는 보유), hp 자기 복구 90~110. `tool/rules_check.sh` 61개(기존 48 + 새 13) 통과.
