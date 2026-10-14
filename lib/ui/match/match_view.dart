@@ -10,6 +10,7 @@ import '../../game/components/minimap.dart';
 import '../../game/net/match_sync.dart';
 import '../../game/soldier_game.dart';
 import '../../rules/balance.dart';
+import '../../rules/character.dart';
 import '../../rules/match.dart';
 import '../../rules/rewards.dart';
 import '../loadout/loadout_view_model.dart';
@@ -42,11 +43,12 @@ class MatchView extends ConsumerStatefulWidget {
 class _MatchViewState extends ConsumerState<MatchView> {
   final _gameKey = GlobalKey<RiverpodAwareGameWidgetState<SoldierGame>>();
 
-  /// 감도·발사 방식·미니맵은 설정(홈에서 미리 읽어 둠), 무기는 로드아웃.
+  /// 감도·발사 방식·미니맵은 설정(홈에서 미리 읽어 둠), 무기는 로드아웃, 캐릭터는 장착 캐릭터.
   /// 못 읽었으면(오프라인 등) 기본값. 게임 중에 설정을 바꿔도 다음 매치부터.
   late final _game = () {
     final settings = ref.read(settingsProvider).value ?? const SettingsState();
-    final loadout = equippedWeapons(ref.read(profileProvider).value);
+    final profile = ref.read(profileProvider).value;
+    final loadout = equippedWeapons(profile);
     return SoldierGame(
       match: widget.match,
       bot: widget.bot,
@@ -58,6 +60,10 @@ class _MatchViewState extends ConsumerState<MatchView> {
       secondary: loadout.secondary,
       primaryLevel: loadout.primaryLevel,
       secondaryLevel: loadout.secondaryLevel,
+      character: characterStats(
+        profile?.equippedCharacter,
+        profile?.equippedCharacterLevel ?? 0,
+      ),
       onMinimapRotatesChanged: (rotates) => unawaited(
         ref.read(settingsProvider.notifier).setMinimapRotates(rotates),
       ),

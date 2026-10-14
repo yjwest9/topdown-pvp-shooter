@@ -18,6 +18,7 @@ typedef HitTarget = ({
   CoverBody body,
   Stance stance,
   bool protected,
+  double evasion,
   void Function(HitResult hit, WeaponStats weapon) onHit,
 });
 
@@ -35,6 +36,7 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
     this.hitsTargets = true,
     this.targets,
     this.gradeMultiplier = 1.0,
+    this.character = basicSoldier,
   }) : _dir = Vector2(cos(angle), sin(angle)),
        super(angle: angle);
 
@@ -42,6 +44,9 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
 
   /// 쏜 무기의 등급·강화 배율(decisions 7장). 봇·상대 총알은 E+0.
   final double gradeMultiplier;
+
+  /// 쏜 사람 캐릭터(명중·크리). 봇·상대 화면 연출용 총알은 기본 병사 +0.
+  final CharacterStats character;
 
   /// 쏜 순간 쏜 사람 상태(상자 위였는지 등).
   final CoverBody shooter;
@@ -97,7 +102,7 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
       final at = Vector2(t.body.pos.x, t.body.pos.y);
       // 부활 보호 중: 총알만 멈추고 아무 일 없음.
       if (t.protected) return _stop(const Color(0xFFE3E6D8));
-      final hit = _roll(t.body.airborne);
+      final hit = _roll(t);
       if (hit.miss) {
         _missed.add(t.key);
         game.world.add(FloatingText.miss(at: at));
@@ -114,19 +119,21 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
     if (_traveled >= weapon.range) removeFromParent();
   }
 
-  // ponytail: 쏜 사람·맞는 사람 모두 기본 병사 +0. 캐릭터 선택이 생기면 받아 온다.
-  HitResult _roll(bool targetAirborne) => resolveHit(
+  /// 내 명중과 맞는 쪽 회피(점프 중이면 +10%p)로 정한 미스 확률(decisions 5장).
+  double missChanceAgainst(HitTarget t) => missChance(
+    accuracy: character.accuracy,
+    evasion: t.evasion,
+    airborne: t.body.airborne,
+  );
+
+  HitResult _roll(HitTarget t) => resolveHit(
     baseDamage: weapon.pelletDamage,
     critMultiplier: weapon.critMultiplier,
     gradeMultiplier: gradeMultiplier,
-    missChance: missChance(
-      accuracy: basicSoldier.accuracy,
-      evasion: basicSoldier.evasion,
-      airborne: targetAirborne,
-    ),
+    missChance: missChanceAgainst(t),
     critChance: critChance(
       weaponCrit: weapon.critChance,
-      characterCrit: basicSoldier.crit,
+      characterCrit: character.crit,
     ),
     missRoll: game.random.nextDouble(),
     critRoll: game.random.nextDouble(),

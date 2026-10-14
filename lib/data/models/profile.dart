@@ -51,13 +51,19 @@ class Profile {
     this.primaryId,
     this.secondaryId,
     this.lastAdAt,
+    this.characters = const {},
+    this.equippedCharacter = defaultCharacter,
   });
+
+  /// 기본 병사 id. 저장소는 rules를 못 읽어서 여기 둔다(balance.dart basicSoldier.id와 같음).
+  static const defaultCharacter = 'basic';
 
   factory Profile.fromJson(Object? json) {
     final m = json! as Map<Object?, Object?>;
     final s = (m['stats'] as Map<Object?, Object?>?) ?? const {};
     final w = (m['weapons'] as Map<Object?, Object?>?) ?? const {};
     final l = (m['loadout'] as Map<Object?, Object?>?) ?? const {};
+    final ch = (m['characters'] as Map<Object?, Object?>?) ?? const {};
     int i(Object? v) => (v as num?)?.toInt() ?? 0;
     return Profile(
       nickname: m['nickname'] as String? ?? '',
@@ -77,6 +83,11 @@ class Profile {
       primaryId: l['primary'] as String?,
       secondaryId: l['secondary'] as String?,
       lastAdAt: (m['lastAdAt'] as num?)?.toInt(),
+      characters: {
+        for (final e in ch.entries)
+          e.key! as String: i((e.value as Map<Object?, Object?>?)?['level']),
+      },
+      equippedCharacter: m['equippedCharacter'] as String? ?? defaultCharacter,
     );
   }
 
@@ -105,6 +116,15 @@ class Profile {
   /// 마지막으로 광고 보상을 받은 서버 시간(ms). 없으면 받은 적 없음. 서버 시간으로만
   /// 쓰므로 [toJson]에는 없다.
   final int? lastAdAt;
+
+  /// 보유 캐릭터 id → 강화 단계. [toJson]에는 없다(무기처럼 원래 값이 남는다).
+  final Map<String, int> characters;
+
+  /// 장착 캐릭터 id. 없으면 기본 병사.
+  final String equippedCharacter;
+
+  /// 장착 캐릭터의 단계. 보유 기록이 없으면 0.
+  int get equippedCharacterLevel => characters[equippedCharacter] ?? 0;
 
   bool get hasLoadout => primaryId != null && secondaryId != null;
 
@@ -148,6 +168,8 @@ class Profile {
     primaryId: primaryId,
     secondaryId: secondaryId,
     lastAdAt: lastAdAt,
+    characters: characters,
+    equippedCharacter: equippedCharacter,
   );
 
   /// createdAt은 따로 쓴다(서버 시간).

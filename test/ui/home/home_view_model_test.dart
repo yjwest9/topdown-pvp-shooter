@@ -104,6 +104,19 @@ void main() {
     },
   );
 
+  test('existing user gets the basic soldier +0, equipped', () async {
+    final db = FakeRtdbService();
+    await ProfileRepository(db).create('u', 'A'); // 캐릭터 기능 전에 만든 프로필
+    final c = home(db);
+    await pumpEventQueue();
+    await pumpEventQueue();
+    expect(await db.get('users/u/characters'), {
+      'basic': {'level': 0},
+    });
+    expect(await db.get('users/u/equippedCharacter'), 'basic');
+    expect(c.read(homeProvider).profile.characters, {'basic': 0});
+  });
+
   test('profile card: win rate and K/D, also with 0 matches', () async {
     final db = FakeRtdbService();
     await ProfileRepository(db).create('u', 'A');

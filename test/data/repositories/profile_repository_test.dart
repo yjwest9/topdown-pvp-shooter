@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:topsoldier/data/models/profile.dart';
 import 'package:topsoldier/data/repositories/profile_repository.dart';
 
 import '../../fakes.dart';
@@ -275,6 +276,140 @@ void main() {
       final before = await db.get('users/u');
       expect(await repo.exchange('u', swap), false);
       expect(await db.get('users/u'), before);
+    });
+  });
+
+  group('characters (decisions 8장)', () {
+    Future<ProfileRepository> start(
+      FakeRtdbService db, {
+      int gold = 0,
+      int diamond = 0,
+    }) async {
+      final repo = ProfileRepository(db);
+      await repo.create('u', 'A');
+      await db.update('users/u', {'gold': gold, 'diamond': diamond});
+      await repo.grantStarterCharacter('u', id: 'basic');
+      return repo;
+    }
+
+    Future<Profile> read(ProfileRepository repo) async =>
+        (await repo.watch('u').first)!;
+
+    test('starter: basic +0 granted once and equipped, kept as is', () async {
+      final db = FakeRtdbService();
+      final repo = await start(db);
+      await db.set('users/u/characters/basic/level', 2);
+      await repo.grantStarterCharacter('u', id: 'basic');
+      final p = await read(repo);
+      expect(p.characters, {'basic': 2});
+      expect(p.equippedCharacter, 'basic');
+    });
+
+    test('old profile without characters reads as basic equipped', () async {
+      final repo = ProfileRepository(FakeRtdbService());
+      await repo.create('u', 'A');
+      final p = await read(repo);
+      expect(p.characters, isEmpty);
+      expect(p.equippedCharacter, 'basic');
+    });
+
+    test('buy: diamond −100, owned at +0', () async {
+      final repo = await start(FakeRtdbService(), diamond: 130);
+      expect(await repo.buyCharacter('u', 'scout', 100), true);
+      final p = await read(repo);
+      expect((p.diamond, p.characters['scout']), (30, 0));
+    });
+
+    test('buy with 99 diamonds or already owned changes nothing', () async {
+      final db = FakeRtdbService();
+      final repo = await start(db, diamond: 99);
+      final before = await db.get('users/u');
+      expect(await repo.buyCharacter('u', 'scout', 100), false);
+      expect(await db.get('users/u'), before);
+
+      await db.update('users/u', {'diamond': 500});
+      expect(await repo.buyCharacter('u', 'scout', 100), true);
+      expect(await repo.buyCharacter('u', 'scout', 100), false);
+      expect((await read(repo)).diamond, 400);
+    });
+
+    test('equip an owned character', () async {
+      final repo = await start(FakeRtdbService(), diamond: 100);
+      await repo.buyCharacter('u', 'assault', 100);
+      await repo.equipCharacter('u', 'assault');
+      expect((await read(repo)).equippedCharacter, 'assault');
+    });
+
+    group('upgrade (gold, same as weapons)', () {
+      Future<(int, int?)> goldAndLevel(ProfileRepository r) async {
+        final p = await read(r);
+        return (p.gold, p.characters['basic']);
+      }
+
+      test('success: gold − cost, +1', () async {
+        final repo = await start(FakeRtdbService(), gold: 5000);
+        expect(
+          await repo.upgradeCharacter(
+            'u',
+            'basic',
+            fromLevel: 0,
+            cost: 2000,
+            success: true,
+          ),
+          true,
+        );
+        expect(await goldAndLevel(repo), (3000, 1));
+      });
+
+      test('fail: gold − cost, level stays', () async {
+        final repo = await start(FakeRtdbService(), gold: 5000);
+        await repo.upgradeCharacter(
+          'u',
+          'basic',
+          fromLevel: 0,
+          cost: 2000,
+          success: false,
+        );
+        expect(await goldAndLevel(repo), (3000, 0));
+      });
+
+      test('not enough gold or wrong level: nothing changes', () async {
+        final repo = await start(FakeRtdbService(), gold: 1999);
+        expect(
+          await repo.upgradeCharacter(
+            'u',
+            'basic',
+            fromLevel: 0,
+            cost: 2000,
+            success: true,
+          ),
+          false,
+        );
+        expect(
+          await repo.upgradeCharacter(
+            'u',
+            'basic',
+            fromLevel: 3,
+            cost: 0,
+            success: true,
+          ),
+          false,
+        );
+        expect(await goldAndLevel(repo), (1999, 0));
+      });
+
+      test('a rerun of the transaction applies once', () async {
+        final db = FakeRtdbService()..rerunTransactions = true;
+        final repo = await start(db, gold: 5000);
+        await repo.upgradeCharacter(
+          'u',
+          'basic',
+          fromLevel: 0,
+          cost: 2000,
+          success: true,
+        );
+        expect(await goldAndLevel(repo), (3000, 1));
+      });
     });
   });
 }

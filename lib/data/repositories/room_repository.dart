@@ -10,6 +10,9 @@ final roomRepositoryProvider = Provider(
   (ref) => RoomRepository(FirebaseRtdbService()),
 );
 
+/// 방에 들어갈 때 기록하는 내 장착 캐릭터(decisions 13장).
+typedef PlayerCharacter = ({String id, int level});
+
 class RoomException implements Exception {
   const RoomException(this.message);
   final String message;
@@ -39,9 +42,14 @@ class RoomRepository {
     required String uid,
     required String name,
     required int durationMs,
+    PlayerCharacter? character,
   }) async {
     final rooms = RoomRepository(LocalRtdbService());
-    final code = await rooms.createRoom(uid: uid, name: name);
+    final code = await rooms.createRoom(
+      uid: uid,
+      name: name,
+      character: character,
+    );
     await rooms.joinRoom(code, uid: botUid, name: 'BOT');
     await rooms.start(code, durationMs: durationMs);
     return (rooms: rooms, code: code);
@@ -52,7 +60,11 @@ class RoomRepository {
   String _room(String code) => 'rooms/$code';
 
   /// 빈 코드를 찾아 방을 만들고 방장으로 들어간다. 코드 충돌은 meta 생성 트랜잭션으로 막는다.
-  Future<String> createRoom({required String uid, required String name}) async {
+  Future<String> createRoom({
+    required String uid,
+    required String name,
+    PlayerCharacter? character,
+  }) async {
     for (var i = 0; i < _createTries; i++) {
       final code = newRoomCode(_random);
       final created = await _db.transaction(
@@ -61,7 +73,13 @@ class RoomRepository {
       );
       if (!created.committed) continue;
       await _db.update('${_room(code)}/meta', {'createdAt': serverTimestamp});
-      await _enter(code, uid: uid, name: name, team: RoomMeta.teamA);
+      await _enter(
+        code,
+        uid: uid,
+        name: name,
+        team: RoomMeta.teamA,
+        character: character,
+      );
       return code;
     }
     throw const RoomException('방을 만들지 못했습니다. 다시 시도해 주세요.');
@@ -78,6 +96,7 @@ class RoomRepository {
     String code, {
     required String uid,
     required String name,
+    PlayerCharacter? character,
   }) async {
     final meta = await _db.get('${_room(code)}/meta');
     if (meta == null) throw const RoomException('없는 방 코드입니다.');
@@ -89,7 +108,13 @@ class RoomRepository {
     if (others.length >= maxPlayers) {
       throw const RoomException('방이 가득 찼습니다.');
     }
-    await _enter(code, uid: uid, name: name, team: RoomMeta.teamB);
+    await _enter(
+      code,
+      uid: uid,
+      name: name,
+      team: RoomMeta.teamB,
+      character: character,
+    );
   }
 
   Future<void> _enter(
@@ -97,12 +122,17 @@ class RoomRepository {
     required String uid,
     required String name,
     required String team,
+    PlayerCharacter? character,
   }) async {
     await _armDisconnect(code, uid);
     await _db.set('${_room(code)}/players/$uid', {
       'name': name,
       'connected': true,
       'team': team,
+      if (character != null) ...{
+        'character': character.id,
+        'characterLevel': character.level,
+      },
     });
   }
 
@@ -154,13 +184,20 @@ class RoomRepository {
   Future<String> createQuickRoom({
     required String uid,
     required String name,
+    PlayerCharacter? character,
   }) async {
     final id = _db.newKey('rooms');
     await _db.set('${_room(id)}/meta', {
       ..._newMeta(uid),
       'createdAt': serverTimestamp,
     });
-    await _enter(id, uid: uid, name: name, team: RoomMeta.teamA);
+    await _enter(
+      id,
+      uid: uid,
+      name: name,
+      team: RoomMeta.teamA,
+      character: character,
+    );
     await _db.removeOnDisconnect(_room(id));
     return id;
   }

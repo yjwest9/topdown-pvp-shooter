@@ -70,5 +70,20 @@ check $(req $TA PATCH users/$A "{\"diamond\":100,\"lastAdAt\":$cur}") allow "las
 check $(req $TA PUT users/$A "$(curl -s "$DB/users/$A.json?ns=$NS" -H "Authorization: Bearer owner")") allow "users 통째로 다시 쓰기, lastAdAt 그대로"
 admin PUT users/$A/lastAdAt "$(( $(date +%s)*1000 - 3600001 ))"
 check $(req $TA PATCH users/$A "{\"gold\":{\".sv\":{\"increment\":10000}},\"lastAdAt\":$TS}") allow "1시간 넘게 지난 뒤 다시(골드 +10,000과 한 번에)"
+admin PUT rooms/q2 "{\"meta\":{\"hostUid\":\"$A\",\"status\":\"playing\"},\"players\":{\"$A\":{\"connected\":true}}}"
+check $(req $TA PUT rooms/q2/hp/$A '{"value":110,"protectedUntil":0}') allow "hp 자기 복구 110(기본 병사 +5)"
+check $(req $TA PUT rooms/q2/hp/$A '{"value":111,"protectedUntil":0}') deny "hp 자기 복구 111"
+check $(req $TA PUT rooms/q2/hp/$A '{"value":89,"protectedUntil":0}') deny "hp 자기 복구 89"
+check $(req $TA PUT rooms/q2/hp/$A '{"value":90,"protectedUntil":0}') allow "hp 자기 복구 90(정찰병)"
+admin DELETE rooms/q2
+check $(req $TA PUT users/$A/characters/scout '{"level":0}') allow "새 캐릭터 level 0"
+check $(req $TA PUT users/$A/characters/marksman '{"level":3}') deny "새 캐릭터를 +3으로"
+check $(req $TA PATCH users/$A/characters/scout '{"level":2}') deny "캐릭터 강화 +2 점프(0 -> 2)"
+check $(req $TA PATCH users/$A/characters/scout '{"level":1}') allow "캐릭터 강화 +1"
+check $(req $TA PUT users/$A/characters/ninja '{"level":0}') deny "모르는 캐릭터 id"
+check $(req $TB PUT users/$A/characters/assault '{"level":0}') deny "남의 캐릭터 쓰기"
+check $(req $TA PATCH users/$A '{"equippedCharacter":"basic"}') allow "장착 'basic'(보유 기록 없어도)"
+check $(req $TA PATCH users/$A '{"equippedCharacter":"assault"}') deny "미보유 캐릭터 장착"
+check $(req $TA PATCH users/$A '{"equippedCharacter":"scout"}') allow "보유 캐릭터 장착"
 for u in $A $B $C; do admin DELETE users/$u; done
 

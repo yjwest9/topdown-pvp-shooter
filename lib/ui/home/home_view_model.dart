@@ -64,6 +64,7 @@ class HomeViewModel extends Notifier<HomeState> {
         uid: 'me',
         name: myNickname(ref),
         durationMs: matchDurationMs,
+        character: myCharacter(ref),
       );
 
   /// 닉네임 입력 창의 기본값.
@@ -80,18 +81,23 @@ class HomeViewModel extends Notifier<HomeState> {
       unawaited(ref.read(adRepositoryProvider).load());
     }
     final p = ref.watch(profileProvider);
-    // 새 유저·기존 유저 모두 로드아웃이 없으면 기본 무기 지급(decisions 6장).
-    if (p.value case final profile? when !profile.hasLoadout && !_granting) {
+    // 새 유저·기존 유저 모두 로드아웃이 없으면 기본 무기, 기본 병사가 없으면 기본 병사 지급
+    // (decisions 6장·8장). 둘 다 이미 있으면 저장소가 아무것도 안 한다.
+    if (p.value case final profile?
+        when (!profile.hasLoadout ||
+                !profile.characters.containsKey(basicSoldier.id)) &&
+            !_granting) {
       _granting = true;
       Future.microtask(() async {
         try {
-          await ref
-              .read(profileRepositoryProvider)
-              .grantStarter(
-                await _auth.signIn(),
-                primary: startingPrimary.id,
-                secondary: startingSecondary.id,
-              );
+          final repo = ref.read(profileRepositoryProvider);
+          final uid = await _auth.signIn();
+          await repo.grantStarter(
+            uid,
+            primary: startingPrimary.id,
+            secondary: startingSecondary.id,
+          );
+          await repo.grantStarterCharacter(uid, id: basicSoldier.id);
         } finally {
           _granting = false;
         }

@@ -7,6 +7,7 @@ import '../../data/models/match_stats.dart';
 import '../../data/models/room.dart';
 import '../../data/repositories/room_repository.dart';
 import '../../rules/balance.dart';
+import '../../rules/character.dart';
 import '../../rules/combat.dart';
 import '../../rules/match.dart';
 import '../components/bullet.dart';
@@ -87,6 +88,10 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
       _endsAt == 0 ? matchDurationMs : max(0, _endsAt - serverNow);
 
   String nameOf(String id) => players[id]?.name ?? '?';
+
+  /// 방 참가자의 캐릭터(강화 반영). 기록이 없으면(옛 앱·봇) 기본 병사 +0.
+  CharacterStats characterOf(String id) =>
+      characterStats(players[id]?.character, players[id]?.characterLevel ?? 0);
 
   @override
   void onMount() {
@@ -225,7 +230,7 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
     code,
     uid,
     NetHp(
-      value: basicSoldier.hp.toDouble(),
+      value: game.character.hp.toDouble(),
       protectedUntil: serverNow + spawnProtectionMs,
     ),
   );

@@ -118,7 +118,11 @@ class MatchmakingViewModel extends Notifier<MatchmakingState> {
       final uid = _uid = await _auth.signIn();
       _name = myNickname(ref);
       if (_closed) return;
-      final room = _myRoom = await rooms.createQuickRoom(uid: uid, name: _name);
+      final room = _myRoom = await rooms.createQuickRoom(
+        uid: uid,
+        name: _name,
+        character: myCharacter(ref),
+      );
       state = state.copyWith(uid: uid);
       _subs.add(rooms.slot().listen(_onSlot));
       _roomSub = rooms.players(room).listen(_onMyRoomPlayers);
@@ -177,7 +181,12 @@ class MatchmakingViewModel extends Notifier<MatchmakingState> {
           case QuickMatchAction.take:
             if (_closed) return;
             try {
-              await rooms.joinRoom(slot!.roomId, uid: uid, name: _name);
+              await rooms.joinRoom(
+                slot!.roomId,
+                uid: uid,
+                name: _name,
+                character: myCharacter(ref),
+              );
             } on RoomException {
               continue; // 방장이 막 취소함 → 다시 판정
             }
@@ -225,7 +234,11 @@ class MatchmakingViewModel extends Notifier<MatchmakingState> {
     final old = _myRoom!;
     unawaited(_roomSub?.cancel());
     await rooms.deleteRoom(old);
-    final room = _myRoom = await rooms.createQuickRoom(uid: _uid!, name: _name);
+    final room = _myRoom = await rooms.createQuickRoom(
+      uid: _uid!,
+      name: _name,
+      character: myCharacter(ref),
+    );
     if (_closed) return rooms.deleteRoom(room);
     _roomSub = rooms.players(room).listen(_onMyRoomPlayers);
     await _attempt();

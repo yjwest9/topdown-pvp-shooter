@@ -44,7 +44,11 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     this.secondaryLevel = 0,
     this.primaryFireMode = FireMode.auto,
     this.secondaryFireMode = FireMode.auto,
+    this.character = basicSoldier,
   }) : random = random ?? Random();
+
+  /// 내 장착 캐릭터(강화 반영). 최대 체력·이동 속도·내 총알의 명중·크리, 맞을 때 회피.
+  final CharacterStats character;
 
   /// 로드아웃(decisions 6장). 숫자키 1~0 변경은 훈련소에서만.
   final WeaponStats primary;
@@ -127,6 +131,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
       secondaryWeapon: secondary,
       primaryLevel: primaryLevel,
       secondaryLevel: secondaryLevel,
+      moveSpeed: character.moveSpeed,
     );
     dummies = [
       if (match == null)
@@ -289,6 +294,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
           body: d.coverBody,
           stance: d.stance,
           protected: false,
+          evasion: TargetDummy.stats.evasion,
           onHit: (h, _) {
             d.takeDamage(h.damage);
             if (d.dead) confirmKill('표적');
@@ -301,6 +307,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
           body: r.coverBody,
           stance: r.stance,
           protected: r.protected,
+          evasion: match!.characterOf(r.uid).evasion,
           onHit: (h, w) => match!.hit(r.uid, h, w),
         ),
   ];
@@ -350,6 +357,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
           weapon: w.weapon,
           shooter: player.coverBody,
           gradeMultiplier: gradeMultiplier(w.grade, w.level),
+          character: character,
         ),
     ]);
     for (final a in angles) {

@@ -106,10 +106,8 @@ class RemotePlayer extends PositionComponent
 
   /// 머리 위 체력 바. 카메라 각도만큼 돌려 화면에서 똑바로 보이게.
   void _renderHpBar(Canvas canvas) {
-    final ratio = ((hp?.value ?? basicSoldier.hp) / basicSoldier.hp).clamp(
-      0.0,
-      1.0,
-    );
+    final full = sync.characterOf(uid).hp;
+    final ratio = ((hp?.value ?? full) / full).clamp(0.0, 1.0);
     canvas
       ..save()
       ..translate(playerRadius, playerRadius)

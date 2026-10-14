@@ -73,7 +73,11 @@ class LobbyViewModel extends Notifier<LobbyState> {
   }
 
   Future<void> createRoom() => _enter((uid, name) async {
-    final code = await rooms.createRoom(uid: uid, name: name);
+    final code = await rooms.createRoom(
+      uid: uid,
+      name: name,
+      character: myCharacter(ref),
+    );
     return (code: code, host: true);
   });
 
@@ -83,7 +87,12 @@ class LobbyViewModel extends Notifier<LobbyState> {
       return Future.value();
     }
     return _enter((uid, name) async {
-      await rooms.joinRoom(code, uid: uid, name: name);
+      await rooms.joinRoom(
+        code,
+        uid: uid,
+        name: name,
+        character: myCharacter(ref),
+      );
       return (code: code, host: false);
     });
   }

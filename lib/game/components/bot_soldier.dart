@@ -251,6 +251,7 @@ class BotSoldier extends Component with HasGameReference<SoldierGame> {
         body: p.coverBody,
         stance: p.stance,
         protected: match.isProtected(match.myHp),
+        evasion: game.character.evasion,
         onHit: (h, w) => unawaited(_damage(h, w)),
       ),
     ];

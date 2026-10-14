@@ -21,7 +21,11 @@ class Player extends PositionComponent {
     this.secondaryWeapon = startingSecondary,
     this.primaryLevel = 0,
     this.secondaryLevel = 0,
+    this.moveSpeed = 1.0,
   }) : super(size: Vector2.all(playerRadius * 2), anchor: Anchor.center);
+
+  /// 캐릭터 이동 배율(정찰병 1.05).
+  final double moveSpeed;
 
   /// 로드아웃으로 처음 드는 무기.
   final WeaponStats primaryWeapon;
@@ -143,7 +147,11 @@ class Player extends PositionComponent {
         forward: forward,
         strafe: strafe,
         distance:
-            walkSpeed * body.moveSpeedMultiplier * weapon.weapon.moveSpeed * dt,
+            walkSpeed *
+            moveSpeed *
+            body.moveSpeedMultiplier *
+            weapon.weapon.moveSpeed *
+            dt,
       );
       final walls = body.ignoresLowCrates ? highWalls : _allBlocks;
       to = slide(from, d, playerRadius, walls);

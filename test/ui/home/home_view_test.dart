@@ -13,7 +13,7 @@ import '../../fakes.dart';
 
 void main() {
   testWidgets('small landscape phone: long nickname and big numbers fit, '
-      'menus without a screen say "준비 중"', (tester) async {
+      'the 캐릭터 menu opens the character screen', (tester) async {
     tester.view
       ..physicalSize = const Size(740, 360)
       ..devicePixelRatio = 1;
@@ -42,7 +42,7 @@ void main() {
     expect(find.text('123,456,789'), findsOneWidget);
     expect(find.textContaining('공휴일 보상 2배'), findsOneWidget);
     await tester.tap(find.text('캐릭터'));
-    await tester.pump();
-    expect(find.text('캐릭터: 준비 중입니다'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('저격수'), findsOneWidget);
   });
 }

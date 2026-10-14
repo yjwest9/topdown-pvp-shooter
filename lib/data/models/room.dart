@@ -53,6 +53,8 @@ class RoomPlayer {
     required this.name,
     required this.connected,
     this.team = RoomMeta.teamA,
+    this.character,
+    this.characterLevel = 0,
   });
 
   factory RoomPlayer.fromJson(String uid, Object? json) {
@@ -62,6 +64,8 @@ class RoomPlayer {
       name: m['name'] as String? ?? '',
       connected: m['connected'] as bool? ?? false,
       team: m['team'] as String? ?? RoomMeta.teamA,
+      character: m['character'] as String?,
+      characterLevel: _i(m['characterLevel']),
     );
   }
 
@@ -71,6 +75,10 @@ class RoomPlayer {
 
   /// 방장 A(남쪽), 참가자 B(북쪽).
   final String team;
+
+  /// 장착 캐릭터 id와 단계(decisions 13장). 옛 앱·봇은 없음 → 기본 병사 +0.
+  final String? character;
+  final int characterLevel;
 }
 
 /// `rooms/{code}/hp/{uid}`. 맞힌 쪽이 트랜잭션으로 깎는다.

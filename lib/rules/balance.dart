@@ -391,6 +391,7 @@ const weapons = <WeaponStats>[
 class CharacterStats {
   const CharacterStats({
     required this.id,
+    required this.name,
     required this.hp,
     this.accuracy = 0,
     this.evasion = 0,
@@ -403,6 +404,9 @@ class CharacterStats {
   });
 
   final String id;
+
+  /// 화면에 보이는 이름(decisions 8장).
+  final String name;
   final int hp;
   final double accuracy;
   final double evasion;
@@ -416,15 +420,22 @@ class CharacterStats {
   final double critPerLevel;
 }
 
-const basicSoldier = CharacterStats(id: 'basic', hp: 100, hpPerLevel: 2);
+const basicSoldier = CharacterStats(
+  id: 'basic',
+  name: '기본 병사',
+  hp: 100,
+  hpPerLevel: 2,
+);
 const marksman = CharacterStats(
   id: 'marksman',
+  name: '저격수',
   hp: 95,
   accuracy: 0.08,
   accuracyPerLevel: 0.01,
 );
 const scout = CharacterStats(
   id: 'scout',
+  name: '정찰병',
   hp: 90,
   evasion: 0.08,
   moveSpeed: 1.05,
@@ -432,12 +443,21 @@ const scout = CharacterStats(
 );
 const assault = CharacterStats(
   id: 'assault',
+  name: '돌격병',
   hp: 95,
   crit: 0.05,
   critPerLevel: 0.01,
 );
 
 const characters = <CharacterStats>[basicSoldier, marksman, scout, assault];
+
+/// 캐릭터 가격(다이아). 기본 병사는 무료. 강화는 무기와 같은 [upgradeCosts]·[upgradeChances].
+const characterPrice = 100;
+
+/// 캐릭터 +0~+5의 최소·최대 체력. database.rules.json의 hp 자기 복구 규칙(90~110)과
+/// 같아야 한다. 캐릭터 수치를 바꾸면 거기도 같이 바꿀 것.
+const characterHpMin = 90;
+const characterHpMax = 110;
 
 // ------------------------------------------------------ 멀티플레이 (13장)
 

@@ -72,8 +72,10 @@ class MatchHud extends Component with HasGameReference<SoldierGame> {
   }
 
   void _renderHp(Canvas canvas, Vector2 size) {
-    final value = sync.myHp?.value ?? basicSoldier.hp.toDouble();
-    final ratio = (value / basicSoldier.hp).clamp(0.0, 1.0);
+    // 최대 체력은 내 캐릭터(정찰병 90 ~ 기본 병사 +5 110).
+    final full = sync.game.character.hp;
+    final value = sync.myHp?.value ?? full.toDouble();
+    final ratio = (value / full).clamp(0.0, 1.0);
     const w = 180.0, h = 8.0;
     final left = size.x / 2 - w / 2, top = size.y - 22;
     canvas

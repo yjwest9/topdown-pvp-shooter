@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/profile.dart';
 import '../../game/net/match_sync.dart';
 import '../../rules/balance.dart';
+import '../../rules/character.dart';
 import '../../rules/rewards.dart';
 import '../../rules/upgrade.dart';
+import '../character/character_view.dart';
 import '../format.dart';
 import '../loadout/loadout_view.dart';
 import '../loadout/loadout_view_model.dart';
@@ -113,12 +115,6 @@ class _Home extends ConsumerWidget {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page)),
   );
 
-  void _soon(BuildContext context, String name) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('$name: 준비 중입니다')));
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Column(
@@ -205,21 +201,16 @@ class _Home extends ConsumerWidget {
           color: panelColor,
           child: Row(
             children: [
-              for (final (icon, name) in [
-                (Icons.gps_fixed, '무기'),
-                (Icons.person, '캐릭터'),
-                (Icons.storefront, '상점'),
-                (Icons.settings, '설정'),
+              for (final (icon, name, page) in [
+                (Icons.gps_fixed, '무기', const LoadoutView()),
+                (Icons.person, '캐릭터', const CharacterView()),
+                (Icons.storefront, '상점', const ShopView()),
+                (Icons.settings, '설정', const SettingsView()),
               ])
                 Expanded(
                   child: TextButton.icon(
                     style: TextButton.styleFrom(foregroundColor: lightColor),
-                    onPressed: () => switch (name) {
-                      '무기' => _open(context, const LoadoutView()),
-                      '상점' => _open(context, const ShopView()),
-                      '설정' => _open(context, const SettingsView()),
-                      _ => _soon(context, name),
-                    },
+                    onPressed: () => _open(context, page),
                     icon: Icon(icon, size: 18),
                     label: Text(name),
                   ),
@@ -373,6 +364,21 @@ class _Character extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // 장착 캐릭터 이름 + 단계(decisions 8장).
+            Text(
+              withLevel(
+                characterStats(
+                  profile.equippedCharacter,
+                  profile.equippedCharacterLevel,
+                ).name,
+                profile.equippedCharacterLevel,
+              ),
+              style: const TextStyle(
+                color: amberColor,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(width: 12),
             GradeBadge(profile.byId(profile.primaryId)?.grade ?? 'E'),
             const SizedBox(width: 8),
             Text(

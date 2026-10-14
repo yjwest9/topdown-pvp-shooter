@@ -23,8 +23,9 @@
           }
         },
         "hp": {
+          // 자기 복구 90~110 = balance.dart의 characterHpMin·characterHpMax. 캐릭터 체력을 바꾸면 같이 바꿀 것.
           "$uid": {
-            ".write": "auth != null && root.child('rooms/' + $code + '/players/' + auth.uid).exists() && (auth.uid === $uid ? newData.child('value').val() === 100 : (data.exists() && newData.child('value').isNumber() && newData.child('value').val() >= 0 && newData.child('value').val() < data.child('value').val() && data.child('protectedUntil').val() <= now && newData.child('protectedUntil').val() === data.child('protectedUntil').val()))"
+            ".write": "auth != null && root.child('rooms/' + $code + '/players/' + auth.uid).exists() && (auth.uid === $uid ? (newData.child('value').isNumber() && newData.child('value').val() >= 90 && newData.child('value').val() <= 110) : (data.exists() && newData.child('value').isNumber() && newData.child('value').val() >= 0 && newData.child('value').val() < data.child('value').val() && data.child('protectedUntil').val() <= now && newData.child('protectedUntil').val() === data.child('protectedUntil').val()))"
           }
         },
         "kills": {
@@ -55,6 +56,12 @@
             ".validate": "newData.hasChildren(['weaponId', 'grade', 'level']) && newData.child('weaponId').isString() && newData.child('weaponId').val().matches(/^(rifle_standard|rifle_rapid|rifle_precision|rifle_heavy|sniper_bolt|sniper_semi|sniper_light|shotgun_pump|shotgun_auto|shotgun_double|pistol)$/) && newData.child('grade').val() === 'E' && newData.child('level').isNumber() && newData.child('level').val() >= 0 && newData.child('level').val() <= 5 && (!data.exists() ? newData.child('level').val() === 0 : (newData.child('weaponId').val() === data.child('weaponId').val() && (newData.child('level').val() === data.child('level').val() || newData.child('level').val() === data.child('level').val() + 1)))"
           }
         },
+        "characters": {
+          "$id": {
+            ".validate": "$id.matches(/^(basic|marksman|scout|assault)$/) && newData.hasChildren(['level']) && newData.child('level').isNumber() && newData.child('level').val() >= 0 && newData.child('level').val() <= 5 && (!data.exists() ? newData.child('level').val() === 0 : (newData.child('level').val() === data.child('level').val() || newData.child('level').val() === data.child('level').val() + 1))"
+          }
+        },
+        "equippedCharacter": { ".validate": "newData.isString() && (newData.val() === 'basic' || newData.parent().child('characters/' + newData.val()).exists())" },
         "loadout": {
           "primary": { ".validate": "newData.isString() && newData.parent().parent().child('weapons/' + newData.val()).exists()" },
           "secondary": { ".validate": "newData.isString() && newData.parent().parent().child('weapons/' + newData.val()).exists()" }

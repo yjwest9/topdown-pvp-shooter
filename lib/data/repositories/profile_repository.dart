@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/profile.dart';
 import '../services/rtdb_service.dart';
 import 'auth_repository.dart';
+import 'room_repository.dart';
 
 final profileRepositoryProvider = Provider(
   (ref) => ProfileRepository(FirebaseRtdbService()),
@@ -18,6 +19,15 @@ final profileProvider = StreamProvider<Profile?>((ref) async* {
 String myNickname(Ref ref) =>
     ref.read(profileProvider).value?.nickname ??
     ref.read(authRepositoryProvider).nickname;
+
+/// 방에 기록할 내 장착 캐릭터와 단계. 프로필을 못 읽었으면 기본 병사 +0.
+PlayerCharacter myCharacter(Ref ref) {
+  final p = ref.read(profileProvider).value;
+  return (
+    id: p?.equippedCharacter ?? Profile.defaultCharacter,
+    level: p?.equippedCharacterLevel ?? 0,
+  );
+}
 
 /// `users/{uid}` 읽기·쓰기(decisions 13장). 본인 것만(DB 규칙).
 class ProfileRepository {
@@ -165,6 +175,76 @@ class ProfileRepository {
         'level': fromLevel + (success ? 1 : 0),
       };
       m['weapons'] = weapons;
+      m['gold'] = p.gold - cost;
+      return m;
+    });
+    return applied;
+  }
+
+  // ---------------------------------------------------------- 캐릭터 (8장)
+
+  /// 기본 캐릭터 [id]가 없으면 +0으로 주고, 장착 캐릭터가 없으면 그걸 장착한다(기존 유저 포함).
+  Future<void> grantStarterCharacter(String uid, {required String id}) =>
+      _db.transaction(_user(uid), (cur) {
+        if (cur == null) return null; // 서버 값으로 다시 불린다
+        final m = {...(cur as Map<Object?, Object?>)};
+        final chars = {
+          ...((m['characters'] as Map<Object?, Object?>?) ?? const {}),
+        };
+        if (chars.containsKey(id) && m['equippedCharacter'] != null) {
+          return txAbort;
+        }
+        chars.putIfAbsent(id, () => {'level': 0});
+        m['characters'] = chars;
+        m['equippedCharacter'] ??= id;
+        return m;
+      });
+
+  /// [id] 캐릭터를 [price] 다이아에 산다. 다이아 차감과 생성은 트랜잭션 하나로.
+  /// 다이아가 모자라거나 이미 있으면 아무것도 안 바꾸고 false.
+  Future<bool> buyCharacter(String uid, String id, int price) async {
+    var bought = false;
+    await _db.transaction(_user(uid), (cur) {
+      bought = false;
+      if (cur == null) return null;
+      final p = Profile.fromJson(cur);
+      if (p.diamond < price || p.characters.containsKey(id)) return txAbort;
+      bought = true;
+      final m = {...(cur as Map<Object?, Object?>)};
+      m['diamond'] = p.diamond - price;
+      m['characters'] = {
+        ...((m['characters'] as Map<Object?, Object?>?) ?? const {}),
+        id: {'level': 0},
+      };
+      return m;
+    });
+    return bought;
+  }
+
+  Future<void> equipCharacter(String uid, String id) =>
+      _db.update(_user(uid), {'equippedCharacter': id});
+
+  /// 캐릭터 강화 한 번. 무기 [upgrade]와 같은 방식(확률은 밖에서, 골드 ≥ [cost]이고
+  /// 아직 [fromLevel]일 때만 골드를 빼고 성공이면 +1). 조건이 안 맞으면 false.
+  Future<bool> upgradeCharacter(
+    String uid,
+    String id, {
+    required int fromLevel,
+    required int cost,
+    required bool success,
+  }) async {
+    var applied = false;
+    await _db.transaction(_user(uid), (cur) {
+      applied = false;
+      if (cur == null) return null; // 서버 값으로 다시 불린다
+      final p = Profile.fromJson(cur);
+      if (p.characters[id] != fromLevel || p.gold < cost) return txAbort;
+      applied = true;
+      final m = {...(cur as Map<Object?, Object?>)};
+      m['characters'] = {
+        ...(m['characters']! as Map<Object?, Object?>),
+        id: {'level': fromLevel + (success ? 1 : 0)},
+      };
       m['gold'] = p.gold - cost;
       return m;
     });
