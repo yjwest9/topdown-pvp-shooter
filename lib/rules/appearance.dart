@@ -223,6 +223,7 @@ class CharacterLook {
     this.tie = false,
     this.sunglasses = false,
     this.messyHair = false,
+    this.headset = false,
   });
 
   final int skin;
@@ -238,6 +239,9 @@ class CharacterLook {
   final bool tie;
   final bool sunglasses;
   final bool messyHair;
+
+  /// 귀를 덮는 헤드셋(정면 실루엣).
+  final bool headset;
 }
 
 const characterLooks = <String, CharacterLook>{
@@ -274,7 +278,7 @@ const characterLooks = <String, CharacterLook>{
     backpack: true,
     messyHair: true,
   ),
-  // Man Brown: 주황빛 갈색 옷, 짧은 갈색 머리
+  // Man Brown: 주황빛 갈색 옷, 짧은 갈색 머리(정면은 헤드셋)
   'assault': CharacterLook(
     skin: 0xFFE0A57A,
     hair: 0xFF5A3A22,
@@ -282,6 +286,7 @@ const characterLooks = <String, CharacterLook>{
     pants: 0xFF6E4A2C,
     shoes: 0xFF3A2A1E,
     accent: 0xFF8E5426,
+    headset: true,
   ),
 };
 
