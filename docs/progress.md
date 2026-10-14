@@ -2,6 +2,14 @@
 
 작업이 끝날 때마다 맨 위에 추가한다. (날짜 / 한 것 / 다음 할 일 / 막힌 것)
 
+## 2026-10-15 (게임 안 병사도 실루엣 택티컬 — feat/ingame-tactical, 병합 전)
+- 먼저: 사용자 확인 후 feat/sound·feat/tactical-figure를 main에 로컬 병합(fast-forward, 그림 브랜치는 rebase하고 progress.md 충돌은 두 기록 모두 살림). 병합된 main에서 테스트 428개·analyze 0 확인. push는 안 함.
+- 조사: Kenney 말고 쓸 만한 탑다운 병사 에셋(`docs/research/topdown-soldier-art.md`). CC0 현대 택티컬 세트는 없음 → 사용자가 고름: 코드로 그리기. decisions 3·8·17장 먼저.
+- 한 것: `game/soldier_art.dart` 위에서 본 병사를 코드로(어두운 몸 + 캐릭터 색 밝은 테두리, 방탄조끼·탄창 주머니, 팔꿈치가 꺾인 팔, 장갑, 밝은 회색 총·저격 조준경·재장전 때 탄창, 헬멧+야간투시경 마운트 / 머리카락·덥수룩한 머리 / 헤드셋 / 배낭 / 정장은 조끼 없음). 캐릭터·포즈마다 한 번 그린 Picture를 재사용. `GameArt.drawSoldier`만 바꿔서 플레이어·상대·훈련 표적 모두 적용(포즈 규칙·앉기 0.85배·팀 원 그대로). Kenney 캐릭터 PNG 20개 삭제(타일 4개만 남음), `characterSprite` 삭제. 미리보기 `tool/topdown_preview_test.dart`(→ `build/topdown_preview.png`, 실제 바닥 타일 위).
+- 확인: 테스트 427개(Kenney 캐릭터 파일 매핑 테스트 2개 삭제, "그림 폴더에 안 쓰는 파일이 없다" 1개 추가), analyze 0, `flutter build web` 성공. 미리보기로 4배·실제 크기 확인.
+- 다음: 사용자 확인(훈련소·봇전) 후 병합.
+- 막힌 것: 없음.
+
 ## 2026-10-15 (홈 캐릭터 실루엣 택티컬 — feat/tactical-figure, 병합 전)
 - 피드백: 홈 캐릭터가 애들 게임 같음. 사용자가 고름(질문): 실루엣 택티컬 스타일(코드로). decisions 8장 먼저.
 - 한 것: `CharacterFigure`를 다시 그림. 2등신·큰 머리·웃는 얼굴·귀 → 약 7.5등신, 어두운 실루엣 + 테두리 빛(왼쪽 위 캐릭터 색, 오른쪽 차가운 역광), 방탄조끼·탄창 주머니·벨트·무릎 보호대·군화·장갑, 얼굴은 그림자 + 고글/선글라스만 빛남. 라이플은 개머리판을 어깨에 두고 총구를 오른쪽 아래로 낮춘 자세, 권총은 두 손으로 몸 앞, 무기는 밝기 38%로 눌러 실루엣에 맞춤. 캐릭터 구분: 기본 병사 헬멧·야간투시경 마운트·고글·배낭 / 저격수 정장·넥타이·선글라스 / 정찰병 덥수룩한 머리·배낭 / 돌격병 헤드셋(`CharacterLook.headset` 추가). 미리보기 도구 `tool/figure_preview_test.dart`(→ `build/figure_preview.png`).
