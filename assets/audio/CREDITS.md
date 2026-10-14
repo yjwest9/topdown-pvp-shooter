@@ -13,9 +13,9 @@
 | fire_rifle_rapid.ogg | 연사형 라이플 | `G_31P.wav` (9mm 기관단총) | 고음 + 압축, 0.32초(짧고 가볍게) |
 | fire_rifle_precision.ogg | 정밀형 라이플 | `U_14P.wav` (7.62mm 반자동 소총) | 저음 + 압축, 0.7초 |
 | fire_rifle_heavy.ogg | 중기관총형 | `C_28P.wav` (7.62mm 돌격소총) | 저음 크게 + 압축, 0.55초 |
-| fire_sniper_bolt.ogg | 볼트액션 저격 | `B_24P.wav` (.30-06 볼트액션 소총) | 저음 크게 + 압축 + 긴 메아리 |
-| fire_sniper_semi.ogg | 반자동 저격 | `M_21P.wav` (7.62x54mm 볼트액션 소총) | 저음 + 압축 + 메아리 |
-| fire_sniper_light.ogg | 경량 저격 | `T_27P.wav` (.300 볼트액션 소총) | 고음을 깎아 소음기 느낌, 작게 |
+| fire_sniper_bolt.ogg | 볼트액션 저격 | `B_24P.wav` (.30-06 볼트액션 소총) | 저음 크게 + 고음('딱') + 강한 압축, 메아리 없음, 1.3초 |
+| fire_sniper_semi.ogg | 반자동 저격 | `M_21P.wav` (7.62x54mm 볼트액션 소총) | 저음 + 고음('딱') + 강한 압축, 메아리 없음, 1.0초 |
+| fire_sniper_light.ogg | 경량 저격 | `R_35P.wav` (.22 권총) | 저음·고음을 깎아 소음기 느낌('퓻'), 0.16초, 작게 |
 | fire_shotgun_pump.ogg | 펌프 샷건 | `O_21P.wav` (12게이지 펌프 샷건) | 저음 크게 + 압축, 0.9초 |
 | fire_shotgun_auto.ogg | 자동 샷건 | `K_22P.wav` (12게이지 펌프 샷건) | 저음 + 압축, 0.6초 |
 | fire_shotgun_double.ogg | 더블배럴 | `H_21P.wav` (12게이지 펌프 샷건) | 저음 가장 크게 + 압축, 1.1초 |
