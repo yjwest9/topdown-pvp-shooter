@@ -8,7 +8,6 @@ import '../../rules/balance.dart';
 import '../../rules/combat.dart';
 import '../../rules/cover.dart';
 import '../../rules/movement.dart';
-import '../../rules/sound.dart';
 import '../soldier_game.dart';
 import 'floating_text.dart';
 import 'kill_feedback.dart';
@@ -128,7 +127,7 @@ class Bullet extends PositionComponent with HasGameReference<SoldierGame> {
       if (this.targets == null) {
         // 내 총알
         game.world.add(HitMarker(position: at));
-        game.playSfx(Sfx.hit.file);
+        game.playHitSound();
       }
       return _stop(const Color(0xFFE0563F));
     }

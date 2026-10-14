@@ -155,6 +155,26 @@ void main() {
   );
 
   training().testGameWidget(
+    'hit sound is quieter than gunshots and plays once per burst of hits',
+    verify: (game, tester) async {
+      // 샷건 펠릿 8개가 한꺼번에 맞음 → 한 번만, 작게.
+      for (var i = 0; i < 8; i++) {
+        game.playHitSound();
+      }
+      expect(sound.plays, [(file: 'hit.ogg', volume: hitSoundVolume)]);
+      expect(hitSoundVolume, lessThan(1.0));
+
+      game.update(hitSoundGap / 2); // 아직 간격 안
+      game.playHitSound();
+      expect(sound.plays, hasLength(1));
+
+      game.update(hitSoundGap); // 간격이 지나면 다시 난다
+      game.playHitSound();
+      expect(sound.plays, hasLength(2));
+    },
+  );
+
+  training().testGameWidget(
     'sound off: nothing is played; back on: sound is back',
     verify: (game, tester) async {
       game.soundEnabled = false;

@@ -101,6 +101,16 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     sound?.play(file, volume: volume);
   }
 
+  double _clock = 0;
+  double _lastHitSound = double.negativeInfinity;
+
+  /// 내 총알이 맞힘(띵): 작게, [hitSoundGap] 안에 또 맞으면 한 번만.
+  void playHitSound() {
+    if (_clock - _lastHitSound < hitSoundGap) return;
+    _lastHitSound = _clock;
+    playSfx(Sfx.hit.file, volume: hitSoundVolume);
+  }
+
   /// 상대(봇 포함) 총소리: 상대([at], 월드 좌표)가 내 화면 안에 있을 때만, 내 총소리의
   /// [enemyShotVolume]배로.
   void playEnemyShot(WeaponStats weapon, Vector2 at) {
@@ -304,6 +314,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
 
   @override
   void update(double dt) {
+    _clock += dt;
     _expireKeyReleases(dt);
     // 죽어 있는 동안은 움직이거나 쏘지 못한다.
     if (match?.isDead ?? false) {

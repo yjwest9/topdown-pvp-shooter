@@ -7,6 +7,7 @@
 - 조사: Kenney 말고 쓸 만한 탑다운 병사 에셋(`docs/research/topdown-soldier-art.md`). CC0 현대 택티컬 세트는 없음 → 사용자가 고름: 코드로 그리기. decisions 3·8·17장 먼저.
 - 한 것: `game/soldier_art.dart` 위에서 본 병사를 코드로(어두운 몸 + 캐릭터 색 밝은 테두리, 방탄조끼·탄창 주머니, 팔꿈치가 꺾인 팔, 장갑, 밝은 회색 총·저격 조준경·재장전 때 탄창, 헬멧+야간투시경 마운트 / 머리카락·덥수룩한 머리 / 헤드셋 / 배낭 / 정장은 조끼 없음). 캐릭터·포즈마다 한 번 그린 Picture를 재사용. `GameArt.drawSoldier`만 바꿔서 플레이어·상대·훈련 표적 모두 적용(포즈 규칙·앉기 0.85배·팀 원 그대로). Kenney 캐릭터 PNG 20개 삭제(타일 4개만 남음), `characterSprite` 삭제. 미리보기 `tool/topdown_preview_test.dart`(→ `build/topdown_preview.png`, 실제 바닥 타일 위).
 - 확인: 테스트 427개(Kenney 캐릭터 파일 매핑 테스트 2개 삭제, "그림 폴더에 안 쓰는 파일이 없다" 1개 추가), analyze 0, `flutter build web` 성공. 미리보기로 4배·실제 크기 확인.
+- 사용자 확인: 병사 그림 괜찮음. 피드백: 맞힘 "띵" 소리가 총소리보다 크게 들림 → 볼륨 35%(`hitSoundVolume`), 0.08초 안 반복은 한 번만(`hitSoundGap`, 샷건 펠릿 8개 겹침·빠른 연사 때문). `SoldierGame.playHitSound`. 테스트 428개.
 - 다음: 사용자 확인(훈련소·봇전) 후 병합.
 - 막힌 것: 없음.
 
