@@ -2,6 +2,11 @@
 
 작업이 끝날 때마다 맨 위에 추가한다. (날짜 / 한 것 / 다음 할 일 / 막힌 것)
 
+## 2026-10-14 (인게임 그래픽 main 병합 — 집 컴퓨터)
+- 한 것: 사용자 확인(학교) 후 feat/ingame-graphics를 main에 fast-forward 병합(f554990, 1de8032). 병합 전 format 0 changed, analyze 0, 테스트 398개 통과. 집 컴퓨터 준비: firebase 로그인, 실서버 규칙 = 로컬 `database.rules.json` 확인(0.1.4 규칙 배포돼 있음), `.env.local`·`android/key.properties` 채움(storeFile은 `C:/keys/topsoldier-upload.jks`).
+- 다음: main push(사용자 요청 시). 집 컴퓨터에 업로드 키 .jks 넣기.
+- 막힌 것: 집 컴퓨터에 업로드 키가 없어 서명 빌드 불가. Git Bash에서 `firebase database:get /...`은 `MSYS_NO_PATHCONV=1` 필요.
+
 ## 2026-10-15 (그래픽 피드백 — feat/ingame-graphics, 병합 전)
 - 사용자 피드백 6가지: 총구 흰 선 없애기, 밝은 바닥에서 버튼·조준선이 안 보임, 홈·캐릭터 화면은 정면에서 서 있는 모습, 총알 색, 상대 재장전 포즈, 총 그래픽. 사용자가 고름(질문): 정면 캐릭터·총 모두 코드로 그리기, 총알은 팀 색 예광탄. Kenney 팩(Toon Characters, Modular Characters, Shooting Gallery)도 받아서 확인했지만 정면 군인·실제 총 옆모습이 없어서 안 씀. decisions 3·5·8·13·17장 먼저.
 - 한 것: 총구 선 삭제. HUD 둥근 버튼·무기 칸·사격 버튼·조이스틱은 어두운 반투명 바탕 + 밝은 테두리, HUD 글자 그림자, 조준 점선·퍼짐 선은 어두운 테두리 위 밝은 선. 총알 = 흰 중심 + 둘레(내 총알 파랑, 상대·봇 빨강; `Bullet.mine`). 상태에 `rl`(재장전 중) 추가 — 나·봇이 보내고 상대 그림이 reload 포즈(`RemotePlayer.pose`), 옛 앱은 false. 무기 모양 데이터 `weaponLooks`(길이·개머리판·탄창·조준경·양각대·총열 수·불펍·소음기·펌프·색, 11종 모두 다름) + `paintWeapon`(Canvas, Flame·Flutter 공용) → 무기 목록·상세·게임 무기 칸·정면 캐릭터 손. 정면 캐릭터 `CharacterFigure`(옷 색·헬멧·배낭·넥타이·선글라스는 `characterLooks`) → 홈(장착 주무기를 듦), 캐릭터 화면은 구성 변경(위쪽 탭으로 고르고, 왼쪽 큰 정면 그림, 가운데 능력치, 오른쪽 강화·버튼). 무기 목록 폭 200 → 240(이름 한 줄). `CharacterPortrait` 삭제.
