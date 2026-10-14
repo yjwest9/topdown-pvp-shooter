@@ -46,6 +46,7 @@ dependencies:
   firebase_messaging: 16.7.0
   package_info_plus: ^10.2.2
   google_mobile_ads: ^9.1.0
+  flame_audio: ^2.12.2
 
 dev_dependencies:
   flutter_test:
@@ -73,6 +74,7 @@ flutter:
   assets:
     - assets/maps/
     - assets/images/
+    - assets/audio/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

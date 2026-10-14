@@ -10,6 +10,7 @@ import '../../rules/balance.dart';
 import '../../rules/character.dart';
 import '../../rules/combat.dart';
 import '../../rules/match.dart';
+import '../../rules/sound.dart';
 import '../components/bullet.dart';
 import '../components/remote_player.dart';
 import '../soldier_game.dart';
@@ -150,6 +151,7 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
     final now = myHp?.value;
     if (before == null || now == null || now >= before) return;
     hurtFlash = 1;
+    game.playSfx(Sfx.hurt);
     if (now <= 0) {
       _deaths++;
       respawnLeft = respawnDelay;
@@ -171,6 +173,14 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
   void _finish(MatchResult result, {bool opponentLeft = false}) {
     if (_finished || _closed) return;
     _finished = true;
+    switch (result) {
+      case MatchResult.win:
+        game.playSfx(Sfx.win);
+      case MatchResult.lose:
+        game.playSfx(Sfx.lose);
+      case MatchResult.draw:
+        break;
+    }
     onMatchEnd?.call(statsFor(result), opponentLeft: opponentLeft);
   }
 
@@ -268,11 +278,13 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
     _pendingShots.removeWhere((s) {
       if (s.t > now) return false;
       final shooter = remotes[s.by];
+      final weapon = weapons.firstWhere((w) => w.id == s.weapon);
+      _playShotSound(s, weapon);
       game.world.add(
         Bullet(
           position: Vector2(s.x, s.y),
           angle: s.a,
-          weapon: weapons.firstWhere((w) => w.id == s.weapon),
+          weapon: weapon,
           shooter:
               shooter?.coverBody ??
               (
@@ -287,6 +299,20 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
       return true;
     });
   }
+
+  /// 상대 총소리. 샷건 펠릿은 한 발씩 따로 오지만 한 번 쏜 소리 하나만 낸다
+  /// (같은 사람의 펠릿이 [_volleyGapMs] 안에 연달아 오면 한 번으로 본다).
+  void _playShotSound(NetShot s, WeaponStats weapon) {
+    final last = _volleyAt[s.by];
+    if (weapon.pellets > 1 && last != null && s.t - last <= _volleyGapMs) {
+      return;
+    }
+    _volleyAt[s.by] = s.t;
+    game.playEnemyShot(weapon, Vector2(s.x, s.y));
+  }
+
+  final _volleyAt = <String, int>{};
+  static const _volleyGapMs = 100;
 
   /// 내가 쏜 총알 한 발씩 기록(샷건은 펠릿마다). 밀려 있으면 버린다(연출용이라).
   void sendShot(Vector2 from, double angle, String weapon) {

@@ -229,6 +229,7 @@ class BotSoldier extends Component with HasGameReference<SoldierGame> {
     final muzzle =
         body.position +
         Vector2(cos(body.angle), sin(body.angle)) * (playerRadius + 10);
+    game.playEnemyShot(w.weapon, muzzle); // 펠릿이 여러 개여도 한 번
     game.world.addAll([
       for (final a in angles)
         Bullet(

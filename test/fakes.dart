@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:topsoldier/data/services/ad_service.dart';
 import 'package:topsoldier/data/services/auth_service.dart';
 import 'package:topsoldier/data/services/rtdb_service.dart';
+import 'package:topsoldier/data/services/sound_service.dart';
 
 class FakeAuthService implements AuthService {
   FakeAuthService(this.uid);
@@ -34,6 +35,20 @@ class FakeAdService implements AdService {
     shown++;
     return earn;
   }
+}
+
+/// 소리를 내는 대신 어떤 파일을 어떤 볼륨으로 냈는지 기록한다.
+class FakeSoundService implements SoundService {
+  final plays = <({String file, double volume})>[];
+
+  List<String> get files => [for (final p in plays) p.file];
+
+  @override
+  Future<void> load(Iterable<({String file, int voices})> files) async {}
+
+  @override
+  Future<void> play(String file, double volume) async =>
+      plays.add((file: file, volume: volume));
 }
 
 /// 메모리 안 RTDB. 바뀐 값은 동기로 전달(위젯 테스트의 가짜 시간 밖으로 새지 않게). 경로는 '/'로 나눈 중첩 Map. [serverTime]이 서버 시간 역할.

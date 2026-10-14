@@ -60,6 +60,13 @@ class SettingsView extends ConsumerWidget {
               activeThumbColor: amberColor,
               onChanged: (v) => unawaited(vm.setMinimapRotates(v)),
             ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('효과음'),
+              value: s.soundEnabled,
+              activeThumbColor: amberColor,
+              onChanged: (v) => unawaited(vm.setSoundEnabled(v)),
+            ),
             const Divider(),
             for (final (primary, label) in [(true, '주무기'), (false, '보조무기')])
               Padding(

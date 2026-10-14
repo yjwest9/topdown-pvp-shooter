@@ -2,6 +2,14 @@
 
 작업이 끝날 때마다 맨 위에 추가한다. (날짜 / 한 것 / 다음 할 일 / 막힌 것)
 
+## 2026-10-15 (효과음 — feat/sound, 병합 전)
+- 한 것: decisions 17장·14장에 효과음 확정(CC0만, `flame_audio` 하나, 소리 목록, 상대 총소리는 화면 안일 때만 50%, 스위치 하나) 먼저 반영. 패키지 `flame_audio ^2.12.2`(→ audioplayers 6.8.1, 기존 패키지 버전은 안 바뀜). 소리 10개 `assets/audio/`(합계 130,694 B) + `CREDITS.md`(파일마다 출처·라이선스). 사격 4종은 The Free Firearm Sound Library(제작팀이 CC0 선언), 재장전은 OpenGameArt Gun reload sounds(CC0), 맞힘·피격·처치·승리·패배는 Kenney(Impact·Interface·Music Jingles, CC0). Kenney 팩에는 실제 총소리가 없어서(레이저·충격음뿐) 총소리만 OpenGameArt에서 받음. OpenGameArt "Gunshot Sounds"(Tabasco)는 페이지는 CC0인데 압축 파일 안 `creativecommons.txt`가 CC-BY 3.0이라 쓰지 않음.
+- 구조: `rules/sound.dart`(`Sfx` 목록 + `fireSfxFor(family)`), `balance.dart`의 `enemyShotVolume = 0.5`, `data/services/sound_service.dart`(파일마다 `AudioPool`, 실패는 조용히 무시), `data/repositories/sound_repository.dart`, `SoldierGame.playSfx`(스위치 하나로 전부 꺼짐)·`playEnemyShot`(`camera.localToGlobal`로 화면 안일 때만). 연결: 내 사격(펠릿 여러 개여도 한 번)·재장전 시작·맞힘(Bullet)·처치(`confirmKill`)·피격(체력 감소)·승리/패배(무승부는 없음)·봇 사격·상대 사격(샷건 펠릿은 100ms 안이면 한 번). 설정 화면·인게임 설정 창에 "효과음" 스위치(기기 저장, 기본 켜짐).
+- 확인: 테스트 427개 통과(+29: 소리 규칙 6, 설정 4, 게임 연결 19), analyze 0, `flutter build web` 성공. 일부러 코드를 망가뜨려 확인: 스위치 확인 제거 → "끄면 조용" 2개 실패, 화면 안 확인 제거 → 3개 실패, 재장전 소리 제거 → 1개 실패, 샷건 중복 제거 제거 → 1개 실패, 파일 삭제/CREDITS 누락 → 규칙 테스트 실패(모두 되돌림).
+- 무기 아이콘: 무기 목록·상세·HUD 무기 칸에 이미 다 있어서(WeaponArt, paintWeapon) 건너뜀. Kenney `_stand` 그림 4개는 몸 중심 계산(`GameArt.drawSoldier`)과 훈련 표적에 쓰여서 삭제하지 않음.
+- 다음: 사용자 확인(로컬 에뮬레이터·크롬) 후 병합. 디버그 apk 크기는 안드로이드 SDK가 있는 컴퓨터에서 재야 함.
+- 막힌 것: 집 컴퓨터에 Android SDK가 없어 apk 빌드·실기기 소리 확인 못 함. 소리는 귀로 못 들어서 파일 선택(특히 맞힘·승리·패배)은 사용자가 들어보고 바꿔야 함.
+
 ## 2026-10-14 (인게임 그래픽 main 병합 — 집 컴퓨터)
 - 한 것: 사용자 확인(학교) 후 feat/ingame-graphics를 main에 fast-forward 병합(f554990, 1de8032). 병합 전 format 0 changed, analyze 0, 테스트 398개 통과. 집 컴퓨터 준비: firebase 로그인, 실서버 규칙 = 로컬 `database.rules.json` 확인(0.1.4 규칙 배포돼 있음), `.env.local`·`android/key.properties` 채움(storeFile은 `C:/keys/topsoldier-upload.jks`).
 - 다음: main push(사용자 요청 시). 집 컴퓨터에 업로드 키 .jks 넣기.

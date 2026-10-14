@@ -7,6 +7,7 @@ class SettingsState {
   const SettingsState({
     this.sensitivity = defaultSensitivity,
     this.minimapRotates = true,
+    this.soundEnabled = true,
     this.primaryFireMode = FireMode.auto,
     this.secondaryFireMode = FireMode.auto,
   });
@@ -15,6 +16,9 @@ class SettingsState {
   final double sensitivity;
   final bool minimapRotates;
 
+  /// 효과음 켜기/끄기(볼륨 조절은 없음).
+  final bool soundEnabled;
+
   /// 주무기·보조무기 칸의 발사 방식(무기를 바꿔도 칸 설정을 따른다).
   final FireMode primaryFireMode;
   final FireMode secondaryFireMode;
@@ -22,11 +26,13 @@ class SettingsState {
   SettingsState copyWith({
     double? sensitivity,
     bool? minimapRotates,
+    bool? soundEnabled,
     FireMode? primaryFireMode,
     FireMode? secondaryFireMode,
   }) => SettingsState(
     sensitivity: sensitivity ?? this.sensitivity,
     minimapRotates: minimapRotates ?? this.minimapRotates,
+    soundEnabled: soundEnabled ?? this.soundEnabled,
     primaryFireMode: primaryFireMode ?? this.primaryFireMode,
     secondaryFireMode: secondaryFireMode ?? this.secondaryFireMode,
   );
@@ -50,6 +56,7 @@ class SettingsViewModel extends AsyncNotifier<SettingsState> {
         maxSensitivity,
       ),
       minimapRotates: await _repo.minimapRotates(),
+      soundEnabled: await _repo.soundEnabled(),
       primaryFireMode: mode(await _repo.fireAuto(primary: true)),
       secondaryFireMode: mode(await _repo.fireAuto(primary: false)),
     );
@@ -67,6 +74,11 @@ class SettingsViewModel extends AsyncNotifier<SettingsState> {
   Future<void> setMinimapRotates(bool value) async {
     state = AsyncData(_now.copyWith(minimapRotates: value));
     await _repo.setMinimapRotates(value);
+  }
+
+  Future<void> setSoundEnabled(bool value) async {
+    state = AsyncData(_now.copyWith(soundEnabled: value));
+    await _repo.setSoundEnabled(value);
   }
 
   Future<void> setFireMode(FireMode mode, {required bool primary}) async {

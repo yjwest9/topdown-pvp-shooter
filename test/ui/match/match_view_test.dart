@@ -104,6 +104,28 @@ void main() {
     expect(game.secondaryFireMode, FireMode.auto);
   });
 
+  testWidgets('in-game sound switch turns the game sound off right away', (
+    tester,
+  ) async {
+    await openMatch(tester, MatchMode.custom);
+    final game = tester
+        .widget<RiverpodAwareGameWidget<SoldierGame>>(
+          find.byType(RiverpodAwareGameWidget<SoldierGame>),
+        )
+        .game!;
+    expect(game.soundEnabled, isTrue);
+    await tester.tap(find.byTooltip('설정'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.tap(find.text('효과음'));
+    await tester.pump();
+    expect(game.soundEnabled, isFalse);
+    await tester.tap(find.text('효과음'));
+    await tester.pump();
+    expect(game.soundEnabled, isTrue);
+  });
+
   testWidgets('quick match: leaving asks first, then records a loss with '
       'no reward', (tester) async {
     final db = await openMatch(tester, MatchMode.pvp);
@@ -143,6 +165,7 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'sensitivity': 8.0,
       'fire_auto_primary': false,
+      'sound_enabled': false,
     });
     final db = FakeRtdbService();
     final repo = ProfileRepository(db);
@@ -191,5 +214,6 @@ void main() {
     expect(game.player.secondary.weapon, pistol);
     expect(game.primaryFireMode, FireMode.manual);
     expect(game.secondaryFireMode, FireMode.auto);
+    expect(game.soundEnabled, isFalse);
   });
 }

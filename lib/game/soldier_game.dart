@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flame/components.dart';
@@ -9,11 +10,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../data/models/room.dart';
+import '../data/repositories/sound_repository.dart';
 import '../rules/aim.dart';
 import '../rules/balance.dart';
 import '../rules/combat.dart';
 import '../rules/movement.dart';
+import '../rules/sound.dart';
 import '../rules/spawn.dart';
+import '../rules/weapon_state.dart';
 import 'components/bot_soldier.dart';
 import 'components/bullet.dart';
 import 'components/fire_button.dart';
@@ -46,6 +50,8 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     this.primaryFireMode = FireMode.auto,
     this.secondaryFireMode = FireMode.auto,
     this.character = basicSoldier,
+    this.sound,
+    this.soundEnabled = true,
   }) : random = random ?? Random();
 
   /// 내 장착 캐릭터(강화 반영). 최대 체력·이동 속도·내 총알의 명중·크리, 맞을 때 회피.
@@ -82,8 +88,31 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     onMinimapRotatesChanged?.call(minimapRotates);
   }
 
+  /// 효과음(decisions 17장). null이면 소리 없음(기존 테스트·훈련 없이 만든 게임).
+  final SoundRepository? sound;
+
+  /// 설정의 효과음 스위치. 끄면 아무 소리도 안 난다(게임 안 설정에서도 바꾼다).
+  bool soundEnabled;
+
+  /// 내 소리를 낸다. 모든 효과음은 여기를 거쳐서 스위치 하나로 꺼진다.
+  void playSfx(Sfx sfx, {double volume = 1}) {
+    if (!soundEnabled) return;
+    sound?.play(sfx, volume: volume);
+  }
+
+  /// 상대(봇 포함) 총소리: 상대([at], 월드 좌표)가 내 화면 안에 있을 때만, 내 총소리의
+  /// [enemyShotVolume]배로.
+  void playEnemyShot(WeaponStats weapon, Vector2 at) {
+    final p = camera.localToGlobal(at);
+    if (p.x < 0 || p.y < 0 || p.x > size.x || p.y > size.y) return;
+    playSfx(fireSfxFor(weapon.family), volume: enemyShotVolume);
+  }
+
   /// 내가 처치했다(표적이 쓰러짐, 상대 체력을 0으로 만듦): 처치 표시.
-  void confirmKill(String victim) => killBanner.show(victim);
+  void confirmKill(String victim) {
+    killBanner.show(victim);
+    playSfx(Sfx.kill);
+  }
 
   /// 탄 퍼짐·미스·크리 랜덤. 테스트는 Random(seed)를 넣는다.
   final Random random;
@@ -121,6 +150,8 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    final audio = sound;
+    if (audio != null) unawaited(audio.load());
     art = GameArt(images);
     final loading = art.load();
     if (loading != null) await loading;
@@ -289,6 +320,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     player.firing = !(match?.isDead ?? false) && _wantsToFire();
     super.update(dt);
     _updateFiring(dt);
+    _watchReload();
     _syncCamera();
     stanceLabel.text = _stanceText();
   }
@@ -348,6 +380,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   void _updateFiring(double dt) {
     final w = player.weapon..tick(dt);
     if (!player.firing || !canFire(player.stance) || !w.tryFire()) return;
+    playSfx(fireSfxFor(w.weapon.family)); // 펠릿이 여러 개여도 한 번
     final angles = shotAngles(
       w.weapon,
       player.stance,
@@ -371,6 +404,20 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     for (final a in angles) {
       match?.sendShot(muzzle, a, w.weapon.id);
     }
+  }
+
+  WeaponState? _watchedWeapon;
+  bool _wasReloading = false;
+
+  /// 재장전이 시작되는 순간 한 번 소리를 낸다(버튼·R 키·탄이 떨어져 자동 재장전 모두).
+  void _watchReload() {
+    final w = player.weapon;
+    if (!identical(w, _watchedWeapon)) {
+      _watchedWeapon = w; // 무기를 바꾼 프레임엔 새 무기 상태만 기억한다
+    } else if (w.reloading && !_wasReloading) {
+      playSfx(Sfx.reload);
+    }
+    _wasReloading = w.reloading;
   }
 
   String _stanceText() {

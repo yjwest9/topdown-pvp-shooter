@@ -29,4 +29,11 @@ void main() {
     expect(await again.fireAuto(primary: true), false);
     expect(await again.fireAuto(primary: false), isNull);
   });
+
+  test('sound is on by default and the choice is saved', () async {
+    expect(await SettingsRepository(PrefsService()).soundEnabled(), isTrue);
+
+    await SettingsRepository(PrefsService()).setSoundEnabled(false);
+    expect(await SettingsRepository(PrefsService()).soundEnabled(), isFalse);
+  });
 }

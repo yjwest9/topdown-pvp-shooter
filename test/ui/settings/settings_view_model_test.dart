@@ -12,6 +12,7 @@ void main() {
     addTearDown(c.dispose);
     final s = await c.read(settingsProvider.future);
     expect((s.sensitivity, s.minimapRotates), (defaultSensitivity, true));
+    expect(s.soundEnabled, true);
     expect(
       (s.primaryFireMode, s.secondaryFireMode),
       (FireMode.auto, FireMode.auto),
@@ -35,6 +36,7 @@ void main() {
     await vm.setSensitivity(5.7);
     await vm.setMinimapRotates(false);
     await vm.setFireMode(FireMode.manual, primary: true);
+    await vm.setSoundEnabled(false);
     c.dispose();
 
     final again = ProviderContainer();
@@ -42,6 +44,7 @@ void main() {
     final s = await again.read(settingsProvider.future);
     expect(s.sensitivity, closeTo(5.7, 1e-9));
     expect(s.minimapRotates, false);
+    expect(s.soundEnabled, false);
     expect(
       (s.primaryFireMode, s.secondaryFireMode),
       (FireMode.manual, FireMode.auto),

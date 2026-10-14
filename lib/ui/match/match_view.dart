@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/match_stats.dart';
 import '../../data/repositories/profile_repository.dart';
+import '../../data/repositories/sound_repository.dart';
 import '../../game/components/minimap.dart';
 import '../../game/net/match_sync.dart';
 import '../../game/soldier_game.dart';
@@ -56,6 +57,8 @@ class _MatchViewState extends ConsumerState<MatchView> {
       primaryFireMode: settings.primaryFireMode,
       secondaryFireMode: settings.secondaryFireMode,
       minimapRotates: settings.minimapRotates,
+      sound: ref.read(soundRepositoryProvider),
+      soundEnabled: settings.soundEnabled,
       primary: loadout.primary,
       secondary: loadout.secondary,
       primaryLevel: loadout.primaryLevel,
@@ -84,7 +87,7 @@ class _MatchViewState extends ConsumerState<MatchView> {
     };
   }
 
-  /// 게임 안 설정: 감도·발사 방식·미니맵은 바로 적용(저장도), 나가기. 게임은 멈추지 않는다.
+  /// 게임 안 설정: 감도·발사 방식·미니맵·효과음은 바로 적용(저장도), 나가기. 게임은 멈추지 않는다.
   Future<void> _openSettings() async {
     final leave = await showDialog<bool>(
       context: context,
@@ -268,6 +271,15 @@ class _InGameSettings extends ConsumerWidget {
                     ),
                   ],
                 ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('효과음'),
+                value: s.soundEnabled,
+                onChanged: (v) {
+                  unawaited(vm.setSoundEnabled(v));
+                  game.soundEnabled = v;
+                },
+              ),
               if (game.match != null)
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,

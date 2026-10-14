@@ -26,6 +26,15 @@ class SettingsRepository {
   Future<void> setMinimapRotates(bool value) =>
       _prefs.setBool(_minimapRotatesKey, value);
 
+  static const _soundEnabledKey = 'sound_enabled';
+
+  /// 효과음 켜기/끄기. 처음엔 켜짐(decisions 17장).
+  Future<bool> soundEnabled() async =>
+      await _prefs.getBool(_soundEnabledKey) ?? true;
+
+  Future<void> setSoundEnabled(bool value) =>
+      _prefs.setBool(_soundEnabledKey, value);
+
   static const _sensitivityKey = 'sensitivity';
 
   /// 시점 감도. 저장한 적 없으면 null(기본값은 규칙이 정한다).
