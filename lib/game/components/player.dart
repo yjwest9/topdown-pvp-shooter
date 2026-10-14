@@ -4,14 +4,17 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 
 import '../../rules/aim.dart';
+import '../../rules/appearance.dart';
 import '../../rules/balance.dart';
 import '../../rules/cover.dart';
 import '../../rules/movement.dart';
 import '../../rules/stance.dart';
 import '../../rules/weapon_state.dart';
+import '../game_art.dart';
+import '../soldier_game.dart';
 
 /// [angle]은 바라보는 방향(rad, 0 = +x). 몸 그림도 이 각도로 회전한다.
-class Player extends PositionComponent {
+class Player extends PositionComponent with HasGameReference<SoldierGame> {
   Player({
     required super.position,
     required super.angle,
@@ -111,7 +114,12 @@ class Player extends PositionComponent {
     usingPrimary = true;
   }
 
-  static final _body = Paint()..color = const Color(0xFF4FA3E0);
+  /// 발밑 팀 원: 나는 파랑(decisions 3장). 그림 위가 아니라 아래에 깐다.
+  static final _teamFill = Paint()..color = const Color(0x554FA3E0);
+  static final _teamRing = Paint()
+    ..color = const Color(0xFF4FA3E0)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 3;
   static final _muzzle = Paint()
     ..color = const Color(0xFFFFFFFF)
     ..strokeWidth = 4;
@@ -179,8 +187,9 @@ class Player extends PositionComponent {
   @override
   void render(Canvas canvas) {
     const c = Offset(playerRadius, playerRadius);
-    // 점프 최대 1.35배, 상자 위 1.175배, 앉으면 ×0.82.
-    final scale = (1 + 0.35 * lift) * (body.crouching ? 0.82 : 1);
+    // 점프 최대 1.35배, 상자 위 1.175배, 앉으면 ×0.85.
+    final scale =
+        (1 + 0.35 * lift) * (body.crouching ? GameArt.crouchScale : 1);
     _renderAim(canvas, c);
     final blink = blinking && (_t * 8).floor().isEven;
     if (blink) canvas.saveLayer(null, _faded);
@@ -199,8 +208,14 @@ class Player extends PositionComponent {
       ..save()
       ..translate(c.dx, c.dy)
       ..scale(scale)
-      ..drawCircle(Offset.zero, playerRadius, _body)
+      ..drawCircle(Offset.zero, playerRadius, _teamFill)
+      ..drawCircle(Offset.zero, playerRadius, _teamRing)
       ..drawLine(Offset.zero, const Offset(playerRadius + 10, 0), _muzzle);
+    game.art.drawSoldier(
+      canvas,
+      game.character.id,
+      poseFor(weapon.weapon.family, reloading: weapon.reloading),
+    );
     if (body.crouching) {
       canvas.drawCircle(Offset.zero, playerRadius * 1.25, _crouchRing);
     }

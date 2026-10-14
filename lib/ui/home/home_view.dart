@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import '../../rules/character.dart';
 import '../../rules/rewards.dart';
 import '../../rules/upgrade.dart';
 import '../character/character_view.dart';
+import '../character_portrait.dart';
 import '../format.dart';
 import '../loadout/loadout_view.dart';
 import '../loadout/loadout_view_model.dart';
@@ -354,10 +356,15 @@ class _Character extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Expanded(
-          child: AspectRatio(
-            aspectRatio: 1,
-            child: CustomPaint(painter: _SoldierPainter()),
+        Expanded(
+          child: LayoutBuilder(
+            // 그림은 위를 보게 돌려서 가로가 세로의 약 1.2배다. 원본이 43px라 너무 키우면 흐려진다.
+            builder: (context, box) => Center(
+              child: CharacterPortrait(
+                profile.equippedCharacter,
+                size: min(min(box.maxHeight * 0.55, box.maxWidth / 1.25), 150),
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -397,33 +404,4 @@ class _Character extends StatelessWidget {
       ],
     );
   }
-}
-
-/// 게임 속 Player.render와 같은 모양(몸 원 + 총구 선 + 그림자), 위를 본다.
-class _SoldierPainter extends CustomPainter {
-  const _SoldierPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final r = size.shortestSide * 0.28;
-    final c = size.center(Offset(0, r * 0.3));
-    canvas
-      ..drawCircle(
-        c + Offset(r * 0.12, r * 0.16),
-        r,
-        Paint()..color = const Color(0x59000000),
-      )
-      ..drawCircle(c, r, Paint()..color = soldierColor)
-      ..drawLine(
-        c,
-        c - Offset(0, r * 1.5),
-        Paint()
-          ..color = Colors.white
-          ..strokeWidth = r * 0.16
-          ..strokeCap = StrokeCap.round,
-      );
-  }
-
-  @override
-  bool shouldRepaint(_SoldierPainter oldDelegate) => false;
 }

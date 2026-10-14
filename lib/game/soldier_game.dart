@@ -28,6 +28,7 @@ import 'components/target_dummy.dart';
 import 'components/test_map.dart';
 import 'components/touch_controls.dart';
 import 'components/weapon_hud.dart';
+import 'game_art.dart';
 import 'net/match_sync.dart';
 
 class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
@@ -94,6 +95,9 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   /// 사격 버튼을 누르고 있음(터치).
   bool fireButtonHeld = false;
 
+  /// 병사·맵 그림(onLoad에서 불러온다).
+  late final GameArt art;
+
   late final GameMap map;
   late final Player player;
   late final KillBanner killBanner;
@@ -117,6 +121,9 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    art = GameArt(images);
+    final loading = art.load();
+    if (loading != null) await loading;
     // PvP는 진영 맵(Tiled), 훈련소는 하드코딩 테스트 맵 + 표적.
     map = match == null
         ? TestMap()

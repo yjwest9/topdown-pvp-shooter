@@ -3,8 +3,11 @@ import 'dart:ui';
 
 import 'package:flame/components.dart';
 import 'package:flame_tiled/flame_tiled.dart';
+import 'package:flutter/foundation.dart';
 
+import '../../rules/appearance.dart';
 import '../../rules/movement.dart';
+import '../game_art.dart';
 
 class MapBlock {
   const MapBlock(this.box, {this.low = false});
@@ -19,7 +22,8 @@ class MapBlock {
 typedef MapSpawn = ({Vec pos, String team});
 typedef MapBase = ({Box area, String team});
 
-/// 벽·상자·스폰으로 된 맵. 바닥과 격자는 코드로 그린다.
+/// 벽·상자·스폰으로 된 맵. 바닥·벽·상자는 타일 그림으로, 게임에 들어올 때 맵 전체를
+/// 한 장의 그림으로 미리 그려 두고 매 프레임 그 한 장만 그린다(칸이 961개라서).
 class GameMap extends Component {
   GameMap({
     required this.width,
@@ -110,27 +114,109 @@ class GameMap extends Component {
       if (s.team == team) s.pos,
   ];
 
-  static final _floor = Paint()..color = const Color(0xFF3A4A3A);
-  static final _grid = Paint()
-    ..color = const Color(0xFF4A5C4A)
-    ..strokeWidth = 1;
-  static final _wall = Paint()..color = const Color(0xFF8A8F96);
-  static final _lowBox = Paint()..color = const Color(0xFFB08850);
+  Image? _baked;
+
+  /// 미리 그려 둔 맵 전체 그림(게임에 붙은 뒤). 테스트가 확인하는 용도.
+  @visibleForTesting
+  Image? get bakedImage => _baked;
+
+  /// 게임에 붙을 때 한 번: 타일을 불러와 맵 전체를 그려 둔다. 게임 밖(테스트의 맵 모양
+  /// 확인)에서는 그림이 필요 없어서 건너뛴다.
+  @override
+  Future<void> onLoad() async {
+    final game = findGame();
+    if (game == null) return;
+    final art = GameArt(game.images);
+    final loading = art.load();
+    if (loading != null) await loading;
+    _baked = _bake(art);
+  }
+
+  Image _bake(GameArt art) {
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
+    final cols = (width / gridSize).ceil(), rows = (height / gridSize).ceil();
+    final floors = [for (final f in floorTiles) art.tile(f)];
+    final paint = Paint()..filterQuality = FilterQuality.medium;
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        // 같은 타일만 깔리면 격자처럼 보여서 두 가지를 섞는다(고정 패턴).
+        final tile = floors[(c * 7 + r * 3) % 4 == 0 ? 1 : 0];
+        _drawTile(
+          canvas,
+          tile,
+          c * gridSize,
+          r * gridSize,
+          gridSize,
+          gridSize,
+          paint,
+        );
+      }
+    }
+    // 그림자: 높은 벽은 길게, 낮은 상자는 짧게 → 높이 차이가 한눈에 보인다(decisions 4장).
+    // 타일을 그리기 전에 전부 깔아서 옆 칸 타일을 덮지 않게 한다.
+    final shadow = Paint()..color = const Color(0x66000000);
+    for (final (boxes, dx, dy) in [
+      (highWalls, 8.0, 10.0),
+      (lowCrates, 3.0, 4.0),
+    ]) {
+      for (final b in boxes) {
+        canvas.drawRect(
+          Rect.fromLTRB(b.left + dx, b.top + dy, b.right + dx, b.bottom + dy),
+          shadow,
+        );
+      }
+    }
+    for (final (box, tile) in [
+      for (final b in highWalls) (b, art.tile(wallTile)),
+      for (final b in lowCrates) (b, art.tile(crateTile)),
+    ]) {
+      // 상자·벽 사각형을 칸 단위로 타일로 채운다(칸에 안 맞는 가장자리는 잘라서).
+      for (var y = box.top; y < box.bottom; y += gridSize) {
+        for (var x = box.left; x < box.right; x += gridSize) {
+          _drawTile(
+            canvas,
+            tile,
+            x,
+            y,
+            min(gridSize, box.right - x),
+            min(gridSize, box.bottom - y),
+            paint,
+          );
+        }
+      }
+    }
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(width.ceil(), height.ceil());
+    picture.dispose();
+    return image;
+  }
+
+  /// 64px 타일 그림의 왼쪽 위 [w]×[h]/[gridSize] 만큼을 (x, y)에 [w]×[h]로 그린다.
+  static void _drawTile(
+    Canvas canvas,
+    Image tile,
+    double x,
+    double y,
+    double w,
+    double h,
+    Paint paint,
+  ) => canvas.drawImageRect(
+    tile,
+    Rect.fromLTWH(0, 0, tile.width * w / gridSize, tile.height * h / gridSize),
+    Rect.fromLTWH(x, y, w, h),
+    paint,
+  );
 
   @override
   void render(Canvas canvas) {
-    canvas.drawRect(Rect.fromLTWH(0, 0, width, height), _floor);
-    for (var v = 0.0; v <= width; v += gridSize) {
-      canvas.drawLine(Offset(v, 0), Offset(v, height), _grid);
-    }
-    for (var v = 0.0; v <= height; v += gridSize) {
-      canvas.drawLine(Offset(0, v), Offset(width, v), _grid);
-    }
-    for (final b in blocks) {
-      canvas.drawRect(
-        Rect.fromLTRB(b.box.left, b.box.top, b.box.right, b.box.bottom),
-        b.low ? _lowBox : _wall,
-      );
-    }
+    final baked = _baked;
+    if (baked != null) canvas.drawImage(baked, Offset.zero, Paint());
+  }
+
+  @override
+  void onRemove() {
+    _baked?.dispose();
+    _baked = null;
   }
 }

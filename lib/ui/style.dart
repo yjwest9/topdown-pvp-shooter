@@ -5,7 +5,6 @@ const bgColor = Color(0xFF232B22);
 const panelColor = Color(0xFF3A4A3A);
 const amberColor = Color(0xFFE8B33A);
 const lightColor = Color(0xFFE3E6D8);
-const soldierColor = Color(0xFF4FA3E0);
 
 /// 등급 배지 "E".
 class GradeBadge extends StatelessWidget {

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../rules/balance.dart';
 import '../../rules/character.dart';
 import '../../rules/upgrade.dart';
+import '../character_portrait.dart';
 import '../format.dart';
 import '../style.dart';
 import '../upgrade_widgets.dart';
@@ -88,7 +89,18 @@ class _CharacterTile extends StatelessWidget {
       selected: s.selected == c,
       selectedTileColor: panelColor,
       onTap: onTap,
-      leading: Icon(owned ? Icons.person : Icons.lock, color: color),
+      // 보유는 그림, 미보유는 흐린 그림 위에 자물쇠.
+      leading: SizedBox(
+        width: 40,
+        height: 40,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            CharacterPortrait(c.id, size: 30, dim: !owned),
+            if (!owned) Icon(Icons.lock, size: 18, color: color),
+          ],
+        ),
+      ),
       title: Text(
         withLevel(c.name, s.levelOf(c)),
         style: TextStyle(fontWeight: FontWeight.w800, color: color),
@@ -163,16 +175,23 @@ class _Detail extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  UpgradeFlash(
-                    seq: s.upgradeSeq,
-                    result: s.upgradeResult,
-                    child: Text(
-                      withLevel(base.name, level),
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      UpgradeFlash(
+                        seq: s.upgradeSeq,
+                        result: s.upgradeResult,
+                        child: Text(
+                          withLevel(base.name, level),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 14),
+                      CharacterPortrait(base.id, size: 52, dim: !owned),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   for (final (label, ratio, value) in rows)

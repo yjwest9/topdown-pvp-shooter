@@ -3,8 +3,10 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 
 import '../../data/models/room.dart';
+import '../../rules/appearance.dart';
 import '../../rules/balance.dart';
 import '../../rules/cover.dart';
+import '../game_art.dart';
 import '../net/interpolation.dart';
 import '../net/match_sync.dart';
 import '../soldier_game.dart';
@@ -68,7 +70,12 @@ class RemotePlayer extends PositionComponent
     angle = s.a;
   }
 
-  static final _body = Paint()..color = const Color(0xFFE0563F);
+  /// 발밑 팀 원: 상대는 빨강(decisions 3장).
+  static final _teamFill = Paint()..color = const Color(0x55E0563F);
+  static final _teamRing = Paint()
+    ..color = const Color(0xFFE0563F)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 3;
   static final _muzzle = Paint()
     ..color = const Color(0xFFFFFFFF)
     ..strokeWidth = 4;
@@ -85,8 +92,9 @@ class RemotePlayer extends PositionComponent
   void render(Canvas canvas) {
     if (!visible) return;
     final crouching = stance == Stance.crouching;
-    // 내 Player와 같은 연출: 점프·상자 위면 커지고, 앉으면 ×0.82.
-    final scale = (1 + 0.35 * state!.up) * (crouching ? 0.82 : 1);
+    // 내 Player와 같은 연출: 점프·상자 위면 커지고, 앉으면 ×0.85.
+    final scale =
+        (1 + 0.35 * state!.up) * (crouching ? GameArt.crouchScale : 1);
     // 부활 보호 중엔 반투명하게 깜빡인다.
     final blink = protected && (_t * 8).floor().isEven;
     if (blink) canvas.saveLayer(null, _faded);
@@ -94,8 +102,16 @@ class RemotePlayer extends PositionComponent
       ..save()
       ..translate(playerRadius, playerRadius)
       ..scale(scale)
-      ..drawCircle(Offset.zero, playerRadius, _body)
+      ..drawCircle(Offset.zero, playerRadius, _teamFill)
+      ..drawCircle(Offset.zero, playerRadius, _teamRing)
       ..drawLine(Offset.zero, const Offset(playerRadius + 10, 0), _muzzle);
+    // 상대 캐릭터 그림은 방 players의 character로, 포즈는 들고 있는 무기로.
+    // (상대의 재장전은 네트워크 상태에 없어서 reload 포즈는 내 병사만.)
+    game.art.drawSoldier(
+      canvas,
+      sync.characterOf(uid).id,
+      poseFor(weaponById(state!.weapon)?.family ?? WeaponFamily.rifle),
+    );
     if (crouching) {
       canvas.drawCircle(Offset.zero, playerRadius * 1.25, _crouchRing);
     }

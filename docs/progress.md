@@ -2,6 +2,13 @@
 
 작업이 끝날 때마다 맨 위에 추가한다. (날짜 / 한 것 / 다음 할 일 / 막힌 것)
 
+## 2026-10-14 (인게임 그래픽 — feat/ingame-graphics, 병합 전)
+- 한 것: decisions 3·4·8·17장 먼저(Kenney Top-down Shooter CC0 확정, 캐릭터 그림, 포즈, 팀 구분 = 발밑 원, 맵 타일). kenney.nl에서 받아(2.6MB zip을 따로 풀어 확인) 쓰는 PNG 25개(37KB)만 `assets/images/`에 복사 + `LICENSE-kenney.txt`. 캐릭터: 기본 병사 = Soldier 1(soldier1), 저격수 = Hitman 1(hitman1), 정찰병 = Survivor 1(survivor1), 돌격병 = Man Brown(manBrown) — 모두 팩에 있는 이름 그대로. 포즈: 라이플·M249·샷건 machine, 저격총 silencer, 권총 gun, 재장전 reload, 홈·캐릭터 화면 stand. 타일: 바닥 tile_07·tile_08, 벽 tile_171, 상자 tile_129. 규칙(테스트 먼저) `rules/appearance.dart`(poseFor, characterSprite, artFiles). 게임: `GameArt`(불러오기, 몸 중심 맞춰 그리기), Player·RemotePlayer·TargetDummy의 원을 그림으로(발밑 팀 원 파랑/빨강, 앉기 ×0.85 + 앉기 링, 점프·부활 깜빡임·조준선·체력 바·총구 표시는 그대로), 상대는 방 players의 character로, `GameMap`은 시작할 때 맵 전체를 한 장의 그림으로 미리 그림(2170² 한 장, 벽 긴 그림자·상자 짧은 그림자). 홈 병사·캐릭터 화면 목록·상세에 `CharacterPortrait`.
+- 확인: 테스트 389개(그림 규칙 6 + 게임 루프 3 추가), analyze 0, `flutter build web` 성공. 기존 테스트는 하나도 안 고침. 다만 위젯 테스트의 가짜 시간 안에서는 그림 디코딩이 끝나지 않아서 `test/flutter_test_config.dart`가 테스트마다 그림을 실제 시간에 미리 불러 둠(Flame이 게임이 닫힐 때 공용 캐시를 비우므로 setUp마다). 그림이 이미 있으면 `await` 자체를 건너뛰게 한 이유: 로딩 순서가 프레임 하나 밀려 프레임 수에 맞춘 기존 봇·매치 테스트가 어긋났음. 에뮬레이터·크롬 봇전, 훈련소(상자·표적·재장전·앉기) 화면 직접 확인, 캡처는 `screenshots/ingame-graphics-*.png`.
+- 디버그 apk(USE_EMULATOR): main 171,096,003 B → 171,098,493 B(+2,490 B). 그림 파일 합계는 37,250 B.
+- 다음: 사용자 확인 후 병합. 무기 아이콘·효과음 등은 이번 범위 밖.
+- 막힌 것: 없음. 캐릭터 그림은 원본이 43px라 홈 화면에서 크게 키우면 흐려져 150dp로 제한(더 선명하게는 팩의 SVG를 쓸 수 있는 패키지가 필요 → 사용자 결정). 상대의 재장전 포즈는 네트워크 상태에 재장전 여부가 없어서 내 병사만 reload. 총구 흰 선을 "그대로" 두었더니 그림 위로 삐져나와 막대처럼 보임.
+
 ## 2026-10-14 (0.1.4+5 업로드 준비 — main 병합, 사용자 확인 완료, 업로드 전)
 - 한 것: 캐릭터 병합분 main push(6c56acb). 로컬 에뮬레이터에서 `tool/rules_check.sh` 61개 전부 통과. 실서버 규칙과 비교: 바뀐 것은 rooms hp 자기 복구(=== 100 → 90~110 숫자 + 주석), users characters/$id, users equippedCharacter 추가뿐(기존 rooms·matchmaking·users 규칙 그대로, 0.1.3 앱의 hp 100도 범위 안이라 호환) → 사용자 확인 후 `firebase deploy --only database`. version 0.1.4+5, `flutter build appbundle --release --dart-define-from-file=.env.local` → 서명된 app-release.aab 58.0MB. 같은 설정 릴리스 apk를 에뮬레이터에 설치·실행: 살아 있고 크래시 0, 병합된 매니페스트 versionCode 5·0.1.4, AD_ID 권한, 테스트 앱 ID 확인.
 - 0.1.4에 들어감: 7킬 종료, 홈에서 광고 미리 불러오기, 캐릭터(구매·장착·강화·게임 반영).
