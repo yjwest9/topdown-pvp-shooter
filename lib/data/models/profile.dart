@@ -50,6 +50,7 @@ class Profile {
     this.weapons = const [],
     this.primaryId,
     this.secondaryId,
+    this.lastAdAt,
   });
 
   factory Profile.fromJson(Object? json) {
@@ -75,6 +76,7 @@ class Profile {
       ],
       primaryId: l['primary'] as String?,
       secondaryId: l['secondary'] as String?,
+      lastAdAt: (m['lastAdAt'] as num?)?.toInt(),
     );
   }
 
@@ -99,6 +101,10 @@ class Profile {
   /// 로드아웃: 장착한 무기 개체 id. 없으면 기본 무기 지급 전.
   final String? primaryId;
   final String? secondaryId;
+
+  /// 마지막으로 광고 보상을 받은 서버 시간(ms). 없으면 받은 적 없음. 서버 시간으로만
+  /// 쓰므로 [toJson]에는 없다.
+  final int? lastAdAt;
 
   bool get hasLoadout => primaryId != null && secondaryId != null;
 
@@ -141,6 +147,7 @@ class Profile {
     weapons: weapons,
     primaryId: primaryId,
     secondaryId: secondaryId,
+    lastAdAt: lastAdAt,
   );
 
   /// createdAt은 따로 쓴다(서버 시간).

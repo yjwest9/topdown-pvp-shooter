@@ -16,6 +16,7 @@ import '../match/match_view.dart';
 import '../matchmaking/matchmaking_view.dart';
 import '../settings/settings_view.dart';
 import '../settings/settings_view_model.dart';
+import '../shop/shop_view.dart';
 import '../style.dart';
 import 'home_view_model.dart';
 import 'nickname_form.dart';
@@ -215,6 +216,7 @@ class _Home extends ConsumerWidget {
                     style: TextButton.styleFrom(foregroundColor: lightColor),
                     onPressed: () => switch (name) {
                       '무기' => _open(context, const LoadoutView()),
+                      '상점' => _open(context, const ShopView()),
                       '설정' => _open(context, const SettingsView()),
                       _ => _soon(context, name),
                     },

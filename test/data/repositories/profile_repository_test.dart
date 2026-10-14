@@ -240,4 +240,41 @@ void main() {
       expect((p.gold, p.weapons.length, p.hasLoadout), (5000, 2, true));
     });
   });
+
+  group('shop (decisions 9장)', () {
+    Future<ProfileRepository> withGold(FakeRtdbService db, int gold) async {
+      final repo = ProfileRepository(db);
+      await repo.create('u', 'A');
+      await db.update('users/u', {'gold': gold, 'diamond': 7});
+      return repo;
+    }
+
+    test('ad reward: gold +10,000 and lastAdAt = server time', () async {
+      final db = FakeRtdbService()..serverTime = 5000;
+      final repo = await withGold(db, 300);
+      await repo.rewardAd('u', 10000);
+      final p = (await repo.watch('u').first)!;
+      expect((p.gold, p.lastAdAt), (10300, 5000));
+    });
+
+    ({int gold, int diamond})? swap(int gold, int diamond) =>
+        gold < 100000 ? null : (gold: gold - 100000, diamond: diamond + 100);
+
+    test('exchange: gold −100,000, diamond +100, lastAdAt kept', () async {
+      final db = FakeRtdbService();
+      final repo = await withGold(db, 250000);
+      await repo.rewardAd('u', 0);
+      expect(await repo.exchange('u', swap), true);
+      final p = (await repo.watch('u').first)!;
+      expect((p.gold, p.diamond, p.lastAdAt), (150000, 107, db.serverTime));
+    });
+
+    test('exchange with too little gold changes nothing', () async {
+      final db = FakeRtdbService();
+      final repo = await withGold(db, 99999);
+      final before = await db.get('users/u');
+      expect(await repo.exchange('u', swap), false);
+      expect(await db.get('users/u'), before);
+    });
+  });
 }

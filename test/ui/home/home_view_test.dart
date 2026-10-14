@@ -39,8 +39,8 @@ void main() {
 
     expect(find.text('123,456,789'), findsOneWidget);
     expect(find.textContaining('공휴일 보상 2배'), findsOneWidget);
-    await tester.tap(find.text('상점'));
+    await tester.tap(find.text('캐릭터'));
     await tester.pump();
-    expect(find.text('상점: 준비 중입니다'), findsOneWidget);
+    expect(find.text('캐릭터: 준비 중입니다'), findsOneWidget);
   });
 }

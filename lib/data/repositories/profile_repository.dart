@@ -59,6 +59,38 @@ class ProfileRepository {
     return change;
   }
 
+  // ---------------------------------------------------------- 상점 (9장)
+
+  /// 광고 보상: 골드 +[gold]와 lastAdAt(서버 시간)을 update 한 번으로 같이 쓴다.
+  /// 쿨타임이 안 지났으면 DB 규칙이 거부한다(예외).
+  Future<void> rewardAd(String uid, int gold) => _db.update(_user(uid), {
+    'gold': serverIncrement(gold),
+    'lastAdAt': serverTimestamp,
+  });
+
+  /// 환전 한 번을 트랜잭션으로. [exchange]가 지금 골드·다이아로 새 값을 만든다(null이면
+  /// 골드 부족 → 아무것도 안 바꾸고 false).
+  Future<bool> exchange(
+    String uid,
+    ({int gold, int diamond})? Function(int gold, int diamond) exchange,
+  ) async {
+    var done = false;
+    await _db.transaction(_user(uid), (cur) {
+      done = false;
+      if (cur == null) return null; // 서버 값으로 다시 불린다
+      final p = Profile.fromJson(cur);
+      final next = exchange(p.gold, p.diamond);
+      if (next == null) return txAbort;
+      done = true;
+      return {
+        ...(cur as Map<Object?, Object?>),
+        'gold': next.gold,
+        'diamond': next.diamond,
+      };
+    });
+    return done;
+  }
+
   // ---------------------------------------------------------- 무기 (6장)
 
   /// 로드아웃이 없으면(새 유저·기존 유저) 기본 무기 2개를 주고 장착한다. 이미 있으면 그대로.

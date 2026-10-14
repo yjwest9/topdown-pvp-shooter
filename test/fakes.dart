@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:topsoldier/data/services/ad_service.dart';
 import 'package:topsoldier/data/services/auth_service.dart';
 import 'package:topsoldier/data/services/rtdb_service.dart';
 
@@ -9,6 +10,26 @@ class FakeAuthService implements AuthService {
 
   @override
   Future<String> signInAnonymously() async => uid;
+}
+
+/// 광고 SDK 대신. [earn]이 false면 광고를 중간에 닫은 것.
+class FakeAdService implements AdService {
+  FakeAdService({this.supported = true, this.loads = true, this.earn = true});
+
+  @override
+  final bool supported;
+  bool loads;
+  bool earn;
+  int shown = 0;
+
+  @override
+  Future<bool> load() async => supported && loads;
+
+  @override
+  Future<bool> show() async {
+    shown++;
+    return earn;
+  }
 }
 
 /// 메모리 안 RTDB. 바뀐 값은 동기로 전달(위젯 테스트의 가짜 시간 밖으로 새지 않게). 경로는 '/'로 나눈 중첩 Map. [serverTime]이 서버 시간 역할.
@@ -59,6 +80,9 @@ class FakeRtdbService implements RtdbService {
     var node = root;
     for (final p in parts.take(parts.length - 1)) {
       node = (node[p] ??= <String, Object?>{}) as Map<String, Object?>;
+    }
+    if (value case {'.sv': {'increment': final num delta}}) {
+      value = ((node[parts.last] as num?) ?? 0) + delta;
     }
     if (value == null) {
       node.remove(parts.last);

@@ -48,6 +48,8 @@
         "exp": { ".validate": "newData.isNumber() && newData.val() >= 0" },
         "gold": { ".validate": "newData.isNumber() && newData.val() >= 0" },
         "diamond": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+        // 3600000 = balance.dart의 adCooldown(1시간). 바꾸면 양쪽을 같이 바꿀 것.
+        "lastAdAt": { ".validate": "newData.val() === data.val() || (newData.val() === now && (!data.exists() || now - data.val() >= 3600000))" },
         "weapons": {
           "$id": {
             ".validate": "newData.hasChildren(['weaponId', 'grade', 'level']) && newData.child('weaponId').isString() && newData.child('weaponId').val().matches(/^(rifle_standard|rifle_rapid|rifle_precision|rifle_heavy|sniper_bolt|sniper_semi|sniper_light|shotgun_pump|shotgun_auto|shotgun_double|pistol)$/) && newData.child('grade').val() === 'E' && newData.child('level').isNumber() && newData.child('level').val() >= 0 && newData.child('level').val() <= 5 && (!data.exists() ? newData.child('level').val() === 0 : (newData.child('weaponId').val() === data.child('weaponId').val() && (newData.child('level').val() === data.child('level').val() || newData.child('level').val() === data.child('level').val() + 1)))"

@@ -502,6 +502,19 @@ const levelExpStep = 50;
 const nicknameMin = 2;
 const nicknameMax = 12;
 
+// ------------------------------------------------- 상점 (9장) [잠정]
+
+/// 보상형 광고 한 번에 받는 골드.
+const adRewardGold = 10000;
+
+/// 광고 쿨타임(서버 시간). database.rules.json의 users/$uid/lastAdAt 규칙(3600000)과
+/// 같아야 한다. 바꾸면 거기도 바꿀 것.
+const adCooldown = Duration(hours: 1);
+
+/// 환전: [exchangeGoldCost] 골드 → [exchangeDiamonds] 다이아.
+const exchangeGoldCost = 100000;
+const exchangeDiamonds = 100;
+
 // ------------------------------------------------- 빠른 매칭 재탐색 (13장)
 
 /// 누가 내 자리를 잡고 이만큼 안에 방에 안 들어오면 새 방으로 다시 찾는다.

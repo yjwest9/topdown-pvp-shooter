@@ -2,6 +2,13 @@
 
 작업이 끝날 때마다 맨 위에 추가한다. (날짜 / 한 것 / 다음 할 일 / 막힌 것)
 
+## 2026-10-14 (상점·보상형 광고·환전 — main 병합)
+- 한 것: decisions 9·10·13장 먼저 수정(광고 10,000G·1시간 쿨타임·하루 제한 없음, lastAdAt은 RTDB `users/{uid}/lastAdAt`, 환전 버튼 하나, 인앱 결제 패키지 없이 UI만, 광고는 상점에만). 패키지 google_mobile_ads 9.1.0(사용자 승인), AndroidManifest에 Google 테스트 앱 ID. minSdk·compileSdk는 Flutter 기본(24·36)이 플러그인 요구(24·36)를 이미 맞춰서 변경 없음. 규칙(테스트 먼저) `rules/shop.dart` adCooldownLeft·exchangeGold, 수치는 balance.dart(adRewardGold·adCooldown·exchangeGoldCost·exchangeDiamonds). `AdService`(보상 콜백이 왔을 때만 true, 웹은 지원 안 함) + `AdRepository`. ProfileRepository: rewardAd(골드 increment + lastAdAt timestamp를 update 한 번), exchange(트랜잭션). 프로필에 lastAdAt. 상점 화면 `ui/shop/`(무료 골드 카드: 준비 중/실패+다시 시도/쿨타임 59:12 1초 갱신/앱에서만 가능, 환전 확인 창, 다이아 충전 3개 준비 중). 홈 "상점" 연결.
+- DB 규칙: lastAdAt은 새 값 == now이고 이전 값이 없거나 1시간 지났을 때만, 값 그대로는 허용(트랜잭션이 users 전체를 다시 쓰므로). 로컬 에뮬레이터 REST 49개(기존 42 + 새 7) 통과. 확인 스크립트는 `tool/rules_check.sh`.
+- 확인: 테스트 348개, analyze 0, `flutter build web` 성공, 디버그 apk 빌드 성공. 보상 지급 조건(`if (earned)`)을 빼면 "중간에 닫으면 보상 없음", 쿨타임 검사를 빼면 "쿨타임 중엔 광고 안 보여 줌" 테스트가 실패하는 것 확인. 에뮬레이터(로컬 Firebase)에서 테스트 광고 끝까지 → "+10,000 G", 골드 0 → 10,000, 버튼 "다시 받기까지 59:59".
+- 다음: 사용자 체크리스트 후 병합. 실서버 규칙 배포·버전 올리기는 빌드 때. Play Console 광고 포함 신고.
+- 막힌 것: 없음. 본인이 lastAdAt을 지우면(.validate는 삭제에 안 돎) 쿨타임을 건너뛸 수 있음. 골드를 직접 쓸 수 있는 것과 같은 한계(9장 "조작 가능성 인정").
+
 ## 2026-10-13 (에뮬레이터 WASD·방향키 — fix/emulator-keys)
 - 한 것: 에뮬레이터에서 Space·C·R은 되는데 ←→ 회전이 안 되고 WASD는 뚝뚝 끊김. 안드로이드 에뮬레이터가 PC 키를 누르고 있으면 누름·뗌을 반복해서 보내서 "누르고 있음"이 유지되지 않는 것. 안드로이드(웹 제외)에선 뗌을 바로 믿지 않고 첫 누름 뒤 0.6초, 반복 중엔 0.12초 안에 다시 안 눌리면 뗌. 반복 누름은 점프·앉기를 다시 하지 않음. 누름·뗌 반복을 흉내 내는 게임 루프 테스트 2개(수정 전 실패 확인). 테스트 327개.
 - 확인(getevent): WASD는 커널에서부터 DOWN/UP이 0.1ms 간격 쌍, 누르는 동안 0.03초마다 반복(PC 키 반복 지연 0.5초). ←→와 Shift는 안드로이드까지 아예 안 옴(에뮬레이터 창이 가로챔) → 게임에서 못 고침, 회전·달리기 키보드 확인은 크롬에서. main 병합.

@@ -5,6 +5,11 @@ import 'firebase_setup.dart';
 /// 쓰는 값 안에 넣으면 서버가 서버 시간(ms)으로 바꾼다. (= `ServerValue.timestamp`)
 const serverTimestamp = <String, String>{'.sv': 'timestamp'};
 
+/// 쓰는 값 안에 넣으면 서버가 지금 값 + [delta]로 바꾼다. (= `ServerValue.increment`)
+Map<String, Object> serverIncrement(int delta) => {
+  '.sv': {'increment': delta},
+};
+
 /// 트랜잭션 함수가 이걸 돌려주면 아무것도 쓰지 않고 끝낸다.
 const txAbort = _TxAbort();
 
