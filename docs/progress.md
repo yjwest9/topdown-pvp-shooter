@@ -2,9 +2,15 @@
 
 작업이 끝날 때마다 맨 위에 추가한다. (날짜 / 한 것 / 다음 할 일 / 막힌 것)
 
+## 2026-10-14 (0.1.3+4 업로드 준비 — main 병합)
+- 한 것: 상점 브랜치 main 병합·push, DB 규칙 확인 스크립트를 `tool/rules_check.sh`로 저장소에 넣음(48개 = 기존 41 + lastAdAt 7, 이전 기록의 "49개"는 셈 실수). 로컬 에뮬레이터에서 48개 전부 통과. 실서버 규칙과 비교: users/$uid/lastAdAt(+주석)만 추가 → 사용자 확인 후 `firebase deploy --only database`, 배포 후 실서버 규칙 = 로컬 파일 확인. 실서버 최소 확인(테스트 익명 계정): lastAdAt 서버 시간 쓰기 200, 바로 다시 401, 0으로 401, 확인 데이터·계정 삭제. version 0.1.3+4, `flutter build appbundle --release --dart-define-from-file=.env.local` → 서명된 app-release.aab 57.8MB(0.1.2보다 4.5MB, 광고 SDK). 병합된 릴리스 매니페스트에 `com.google.android.gms.permission.AD_ID`(+ ACCESS_ADSERVICES_AD_ID·ATTRIBUTION)와 테스트 앱 ID `ca-app-pub-3940256099942544~3347511713` 있음. Play 신고(광고 포함·광고 ID·데이터 보안)는 미리 저장해 둠.
+- 릴리스 앱이 시작하자마자 죽음(사용자 발견): `Failed to create an instance of androidx.work.impl.WorkDatabase`. google_mobile_ads가 끌고 오는 WorkManager 2.7.0·Room 2.2.5의 `WorkDatabase_Impl`(이름으로 찾아 만드는 클래스)을 R8이 지움. 디버그는 축소를 안 해서 몰랐음. `android/app/proguard-rules.pro`에 RoomDatabase 하위 클래스 생성자 유지 규칙 한 줄(Flutter가 자동으로 읽음, 패키지 변경 없음). 릴리스 apk 재설치 → 실행·오류 없음 확인. aab 다시 빌드 57.9MB.
+- 다음: 사용자 확인(에뮬레이터 릴리스 앱 상점 광고, 실서버 빠른 대전 1판) 후 main 병합, Play Console 업로드, 태그 v0.1.3.
+- 막힌 것: 실서버 확인 첫 시도에 스크립트가 토큰을 잘못 뽑아 요청이 안 갔고(데이터 안 생김), 그 계정 삭제도 실패 → 데이터 없는 익명 계정 1개(9yy9ZGsfnLcobKAJWJTJtVcYKOv1)가 실서버 Authentication에 남음. 콘솔에서 지우기.
+
 ## 2026-10-14 (상점·보상형 광고·환전 — main 병합)
 - 한 것: decisions 9·10·13장 먼저 수정(광고 10,000G·1시간 쿨타임·하루 제한 없음, lastAdAt은 RTDB `users/{uid}/lastAdAt`, 환전 버튼 하나, 인앱 결제 패키지 없이 UI만, 광고는 상점에만). 패키지 google_mobile_ads 9.1.0(사용자 승인), AndroidManifest에 Google 테스트 앱 ID. minSdk·compileSdk는 Flutter 기본(24·36)이 플러그인 요구(24·36)를 이미 맞춰서 변경 없음. 규칙(테스트 먼저) `rules/shop.dart` adCooldownLeft·exchangeGold, 수치는 balance.dart(adRewardGold·adCooldown·exchangeGoldCost·exchangeDiamonds). `AdService`(보상 콜백이 왔을 때만 true, 웹은 지원 안 함) + `AdRepository`. ProfileRepository: rewardAd(골드 increment + lastAdAt timestamp를 update 한 번), exchange(트랜잭션). 프로필에 lastAdAt. 상점 화면 `ui/shop/`(무료 골드 카드: 준비 중/실패+다시 시도/쿨타임 59:12 1초 갱신/앱에서만 가능, 환전 확인 창, 다이아 충전 3개 준비 중). 홈 "상점" 연결.
-- DB 규칙: lastAdAt은 새 값 == now이고 이전 값이 없거나 1시간 지났을 때만, 값 그대로는 허용(트랜잭션이 users 전체를 다시 쓰므로). 로컬 에뮬레이터 REST 49개(기존 42 + 새 7) 통과. 확인 스크립트는 `tool/rules_check.sh`.
+- DB 규칙: lastAdAt은 새 값 == now이고 이전 값이 없거나 1시간 지났을 때만, 값 그대로는 허용(트랜잭션이 users 전체를 다시 쓰므로). 로컬 에뮬레이터 REST 48개(기존 41 + 새 7) 통과. 확인 스크립트는 `tool/rules_check.sh`.
 - 확인: 테스트 348개, analyze 0, `flutter build web` 성공, 디버그 apk 빌드 성공. 보상 지급 조건(`if (earned)`)을 빼면 "중간에 닫으면 보상 없음", 쿨타임 검사를 빼면 "쿨타임 중엔 광고 안 보여 줌" 테스트가 실패하는 것 확인. 에뮬레이터(로컬 Firebase)에서 테스트 광고 끝까지 → "+10,000 G", 골드 0 → 10,000, 버튼 "다시 받기까지 59:59".
 - 다음: 사용자 체크리스트 후 병합. 실서버 규칙 배포·버전 올리기는 빌드 때. Play Console 광고 포함 신고.
 - 막힌 것: 없음. 본인이 lastAdAt을 지우면(.validate는 삭제에 안 돎) 쿨타임을 건너뛸 수 있음. 골드를 직접 쓸 수 있는 것과 같은 한계(9장 "조작 가능성 인정").
