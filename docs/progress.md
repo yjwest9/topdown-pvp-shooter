@@ -1,5 +1,13 @@
 # 진행 상황
 
+## 2026-10-15 (1대1 전용 맵 duel — feat/duel-map, 병합 전)
+- 먼저 chore/release-0.1.6을 main에 squash 병합하고 태그 v0.1.6과 함께 push(ae3761e), 브랜치 삭제. decisions 11장에 먼저 반영(PM 설계 좌표 그대로).
+- 한 것: `tool/duel_map_gen.py`(outpost 스크립트에서 N=17과 A쪽 절반 데이터만 바꿈) → `assets/maps/duel.tmx`(17 × 17칸 1190px, 벽 26개·상자 14개), 실행 결과 ASCII가 PM이 준 것과 한 줄도 안 다르게 같음. 미리보기 `docs/maps/duel.png`(`flutter test tool/map_preview_test.dart`; 이 도구는 맵이 게임 안에서 타일 그림으로 구워진 뒤로 빈 그림이 나와서 단순한 색(바닥·벽·상자·진영·스폰)으로 직접 그리도록 고침, outpost.png는 그대로 둠). 게임이 duel을 읽음(`soldier_game.dart`, 빠른 대전·친선전·봇전 모두), 방 meta `map`도 'duel'. outpost.tmx·그림·미니맵 코드는 그대로.
+- 테스트: 맵 규칙 테스트를 `test/game/components/map_rules.dart`로 빼서 outpost(2170)와 duel(1190)이 같이 돌림. duel 전용 6개(미니맵 reach, 스폰→기둥 옆 시간, outpost보다 40% 이상 짧음, 상자를 막힌 칸으로 본 BFS, 상자 맞닿은 칸 60%, 틈 공간 상자 위 시야). 기존 테스트의 맵 좌표만 새 맵에 맞게(봇 2개, 상대 위치 데이터 2곳, 맵 크기 2곳). 잰 값: 스폰 → 가운데 기둥 옆 3.50·3.82·3.50초(PM 계산 11·12·11칸과 같음), 평균 길이 duel 22.67칸 / outpost 44칸(PM 계산과 같음), 상자 막은 BFS A스폰 → 첫 B스폰 22·23·22칸, 상자 맞닿은 칸 76/114, reach 579px. 4초를 3초로 바꾸면 3.5·3.82·3.5초라 테스트가 실패하는 것 확인.
+- 확인: format·analyze 0, 테스트 전부 통과, `flutter build web` 성공.
+- 다음: 사용자 확인(미리보기, 봇전, 친선전, 미니맵) 후 병합. 맵 고르기 UI·2대2는 범위 밖.
+- 막힌 것: 없음.
+
 ## 2026-10-15 (0.1.6+7 업로드 준비 — chore/release-0.1.6, 병합 전, 학교 PC)
 - 한 것: fix/demo-hardening을 main에 squash 병합·push(f4040ae), feat/next-holiday·fix/demo-hardening 로컬 브랜치 삭제(원격엔 원래 없었음). 기능 변경 없음, `pubspec.yaml` version 0.1.6+7만 바꿈. 0.1.5(versionCode 6) 이후 바뀐 것: 시연 보강(끊김 오판 유예, 오프라인 첫 실행 복귀 시 닉네임 창, 연결 오류 한국어, 광고 보상 실패 알림, 재연결·연결 안내, 상대 이탈 승리 유예, 홈·무기·캐릭터·상점 아래 여백).
 - 확인: format 0 changed, analyze 0, 테스트 457개 통과. 로컬 에뮬레이터 `tool/rules_check.sh` 61개 통과. 실서버 규칙(`firebase database:get /.settings/rules`)과 로컬 `database.rules.json`을 JSON으로 비교 → 같음(배포 안 함). `flutter build appbundle --release --dart-define-from-file=.env.local` → app-release.aab 59.2MB(62,078,492 B), 업로드 키(CN=youngjun seo, SHA256 F7:3C:72:7D…) 서명이 0.1.5와 같음.

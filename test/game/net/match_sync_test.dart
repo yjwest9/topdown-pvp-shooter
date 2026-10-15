@@ -141,7 +141,7 @@ void main() {
     verify: (game, tester) async {
       final me = (x: game.player.position.x, y: game.player.position.y);
       expect(game.map.spawnsOf('A'), contains(me));
-      expect(game.map.width, 2170);
+      expect(game.map.width, 1190);
       expect(game.dummies, isEmpty);
     },
   );

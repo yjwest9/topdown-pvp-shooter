@@ -93,7 +93,7 @@ class RoomRepository {
     'hostUid': uid,
     'status': RoomMeta.waiting,
     'mode': 'pvp1v1',
-    'map': 'test',
+    'map': 'duel',
   };
 
   Future<void> joinRoom(

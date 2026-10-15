@@ -92,8 +92,8 @@ void main() {
       });
       await db.set('rooms/1234/hp/b', {'value': 90, 'protectedUntil': 0});
       await db.set('rooms/1234/states/b', {
-        'x': 1085.0,
-        'y': 1365.0,
+        'x': 595.0,
+        'y': 735.0,
         'a': 1.0,
         'stance': 'standing',
         'up': 0.0,

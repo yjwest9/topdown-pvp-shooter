@@ -67,9 +67,9 @@ void main() {
   );
 
   online(db).testGameWidget(
-    'match: outpost baked into one 2170px image, opponent drawn with his character',
+    'match: duel baked into one 1190px image, opponent drawn with his character',
     verify: (game, tester) async {
-      expect(game.map.bakedImage!.width, 2170);
+      expect(game.map.bakedImage!.width, 1190);
       await db.set('rooms/1234/players/b', {
         'name': 'B',
         'connected': true,
@@ -79,8 +79,8 @@ void main() {
       });
       await db.set('rooms/1234/hp/b', {'value': 95, 'protectedUntil': 0});
       await db.set('rooms/1234/states/b', {
-        'x': 1085.0,
-        'y': 1365.0,
+        'x': 595.0,
+        'y': 735.0,
         'a': 1.0,
         'stance': 'standing',
         'up': 0.0,
@@ -93,8 +93,8 @@ void main() {
       expect(game.match!.characterOf('b').id, 'assault');
       expect(game.match!.remotes['b']!.pose, Pose.silencer); // 저격총
       await db.set('rooms/1234/states/b', {
-        'x': 1085.0,
-        'y': 1365.0,
+        'x': 595.0,
+        'y': 735.0,
         'a': 1.0,
         'stance': 'standing',
         'up': 0.0,

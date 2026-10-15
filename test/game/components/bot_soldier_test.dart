@@ -103,13 +103,13 @@ void main() {
     'low hp while fighting: hides crouched behind a low crate',
     verify: (game, tester) async {
       await run(game, tester, 0.1);
-      // 가운데 통로(15열). 나는 남쪽을 봐서 봇을 안 쏜다. 봇은 북쪽 광장, 둘 사이에
-      // 광장 한가운데 긴 상자.
+      // duel 맵 5열. 나는 남쪽을 봐서 봇을 안 쏜다(5열 10행). 봇은 북쪽(5열 6행), 둘 사이
+      // (5열 8행)에 낮은 상자 2칸 중 하나.
       game.player
-        ..position = Vector2(1085, 1365)
+        ..position = Vector2(385, 735)
         ..angle = pi / 2;
       final b = botOf(game);
-      b.body.position = Vector2(1085, 945);
+      b.body.position = Vector2(385, 455);
       await RoomRepository(db)
           .setHp(code, bot, const NetHp(value: 30, protectedUntil: 0));
       await run(game, tester, 6, until: () => b.body.body.crouching);
@@ -158,7 +158,7 @@ void main() {
   testWidgets('hard bot hits a still player far more than easy', (
     tester,
   ) async {
-    // 가운데 길 340px(진영 앞 마당 → 통로 → 광장), 나는 가만히(봇을 안 봄). 봇·나 체력은 안 닳게 채우며 10초 누적 데미지.
+    // duel 맵 7열의 곧은 길 350px(5행 → 10행, 높은 벽·상자 없음), 나는 가만히(봇을 안 봄). 봇·나 체력은 안 닳게 채우며 10초 누적 데미지.
     Future<double> damage(BotDifficulty d, int seed) async {
       final db = FakeRtdbService();
       final repo = RoomRepository(db);
@@ -186,9 +186,9 @@ void main() {
       });
       await run(game, tester, 0.1);
       game.player
-        ..position = Vector2(1085, 1575)
+        ..position = Vector2(525, 735)
         ..angle = pi / 2;
-      botOf(game).body.position = Vector2(1085, 1235);
+      botOf(game).body.position = Vector2(525, 385);
       await repo.setHp(code, bot, const NetHp(value: 1e9, protectedUntil: 0));
       const full = 1e6;
       var total = 0.0;
