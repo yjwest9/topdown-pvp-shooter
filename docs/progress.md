@@ -1,5 +1,14 @@
 # 진행 상황
 
+## 2026-10-15 (0.1.5+6 업로드 준비 — chore/release-0.1.5, 병합 전, 학교 PC)
+- 한 것: 0.1.4(versionCode 5)는 Play에 올리지 않고 건너뜀 → 0.1.5에 0.1.4 내용(7킬·캐릭터·그림)과 효과음·실루엣 그림까지 모두 들어감. 기능 변경 없음, `pubspec.yaml` version 0.1.5+6만 바꿈. format 0 changed, analyze 0, 테스트 428개 통과. 로컬 에뮬레이터 `tool/rules_check.sh` 61개 전부 통과. 실서버 규칙(`firebase database:get /.settings/rules`)과 로컬 `database.rules.json`을 JSON으로 비교 → 같음(배포 안 함). `flutter build appbundle --release --dart-define-from-file=.env.local` → app-release.aab 59.2MB, 업로드 키(CN=youngjun seo) 서명 확인.
+- 디버그 apk(USE_EMULATOR) 211,190,834 B. 이전 기준 171,098,493 B보다 약 40MB 큼 — 효과음(assets/audio 280KB)과는 무관한 크기라 이 PC의 Flutter 엔진/도구 차이로 보이지만 같은 PC에서 이전 커밋을 다시 빌드해 비교하진 않음.
+- 릴리스 apk를 에뮬레이터에 설치(예전 디버그 앱은 서명이 달라 삭제 후 설치, versionCode 6·0.1.5 확인): 시작·크래시 로그 0, 닉네임 → 홈 → 훈련소 진입, 사격 중 앱이 MediaPlayer로 44100Hz 소리를 읽어 재생(R8로 지워진 클래스 없음, 오류 로그 0). 귀로 들은 확인은 아님(사용자 확인). proguard 규칙 추가 없음.
+- 병합된 릴리스 매니페스트: versionCode 6·0.1.5, AD_ID 권한, 테스트 앱 ID `ca-app-pub-3940256099942544~3347511713`.
+- 주의: 에뮬레이터 앱을 새로 깔아 실서버 익명 계정이 하나 더 생김(닉네임 Soldier4479). 규칙 확인 스크립트는 로컬 에뮬레이터에서만 돌림.
+- 다음: 사용자 확인(실서버 릴리스 앱) → 병합·push·태그 v0.1.5, Play 업로드.
+- 막힌 것: 없음.
+
 작업이 끝날 때마다 맨 위에 추가한다. (날짜 / 한 것 / 다음 할 일 / 막힌 것)
 
 ## 2026-10-15 (게임 안 병사도 실루엣 택티컬 — feat/ingame-tactical, 병합 전)
