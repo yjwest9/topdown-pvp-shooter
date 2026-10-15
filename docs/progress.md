@@ -1,5 +1,14 @@
 # 진행 상황
 
+## 2026-10-15 (에뮬레이터 렉 측정 — perf/emulator-lag, 병합 전, 코드 변경 없음)
+- 먼저 feat/duel-map을 main에 squash 병합·push(185c5c6), 브랜치 삭제.
+- 측정(표는 demo-risks.md "에뮬레이터 렉 측정"): 에뮬레이터 봇전(보통) 30초, 디버그·profile·릴리스 모두 11~13fps, raster 75~90ms가 병목(build는 1~5ms). 디버그 전용이 아님.
+- 원인: HUD 글자 그림자 blur. HUD 글자를 끄면 raster 90 → 48ms, blur를 0으로 하면 36ms(21fps). 맵·미니맵·병사·총알은 영향 거의 없음. 실루엣 이전(59954fb)도 13fps라 그림 방식이 원인 아님. 빈 화면 대조군도 28fps라 에뮬레이터 기본 한계가 큼.
+- 코드는 안 고침: blur를 없애는 건 눈에 보이는 변경이라 사용자 확인 필요(demo-risks.md에 방법 (a)(b)). 임시 측정 코드와 측정용 worktree(D:/Projects/_perf_old)는 지움.
+- 주의: 측정 도중 "맵 선택" 파일 방식이 앱에서 읽히지 않아(저장소 권한) 초반 outpost·끄기 측정이 모두 duel로 나온 것을 뒤늦게 발견해 빌드 옵션(--dart-define) 방식으로 다시 쟀다. outpost는 디버그만 유효, profile·릴리스는 중단.
+- 다음: 사용자가 실제 폰(Play 0.1.6)에서 봇전 렉을 확인한 뒤, 느리면 위 (a)/(b) 중 선택.
+- 막힌 것: 없음.
+
 ## 2026-10-15 (1대1 전용 맵 duel — feat/duel-map, 병합 전)
 - 먼저 chore/release-0.1.6을 main에 squash 병합하고 태그 v0.1.6과 함께 push(ae3761e), 브랜치 삭제. decisions 11장에 먼저 반영(PM 설계 좌표 그대로).
 - 한 것: `tool/duel_map_gen.py`(outpost 스크립트에서 N=17과 A쪽 절반 데이터만 바꿈) → `assets/maps/duel.tmx`(17 × 17칸 1190px, 벽 26개·상자 14개), 실행 결과 ASCII가 PM이 준 것과 한 줄도 안 다르게 같음. 미리보기 `docs/maps/duel.png`(`flutter test tool/map_preview_test.dart`; 이 도구는 맵이 게임 안에서 타일 그림으로 구워진 뒤로 빈 그림이 나와서 단순한 색(바닥·벽·상자·진영·스폰)으로 직접 그리도록 고침, outpost.png는 그대로 둠). 게임이 duel을 읽음(`soldier_game.dart`, 빠른 대전·친선전·봇전 모두), 방 meta `map`도 'duel'. outpost.tmx·그림·미니맵 코드는 그대로.
