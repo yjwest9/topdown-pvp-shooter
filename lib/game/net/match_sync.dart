@@ -66,6 +66,7 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
   int _offset = 0;
   double _sinceSend = 0;
   bool _sawOpponent = false;
+  bool _sawMeConnected = false;
   bool _stateInFlight = false;
   int _shotsInFlight = 0;
   static const _maxShotsInFlight = 8;
@@ -143,6 +144,39 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
     if (_sawOpponent && !opponentHere) {
       _finish(MatchResult.win, opponentLeft: true);
     }
+    if (players[uid]?.connected ?? false) _sawMeConnected = true;
+  }
+
+  /// 방장이 끝을 기록하지 못하는 경우의 마무리(demo-risks 2·3-1). 방장은 자기 `_checkEnd`가 한다.
+  void _checkStuck() {
+    if (_finished || _closed || _endsAt == 0) return;
+    // 내 연결 표시가 꺼졌다 = 서버가 나를 끊긴 사람으로 봤다(상대는 이미 이긴 것으로 끝냄).
+    if (_sawMeConnected && players[uid]?.connected == false) {
+      _finish(MatchResult.lose);
+      return;
+    }
+    if (isHost) return;
+    final others = players.values.where((p) => p.uid != uid);
+    // 방장이 이미 끊겨 있었다(내가 방장이 연결된 걸 본 적이 없어도).
+    if (others.isNotEmpty && others.every((p) => !p.connected)) {
+      _finish(MatchResult.win, opponentLeft: true);
+      return;
+    }
+    // 방장이 살아 있는데도 끝 기록이 안 옴: 시간이 끝나고 몇 초 뒤 내 화면의 점수로 끝낸다.
+    if (serverNow - _endsAt > hostEndGraceMs) {
+      _finish(
+        resultFor(
+          matchEndState(
+            scoreA: scoreA,
+            scoreB: scoreB,
+            remainingMs: 0,
+            aConnected: true,
+            bConnected: true,
+          ),
+          teamA: false,
+        ),
+      );
+    }
   }
 
   void _onHp(Map<String, NetHp> next) {
@@ -211,6 +245,7 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
     }
     game.player.blinking = isProtected(myHp);
     if (isHost) _checkEnd();
+    _checkStuck();
   }
 
   /// 방장만 판정해서 meta에 기록한다. 둘 다 meta를 보고 결과 화면으로 간다.

@@ -1,5 +1,13 @@
 # 진행 상황
 
+## 2026-10-15 (시연 위험 점검 + 끊김 수정 + 홈 정리 — feat/next-holiday, 병합 전)
+- 다음 공휴일 D-day 띠는 만들었다가 사용자 요청으로 **되돌림**(a2795e3 revert, "쓸데없는 기능"). 홈 띠는 원래대로 오늘이 공휴일일 때만 "○○ · 공휴일 보상 2배!". decisions 1·12장도 원래대로.
+- 시연 위험 점검: `docs/demo-risks.md`(조사 중 코드 수정 없음). 가장 위험했던 것: 방장 앱이 사라지면 남은 사람이 0:00에서 영영 멈춤, 네트워크가 순간 끊기면 끊긴 쪽만 유령 경기, 광고 보상이 조용히 실패할 수 있음.
+- 수정: `MatchSync._checkStuck`(demo-risks 2·3-1). 내 연결 표시가 꺼져 있으면 패배로, 참가자는 방장이 끊겨 있으면 승리로, 시간이 끝나고 5초(`hostEndGraceMs`) 안에 끝 기록이 안 오면 내 화면 점수로 끝냄. 테스트 4개 추가(끄면 3개 실패). 두 클라이언트 실제 재현은 안 함.
+- 홈 하단 탭바가 밑에서 떠 보이던 것: `main.dart`가 immersiveSticky라서 키보드·시스템 바가 한 번 뜨면 `SafeArea` 아래쪽 여백이 생겼음. 홈만 `SafeArea(bottom: false)`로 고침(다른 화면 같은 현상은 그대로).
+- 다음: 사용자 확인 후 병합.
+- 막힌 것: 없음.
+
 ## 2026-10-15 (0.1.5+6 업로드 준비 — chore/release-0.1.5, 병합 전, 학교 PC)
 - 한 것: 0.1.4(versionCode 5)는 Play에 올리지 않고 건너뜀 → 0.1.5에 0.1.4 내용(7킬·캐릭터·그림)과 효과음·실루엣 그림까지 모두 들어감. 기능 변경 없음, `pubspec.yaml` version 0.1.5+6만 바꿈. format 0 changed, analyze 0, 테스트 428개 통과. 로컬 에뮬레이터 `tool/rules_check.sh` 61개 전부 통과. 실서버 규칙(`firebase database:get /.settings/rules`)과 로컬 `database.rules.json`을 JSON으로 비교 → 같음(배포 안 함). `flutter build appbundle --release --dart-define-from-file=.env.local` → app-release.aab 59.2MB, 업로드 키(CN=youngjun seo) 서명 확인.
 - 디버그 apk(USE_EMULATOR) 211,190,834 B. 이전 기준 171,098,493 B보다 약 40MB 큼 — 효과음(assets/audio 280KB)과는 무관한 크기라 이 PC의 Flutter 엔진/도구 차이로 보이지만 같은 PC에서 이전 커밋을 다시 빌드해 비교하진 않음.

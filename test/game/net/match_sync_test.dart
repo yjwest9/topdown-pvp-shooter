@@ -38,6 +38,24 @@ GameTester<SoldierGame> onlineTester(FakeRtdbService db) => GameTester(
       tester.pumpWidget(ProviderScope(child: widget)),
 );
 
+/// 나는 'b'(참가자). 방장 'a'가 사라질 수 있다.
+GameTester<SoldierGame> joinerTester(FakeRtdbService db) => GameTester(
+  () => SoldierGame(
+    random: Random(7),
+    match: MatchSync(
+      rooms: RoomRepository(db),
+      code: code,
+      uid: 'b',
+      isHost: false,
+      clock: () => db.serverTime,
+    ),
+  ),
+  createGameWidget: (game) =>
+      RiverpodAwareGameWidget(key: GlobalKey(), game: game),
+  pumpWidget: (widget, tester) =>
+      tester.pumpWidget(ProviderScope(child: widget)),
+);
+
 Map<String, Object?> state(double x, double y, {String stance = 'standing'}) =>
     {
       'x': x,
@@ -222,6 +240,76 @@ void main() {
       await tester.pump();
       expect(ended!.opponentLeft, true);
       expect(ended!.stats.result, MatchResult.win);
+    },
+  );
+
+  // 시연 위험(docs/demo-risks.md 2·3-1): 끊김·방장 실종에서 끝나지 않고 멈추던 것.
+
+  Future<void> pumpFrames(SoldierGame game, WidgetTester tester) async {
+    for (var i = 0; i < 3; i++) {
+      game.update(1 / 60);
+      await tester.pump();
+    }
+  }
+
+  joinerTester(db).testGameWidget(
+    'host is already gone when I look (never saw him connected): I win',
+    verify: (game, tester) async {
+      listenEnd(game);
+      await db.update('rooms/$code/meta', {
+        'hostUid': 'a',
+        'status': 'playing',
+        'endsAt': db.serverTime + 100000,
+      });
+      await db.set('rooms/$code/players/a', {'connected': false, 'team': 'A'});
+      await db.set('rooms/$code/players/b', {'connected': true, 'team': 'B'});
+      await pumpFrames(game, tester);
+      expect(ended!.opponentLeft, true);
+      expect(ended!.stats.result, MatchResult.win);
+    },
+  );
+
+  joinerTester(db).testGameWidget(
+    'host alive on paper but nobody writes the end: I end it myself '
+    'a few seconds after time is up',
+    verify: (game, tester) async {
+      listenEnd(game);
+      await bothPlaying(endsIn: 1000);
+      await pumpFrames(game, tester);
+      expect(ended, isNull);
+
+      db.serverTime += 1000 + 3000; // 끝난 지 3초: 아직 기다림
+      await pumpFrames(game, tester);
+      expect(ended, isNull);
+
+      db.serverTime += 3000; // 6초 넘음
+      await pumpFrames(game, tester);
+      expect(ended!.opponentLeft, false);
+      expect(ended!.stats.result, MatchResult.draw); // 0:0
+    },
+  );
+
+  joinerTester(db).testGameWidget(
+    'my own connection was flagged lost (I came back after a drop): I lose',
+    verify: (game, tester) async {
+      listenEnd(game);
+      await bothPlaying(endsIn: 100000);
+      await pumpFrames(game, tester);
+      expect(ended, isNull);
+
+      await db.set('rooms/$code/players/b/connected', false); // onDisconnect
+      await pumpFrames(game, tester);
+      expect(ended!.stats.result, MatchResult.lose);
+    },
+  );
+
+  onlineTester(db).testGameWidget(
+    'host: my own connected flag is not read as a drop before it is first set',
+    verify: (game, tester) async {
+      listenEnd(game);
+      await db.set('rooms/$code/players/a', {'name': 'A', 'team': 'A'});
+      await pumpFrames(game, tester);
+      expect(ended, isNull);
     },
   );
 

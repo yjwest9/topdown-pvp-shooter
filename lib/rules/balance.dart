@@ -476,6 +476,9 @@ const quickMatchStaleMs = 15000;
 /// 대기하는 쪽이 t를 갱신하는 간격.
 const quickMatchHeartbeat = Duration(seconds: 5);
 
+/// 시간이 끝난 뒤 방장이 끝을 기록하지 않으면 참가자가 이 시간 뒤 스스로 끝낸다(ms).
+const hostEndGraceMs = 5000;
+
 /// 이미 누가 잡은 자리면 이만큼 뒤에 다시 본다.
 const quickMatchRetry = Duration(milliseconds: 500);
 

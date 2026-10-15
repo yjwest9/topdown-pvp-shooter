@@ -36,7 +36,9 @@ class HomeView extends ConsumerWidget {
     ref.watch(settingsProvider);
     return Scaffold(
       backgroundColor: bgColor,
+      // 아래는 안전 영역을 안 둔다: immersiveSticky에서 키보드·시스템 바가 한 번 뜨면 탭바가 밑에서 떠 보였다.
       body: SafeArea(
+        bottom: false,
         child: s.needsNickname
             ? const Center(child: NicknameForm(first: true))
             : _Home(s),
