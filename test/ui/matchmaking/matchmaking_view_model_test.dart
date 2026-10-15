@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:topsoldier/data/repositories/auth_repository.dart';
 import 'package:topsoldier/data/repositories/room_repository.dart';
 import 'package:topsoldier/rules/balance.dart';
+import 'package:topsoldier/ui/format.dart';
 import 'package:topsoldier/ui/matchmaking/matchmaking_view_model.dart';
 
 import '../../fakes.dart';
@@ -151,6 +154,46 @@ void main() {
     expect(slot['roomId'], isNot(oldRoom));
     expect(await db.get('rooms/$oldRoom'), isNull);
     expect(stateOf(a).found, false);
+    a.dispose();
+  });
+
+  testWidgets('no DB connection: one reconnect, then "check your internet" '
+      'in 3 seconds, no slot written', (tester) async {
+    final db = FakeRtdbService()..connected = false;
+    final a = player('a', db);
+    await tester.pump();
+    expect(stateOf(a).error, isNull); // 재연결을 기다리는 중
+    await tester.pump(connectWait + const Duration(seconds: 1));
+
+    expect(stateOf(a).error, connectionErrorText);
+    expect(db.reconnects, 1);
+    expect(await db.get(slotPath), isNull);
+    expect(await db.get('rooms'), anyOf(isNull, isEmpty));
+    a.dispose();
+  });
+
+  testWidgets('no DB connection, reconnect works: searching goes on', (
+    tester,
+  ) async {
+    final db = FakeRtdbService()..connected = false;
+    db.onReconnect = () => db.setConnected(true);
+    final a = player('a', db);
+    await tester.pump();
+
+    expect(stateOf(a).error, isNull);
+    expect(((await db.get(slotPath))! as Map)['uid'], 'a');
+    a.dispose();
+  });
+
+  testWidgets('connected but the server does not answer: same message after '
+      '8 seconds', (tester) async {
+    final db = FakeRtdbService();
+    db.hold = Completer<void>();
+    addTearDown(() => db.hold?.complete());
+    final a = player('a', db);
+    await tester.pump(requestTimeout + const Duration(seconds: 1));
+
+    expect(stateOf(a).error, connectionErrorText);
     a.dispose();
   });
 }

@@ -67,6 +67,8 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
   double _sinceSend = 0;
   bool _sawOpponent = false;
   bool _sawMeConnected = false;
+  int? _meLostSince;
+  int? _opponentGoneSince;
   bool _stateInFlight = false;
   int _shotsInFlight = 0;
   static const _maxShotsInFlight = 8;
@@ -139,29 +141,35 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
 
   void _onPlayers(List<RoomPlayer> list) {
     players = {for (final p in list) p.uid: p};
-    final opponentHere = list.any((p) => p.uid != uid && p.connected);
-    if (opponentHere) _sawOpponent = true;
-    if (_sawOpponent && !opponentHere) {
-      _finish(MatchResult.win, opponentLeft: true);
-    }
+    if (list.any((p) => p.uid != uid && p.connected)) _sawOpponent = true;
     if (players[uid]?.connected ?? false) _sawMeConnected = true;
   }
 
-  /// 방장이 끝을 기록하지 못하는 경우의 마무리(demo-risks 2·3-1). 방장은 자기 `_checkEnd`가 한다.
+  /// 상대 이탈·내 끊김·방장이 끝을 기록하지 못하는 경우의 마무리(demo-risks 2·3-1).
+  /// 방장은 자기 `_checkEnd`가 끝을 기록한다. 연결 표시가 꺼진 것은 [stuckGraceMs] 넘게 그대로일
+  /// 때만 믿는다(잠깐 꺼졌다 켜지거나 시작 직후 아직 안 써진 경우에 잘못 끝내지 않게).
   void _checkStuck() {
-    if (_finished || _closed || _endsAt == 0) return;
+    if (_finished || _closed) return;
+    // 상대가 나갔다: 연결 표시가 꺼졌거나 항목이 사라졌다. 참가자는 방장이 연결된 걸 본 적이
+    // 없어도(시작했는데 꺼져 있음) 인정한다.
+    final others = players.values.where((p) => p.uid != uid);
+    final gone =
+        others.every((p) => !p.connected) &&
+        (_sawOpponent || (!isHost && _endsAt != 0 && others.isNotEmpty));
+    _opponentGoneSince = gone ? (_opponentGoneSince ?? serverNow) : null;
+    if (gone && serverNow - _opponentGoneSince! >= stuckGraceMs) {
+      _finish(MatchResult.win, opponentLeft: true);
+      return;
+    }
+    if (_endsAt == 0) return;
     // 내 연결 표시가 꺼졌다 = 서버가 나를 끊긴 사람으로 봤다(상대는 이미 이긴 것으로 끝냄).
-    if (_sawMeConnected && players[uid]?.connected == false) {
+    final meLost = _sawMeConnected && players[uid]?.connected == false;
+    _meLostSince = meLost ? (_meLostSince ?? serverNow) : null;
+    if (meLost && serverNow - _meLostSince! >= stuckGraceMs) {
       _finish(MatchResult.lose);
       return;
     }
     if (isHost) return;
-    final others = players.values.where((p) => p.uid != uid);
-    // 방장이 이미 끊겨 있었다(내가 방장이 연결된 걸 본 적이 없어도).
-    if (others.isNotEmpty && others.every((p) => !p.connected)) {
-      _finish(MatchResult.win, opponentLeft: true);
-      return;
-    }
     // 방장이 살아 있는데도 끝 기록이 안 옴: 시간이 끝나고 몇 초 뒤 내 화면의 점수로 끝낸다.
     if (serverNow - _endsAt > hostEndGraceMs) {
       _finish(
@@ -251,14 +259,14 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
   /// 방장만 판정해서 meta에 기록한다. 둘 다 meta를 보고 결과 화면으로 간다.
   void _checkEnd() {
     if (_endWritten || _finished || _endsAt == 0) return;
-    bool connected(String t) =>
-        players.values.any((p) => p.team == t && p.connected);
+    // 상대가 나간 것은 `_checkStuck`이 유예(stuckGraceMs)를 두고 처리한다. 여기서 바로 끝내면
+    // 잠깐 끊겼다 돌아온 상대가 졌다고 나온다.
     final outcome = matchEndState(
       scoreA: scoreA,
       scoreB: scoreB,
       remainingMs: _endsAt - serverNow,
-      aConnected: connected(RoomMeta.teamA),
-      bConnected: connected(RoomMeta.teamB),
+      aConnected: true,
+      bConnected: true,
     );
     if (outcome == MatchOutcome.ongoing) return;
     _endWritten = true;

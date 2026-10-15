@@ -275,6 +275,8 @@ Open API 1개 이상 / 푸시 알림 1개 이상 / Firebase / REST·JSON / MVVM 
   - DB 규칙: 대기석은 비었거나·내 것이거나·t가 15초보다 오래됐을 때만 새로 앉기. takenBy는 비어 있을 때 한 번, 값은 내 uid만. 삭제는 uid가 나일 때만. 방 전체 삭제는 그 방 참가자만.
 - (2026-10-14) 캐릭터 저장: `users/{uid}/characters/{id}` { level }, `users/{uid}/equippedCharacter`(문자열, 기본 'basic'). 방 참가자 `rooms/{code}/players/{uid}`에 character, characterLevel 추가.
 - (2026-10-14) DB 규칙: characters/$id는 4종만, level 0~5, 새로 만들 땐 0, 이후 그대로 또는 +1. equippedCharacter는 'basic'이거나 보유한 캐릭터. 내 hp 복구는 `=== 100` → **90 이상 110 이하** 숫자(캐릭터 최소·최대 체력, balance.dart와 같이 바꿀 것).
+- (2026-10-15) 끊김·방장 실종 마무리(`MatchSync._checkStuck`)는 유지하되 잘못 끝내지 않게 한다: 연결 표시가 꺼진 걸 3초(`stuckGraceMs`) 넘게 확인해야 끝낸다(시작 직후 아직 안 써졌거나 잠깐 꺼졌다 켜지는 경우). 프로필이 없는 채로(오프라인 첫 실행) 온라인이 되면 3초마다 다시 시도해서 닉네임 입력 창을 띄운다. 연결 실패는 영어 원문 대신 "인터넷 연결을 확인해 주세요" 한 줄(원문은 로그만). 광고 보상은 서버가 확인하기 전엔 화면에 반영하지 않고(`applyLocally: false` 트랜잭션) 8초 안에 못 쓰면 "보상을 받지 못했습니다. 인터넷 연결을 확인해 주세요", 쿨타임도 시작하지 않는다.
+- (2026-10-15 추가) 네트워크가 돌아오면 앱 재시작 없이 DB에 다시 붙어야 한다: 앱이 다시 앞으로 올 때와 빠른 대전·방 만들기·입장·광고 보상 전에 `.info/connected`가 false면 `goOffline` → `goOnline`을 한 번 시도하고 3초(`connectWait`) 안에 안 붙으면 기다리지 않고 "인터넷 연결을 확인해 주세요". 연결돼 있어도 응답이 8초(`requestTimeout`) 넘게 걸리면 같은 문구. "상대가 나갔다"로 승리하는 경로도(방장의 `_checkEnd` 포함) 연결 표시가 꺼진 것을 `stuckGraceMs`(3초) 넘게 확인한 뒤에만 끝낸다.
 - **프로필은 RTDB**(2026-10-12): `users/{uid}` { nickname, level, exp, gold, diamond, createdAt, lastMatchId, stats: { matches, wins, kills, deaths } }. 아래 Firestore 계획에서 users 문서는 이걸로 대체.
 - (2026-10-14) `lastAdAt`도 RTDB `users/{uid}/lastAdAt`.
 - **Firestore**(계획): `users/{uid}` { fcmToken }, `users/{uid}/weapons/{id}`, `users/{uid}/characters/{id}`, `matches/{id}`, `config/balance`(밸런스·경제 설정).

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/profile.dart';
@@ -12,6 +13,9 @@ import '../../rules/shop.dart';
 
 /// 광고 버튼 상태. [unsupported]는 웹("앱에서만 가능").
 enum AdStatus { unsupported, loading, ready, failed }
+
+/// 광고를 본 결과.
+enum AdReward { none, paid, failed, offline }
 
 class ShopState {
   const ShopState({
@@ -87,24 +91,42 @@ class ShopViewModel extends Notifier<ShopState> {
     }
   }
 
-  /// 광고를 보여 주고, 끝까지 봤으면(보상 콜백) 골드를 받는다. 받았으면 true.
-  /// 닫기만 했으면 보상 없이 false.
-  Future<bool> watchAd() async {
+  /// 광고를 보여 주고, 끝까지 봤으면(보상 콜백) 골드를 받는다.
+  /// 닫기만 했으면 [AdReward.none]. 광고 전에 DB에 연결이 안 돼 있으면 광고를 보여 주지 않고
+  /// [AdReward.offline]. 서버에 쓰지 못했거나 [requestTimeout] 안에 안 끝나면 [AdReward.failed]
+  /// (쿨타임도 시작되지 않는다).
+  Future<AdReward> watchAd() async {
     final now = DateTime.now().millisecondsSinceEpoch;
     if (state.ad != AdStatus.ready ||
         state.busy ||
         state.cooldownLeft(now) > Duration.zero) {
-      return false;
+      return AdReward.none;
     }
+    final connection = ref.read(roomRepositoryProvider).connection;
     state = state.copyWith(busy: true);
+    var reload = true;
     try {
-      final earned = await _ads.show();
-      if (earned) await _repo.rewardAd(await _auth.signIn(), adRewardGold);
-      return earned;
+      // 광고를 보고도 보상을 못 받는 일이 없게, 연결이 없으면 광고 전에 알린다.
+      if (!await connection.ensureConnected()) {
+        reload = false;
+        return AdReward.offline;
+      }
+      if (!await _ads.show()) return AdReward.none;
+      try {
+        // 광고를 보는 동안 끊겼을 수 있다.
+        if (!await connection.ensureConnected()) return AdReward.failed;
+        await _repo
+            .rewardAd(await _auth.signIn(), adRewardGold)
+            .timeout(requestTimeout);
+        return AdReward.paid;
+      } catch (e) {
+        debugPrint('광고 보상 저장 실패: $e');
+        return AdReward.failed;
+      }
     } finally {
       if (ref.mounted) {
         state = state.copyWith(busy: false);
-        unawaited(loadAd());
+        if (reload) unawaited(loadAd());
       }
     }
   }

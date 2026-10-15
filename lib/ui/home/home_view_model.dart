@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/holiday.dart';
@@ -11,6 +12,7 @@ import '../../data/repositories/profile_repository.dart';
 import '../../data/repositories/room_repository.dart';
 import '../../rules/balance.dart';
 import '../../rules/profile.dart';
+import '../format.dart';
 
 /// 오늘이 공휴일이면 그 공휴일(매치 보상 2배 이벤트). 앱 실행 중 한 번만 묻는다.
 final holidayProvider = FutureProvider<Holiday?>(
@@ -81,6 +83,12 @@ class HomeViewModel extends Notifier<HomeState> {
       unawaited(ref.read(adRepositoryProvider).load());
     }
     final p = ref.watch(profileProvider);
+    // 오프라인 첫 실행 등으로 프로필을 못 읽었으면 연결이 돌아올 때까지 계속 다시 시도한다
+    // (Riverpod 자체 재시도는 몇 번 뒤 포기한다). 돌아오면 프로필이 없을 때 닉네임 입력 창이 뜬다.
+    if (p.hasError) {
+      final retry = Timer(profileRetry, () => ref.invalidate(profileProvider));
+      ref.onDispose(retry.cancel);
+    }
     // 새 유저·기존 유저 모두 로드아웃이 없으면 기본 무기, 기본 병사가 없으면 기본 병사 지급
     // (decisions 6장·8장). 둘 다 이미 있으면 저장소가 아무것도 안 한다.
     if (p.value case final profile?
@@ -125,7 +133,8 @@ class HomeViewModel extends Notifier<HomeState> {
       }
       return null;
     } catch (e) {
-      return '저장하지 못했습니다: $e';
+      debugPrint('닉네임 저장 실패: $e');
+      return connectionErrorText;
     }
   }
 }

@@ -24,6 +24,9 @@ class FakeAdService implements AdService {
   int shown = 0;
   int loadCalls = 0;
 
+  /// 광고를 보는 도중에 일어나는 일(예: 네트워크 끊김).
+  void Function()? onShow;
+
   @override
   Future<bool> load() async {
     loadCalls++;
@@ -33,6 +36,7 @@ class FakeAdService implements AdService {
   @override
   Future<bool> show() async {
     shown++;
+    onShow?.call();
     return earn;
   }
 }
@@ -77,7 +81,26 @@ class FakeRtdbService implements RtdbService {
 
   List<String> _parts(String path) => path.split('/');
 
+  /// `.info/connected`(DB 연결 상태). [setConnected]로 바꾼다.
+  bool connected = true;
+
+  /// [reconnect] 때마다 불린다(재연결로 붙는 것 흉내: 안에서 [setConnected]).
+  void Function()? onReconnect;
+  int reconnects = 0;
+
+  void setConnected(bool value) {
+    connected = value;
+    _changed.add(null);
+  }
+
+  @override
+  Future<void> reconnect() async {
+    reconnects++;
+    onReconnect?.call();
+  }
+
   Object? _read(String path) {
+    if (path == '.info/connected') return connected;
     Object? node = root;
     for (final p in _parts(path)) {
       if (node is! Map) return null;
@@ -121,6 +144,12 @@ class FakeRtdbService implements RtdbService {
   @override
   Future<Object?> get(String path) async => _read(path);
 
+  /// 있으면 트랜잭션이 이게 끝날 때까지 안 끝난다(오프라인 흉내).
+  Completer<void>? holdTransactions;
+
+  /// 있으면 트랜잭션이 이 예외로 실패한다(DB 규칙 거부 등).
+  Object? transactionError;
+
   /// 있으면 set이 이게 끝날 때까지 안 끝난다(응답 없는 서버 흉내).
   Completer<void>? hold;
 
@@ -155,8 +184,12 @@ class FakeRtdbService implements RtdbService {
   @override
   Future<({bool committed, Object? value})> transaction(
     String path,
-    Object? Function(Object? current) update,
-  ) async {
+    Object? Function(Object? current) update, {
+    bool applyLocally = true,
+  }) async {
+    if (transactionError != null) throw transactionError!;
+    // 연결이 없으면 트랜잭션은 서버가 답할 때까지 값을 바꾸지 않는다(applyLocally: false).
+    if (holdTransactions != null) await holdTransactions!.future;
     if (rerunTransactions) update(_read(path));
     final next = update(_read(path));
     if (identical(next, txAbort)) return (committed: false, value: _read(path));
@@ -201,4 +234,29 @@ class FakeRtdbService implements RtdbService {
   @override
   Future<void> cancelOnDisconnect(String path) async =>
       onDisconnect.removeWhere((k, _) => k == path || k.startsWith('$path/'));
+}
+
+/// 로그인이 안 되는 것(오프라인). 예외 문구는 firebase 원문처럼 영어.
+class OfflineAuthService implements AuthService {
+  @override
+  Future<String> signInAnonymously() async => throw Exception(
+    '[firebase_auth/unknown] An internal error has occurred. '
+    '[ Failed to connect to /10.0.2.2:9099',
+  );
+}
+
+/// 처음 [failures]번은 로그인이 안 되고(오프라인), 그 뒤엔 된다(온라인 복귀).
+class FlakyAuthService implements AuthService {
+  FlakyAuthService(this.uid, {this.failures = 1});
+  final String uid;
+  int failures;
+
+  @override
+  Future<String> signInAnonymously() async {
+    if (failures > 0) {
+      failures--;
+      throw Exception('offline');
+    }
+    return uid;
+  }
 }

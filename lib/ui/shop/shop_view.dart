@@ -34,7 +34,9 @@ class ShopView extends ConsumerWidget {
           const SizedBox(width: 16),
         ],
       ),
+      // 아래 안전 영역 없음: immersiveSticky에서 키보드·시스템 바가 한 번 뜨면 아래가 떠 보인다(홈과 같음).
       body: SafeArea(
+        bottom: false,
         child: Padding(
           padding: const EdgeInsets.all(8),
           child: Row(
@@ -170,11 +172,18 @@ class _AdButtonState extends ConsumerState<_AdButton> {
 
   Future<void> _watch() async {
     final got = await ref.read(shopProvider.notifier).watchAd();
-    if (got && mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text('+${commas(adRewardGold)} G')));
-    }
+    if (!mounted || got == AdReward.none) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(switch (got) {
+            AdReward.paid => '+${commas(adRewardGold)} G',
+            AdReward.offline => connectionErrorText,
+            _ => '보상을 받지 못했습니다. 인터넷 연결을 확인해 주세요',
+          }),
+        ),
+      );
   }
 
   @override

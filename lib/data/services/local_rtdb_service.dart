@@ -70,8 +70,9 @@ class LocalRtdbService implements RtdbService {
   @override
   Future<({bool committed, Object? value})> transaction(
     String path,
-    Object? Function(Object? current) update,
-  ) async {
+    Object? Function(Object? current) update, {
+    bool applyLocally = true,
+  }) async {
     final next = update(_read(path));
     if (identical(next, txAbort)) return (committed: false, value: _read(path));
     await set(path, next);
@@ -109,4 +110,8 @@ class LocalRtdbService implements RtdbService {
 
   @override
   Future<void> cancelOnDisconnect(String path) async {}
+
+  /// 기기 안 메모리 DB는 늘 연결돼 있다.
+  @override
+  Future<void> reconnect() async {}
 }

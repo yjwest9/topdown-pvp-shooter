@@ -32,10 +32,12 @@ abstract class RtdbService {
 
   /// [update]가 지금 값으로 새 값을 만든다([txAbort]면 중단). 서버 값이 바뀌어 있으면
   /// 다시 부른다. [value]는 끝났을 때 값.
+  /// [applyLocally]가 false면 서버가 확인하기 전엔 이 기기의 화면·캐시에도 값이 반영되지 않는다.
   Future<({bool committed, Object? value})> transaction(
     String path,
-    Object? Function(Object? current) update,
-  );
+    Object? Function(Object? current) update, {
+    bool applyLocally = true,
+  });
 
   /// 지금 값을 한 번 보내고, 바뀔 때마다 보낸다.
   Stream<Object?> watch(String path);
@@ -49,6 +51,9 @@ abstract class RtdbService {
 
   /// [path]와 그 아래에 걸어 둔 내 onDisconnect를 모두 취소.
   Future<void> cancelOnDisconnect(String path);
+
+  /// 연결을 한 번 끊었다가 다시 붙인다(`goOffline` → `goOnline`). 쌓인 쓰기·리스너는 그대로.
+  Future<void> reconnect();
 }
 
 class FirebaseRtdbService implements RtdbService {
@@ -76,14 +81,15 @@ class FirebaseRtdbService implements RtdbService {
   @override
   Future<({bool committed, Object? value})> transaction(
     String path,
-    Object? Function(Object? current) update,
-  ) async {
+    Object? Function(Object? current) update, {
+    bool applyLocally = true,
+  }) async {
     final r = await _ref(path).runTransaction((current) {
       final next = update(current);
       return identical(next, txAbort)
           ? Transaction.abort()
           : Transaction.success(next);
-    });
+    }, applyLocally: applyLocally);
     return (committed: r.committed, value: r.snapshot.value);
   }
 
@@ -102,6 +108,14 @@ class FirebaseRtdbService implements RtdbService {
   @override
   Future<void> removeOnDisconnect(String path) =>
       _ref(path).onDisconnect().remove();
+
+  @override
+  Future<void> reconnect() async {
+    await rtdb.goOffline();
+    // 바로 다시 켜면 SDK가 끄기를 못 알아채는 경우가 있어서 잠깐 둔다.
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    await rtdb.goOnline();
+  }
 
   @override
   Future<void> cancelOnDisconnect(String path) =>

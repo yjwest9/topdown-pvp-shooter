@@ -55,7 +55,9 @@ class LoadoutView extends ConsumerWidget {
           const SizedBox(width: 16),
         ],
       ),
+      // 아래 안전 영역 없음: immersiveSticky에서 키보드·시스템 바가 한 번 뜨면 아래가 떠 보인다(홈과 같음).
       body: SafeArea(
+        bottom: false,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

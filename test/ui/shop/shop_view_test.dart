@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,7 +11,7 @@ import 'package:topsoldier/ui/shop/shop_view.dart';
 
 import '../../fakes.dart';
 
-Future<void> pumpShop(
+Future<FakeRtdbService> pumpShop(
   WidgetTester tester, {
   required FakeAdService ads,
   int gold = 0,
@@ -41,6 +43,7 @@ Future<void> pumpShop(
     ),
   );
   await tester.pump();
+  return db;
 }
 
 FilledButton button(WidgetTester tester, String text) => tester.widget(
@@ -106,5 +109,58 @@ void main() {
     await tester.pump();
     expect(find.text('+10,000 G'), findsOneWidget);
     expect(find.text('10,005'), findsOneWidget);
+  });
+
+  const failText = '보상을 받지 못했습니다. 인터넷 연결을 확인해 주세요';
+
+  testWidgets('reward write never answers (offline): failure snackbar, no '
+      'cooldown, the button works again', (tester) async {
+    final db = await pumpShop(tester, ads: FakeAdService(), gold: 500);
+    db.holdTransactions = Completer<void>();
+    addTearDown(() => db.holdTransactions?.complete());
+
+    await tester.tap(find.text('광고 보고 10,000G'));
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text(failText), findsNothing); // 아직 기다리는 중
+    await tester.pump(const Duration(seconds: 10));
+    await tester.pump();
+
+    expect(find.text(failText), findsOneWidget);
+    expect(await db.get('users/u/lastAdAt'), isNull);
+    expect(await db.get('users/u/gold'), 500);
+    expect(find.text('500'), findsOneWidget); // 화면 골드도 그대로
+    expect(find.textContaining('다시 받기까지'), findsNothing);
+    await tester.pump(const Duration(seconds: 2)); // 광고 다시 불러오기
+    expect(button(tester, '광고 보고 10,000G').onPressed, isNotNull);
+  });
+
+  testWidgets(
+    'reward write fails (rule rejects): failure snackbar, no cooldown',
+    (tester) async {
+      final db = await pumpShop(tester, ads: FakeAdService(), gold: 500);
+      db.transactionError = Exception('permission_denied');
+
+      await tester.tap(find.text('광고 보고 10,000G'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(failText), findsOneWidget);
+      expect(await db.get('users/u/lastAdAt'), isNull);
+      expect(find.textContaining('permission_denied'), findsNothing);
+      expect(find.textContaining('다시 받기까지'), findsNothing);
+    },
+  );
+
+  testWidgets('reward write works: +10,000 G snackbar, cooldown starts', (
+    tester,
+  ) async {
+    final db = await pumpShop(tester, ads: FakeAdService(), gold: 500);
+    await tester.tap(find.text('광고 보고 10,000G'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('+10,000 G'), findsOneWidget);
+    expect(await db.get('users/u/gold'), 10500);
+    expect(await db.get('users/u/lastAdAt'), isNotNull);
   });
 }

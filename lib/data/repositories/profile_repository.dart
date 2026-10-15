@@ -71,12 +71,24 @@ class ProfileRepository {
 
   // ---------------------------------------------------------- 상점 (9장)
 
-  /// 광고 보상: 골드 +[gold]와 lastAdAt(서버 시간)을 update 한 번으로 같이 쓴다.
-  /// 쿨타임이 안 지났으면 DB 규칙이 거부한다(예외).
-  Future<void> rewardAd(String uid, int gold) => _db.update(_user(uid), {
-    'gold': serverIncrement(gold),
-    'lastAdAt': serverTimestamp,
-  });
+  /// 광고 보상: 골드 +[gold]와 lastAdAt(서버 시간)을 트랜잭션 한 번으로 같이 쓴다.
+  /// `applyLocally: false`라서 서버가 확인하기 전엔 화면 골드·쿨타임에도 반영되지 않는다
+  /// (오프라인에서 받은 것처럼 보이던 문제). 쿨타임이 안 지났으면 DB 규칙이 거부한다(예외).
+  /// 서버가 받지 못했으면 예외.
+  Future<void> rewardAd(String uid, int gold) async {
+    final r = await _db.transaction(_user(uid), (cur) {
+      if (cur == null) return null; // 서버 값으로 다시 불린다
+      final m = cur as Map<Object?, Object?>;
+      return {
+        ...m,
+        'gold': ((m['gold'] as num?) ?? 0).toInt() + gold,
+        'lastAdAt': serverTimestamp,
+      };
+    }, applyLocally: false);
+    if (!r.committed || r.value == null) {
+      throw StateError('보상을 저장하지 못했습니다.');
+    }
+  }
 
   /// 환전 한 번을 트랜잭션으로. [exchange]가 지금 골드·다이아로 새 값을 만든다(null이면
   /// 골드 부족 → 아무것도 안 바꾸고 false).

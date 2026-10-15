@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/room.dart';
@@ -7,6 +8,7 @@ import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../data/repositories/room_repository.dart';
 import '../../rules/balance.dart';
+import '../format.dart';
 
 class LobbyState {
   const LobbyState({
@@ -103,14 +105,20 @@ class LobbyViewModel extends Notifier<LobbyState> {
     if (state.busy) return;
     state = state.copyWith(busy: true);
     try {
-      final uid = await _auth.signIn();
-      final room = await go(uid, myNickname(ref));
+      // DB에 연결이 안 돼 있으면 기다리지 않고 바로 알린다(재연결을 한 번 시도, decisions 13장).
+      if (!await rooms.connection.ensureConnected()) {
+        state = state.copyWith(busy: false, error: connectionErrorText);
+        return;
+      }
+      final uid = await _auth.signIn().timeout(requestTimeout);
+      final room = await go(uid, myNickname(ref)).timeout(requestTimeout);
       state = LobbyState(uid: uid, code: room.code, isHost: room.host);
       _watch(room.code);
     } on RoomException catch (e) {
       state = state.copyWith(busy: false, error: e.message);
     } catch (e) {
-      state = state.copyWith(busy: false, error: '연결하지 못했습니다: $e');
+      debugPrint('방 연결 실패: $e');
+      state = state.copyWith(busy: false, error: connectionErrorText);
     }
   }
 

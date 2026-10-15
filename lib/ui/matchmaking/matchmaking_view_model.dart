@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/room.dart';
@@ -8,6 +9,7 @@ import '../../data/repositories/profile_repository.dart';
 import '../../data/repositories/room_repository.dart';
 import '../../rules/balance.dart';
 import '../../rules/matchmaking.dart';
+import '../format.dart';
 
 class MatchmakingState {
   const MatchmakingState({
@@ -115,21 +117,26 @@ class MatchmakingViewModel extends Notifier<MatchmakingState> {
       );
     });
     try {
-      final uid = _uid = await _auth.signIn();
+      // DB에 연결이 안 돼 있으면 기다리지 않고 바로 알린다(재연결을 한 번 시도, decisions 13장).
+      if (!await rooms.connection.ensureConnected()) {
+        _stopTimers();
+        state = state.copyWith(error: connectionErrorText);
+        return;
+      }
+      final uid = _uid = await _auth.signIn().timeout(requestTimeout);
       _name = myNickname(ref);
       if (_closed) return;
-      final room = _myRoom = await rooms.createQuickRoom(
-        uid: uid,
-        name: _name,
-        character: myCharacter(ref),
-      );
+      final room = _myRoom = await rooms
+          .createQuickRoom(uid: uid, name: _name, character: myCharacter(ref))
+          .timeout(requestTimeout);
       state = state.copyWith(uid: uid);
       _subs.add(rooms.slot().listen(_onSlot));
       _roomSub = rooms.players(room).listen(_onMyRoomPlayers);
       await _attempt();
     } catch (e) {
       _stopTimers();
-      state = state.copyWith(error: '연결하지 못했습니다: $e');
+      debugPrint('빠른 대전 연결 실패: $e');
+      state = state.copyWith(error: connectionErrorText);
     }
   }
 

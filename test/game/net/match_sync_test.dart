@@ -227,30 +227,66 @@ void main() {
     });
   }
 
-  onlineTester(db).testGameWidget(
-    'opponent leaving mid-match: I win, once',
-    verify: (game, tester) async {
-      listenEnd(game);
-      await db.set('rooms/$code/players/b', {'name': 'B', 'connected': true});
-      await tester.pump();
-      expect(ended, isNull);
-
-      await db.set('rooms/$code/players/b/connected', false);
-      await db.set('rooms/$code/players/b/connected', false);
-      await tester.pump();
-      expect(ended!.opponentLeft, true);
-      expect(ended!.stats.result, MatchResult.win);
-    },
-  );
-
-  // 시연 위험(docs/demo-risks.md 2·3-1): 끊김·방장 실종에서 끝나지 않고 멈추던 것.
-
   Future<void> pumpFrames(SoldierGame game, WidgetTester tester) async {
     for (var i = 0; i < 3; i++) {
       game.update(1 / 60);
       await tester.pump();
     }
   }
+
+  onlineTester(db).testGameWidget(
+    'opponent leaving mid-match: I win once, after the grace',
+    verify: (game, tester) async {
+      listenEnd(game);
+      await db.set('rooms/$code/players/b', {'name': 'B', 'connected': true});
+      await pumpFrames(game, tester);
+      expect(ended, isNull);
+
+      await db.set('rooms/$code/players/b/connected', false);
+      await db.set('rooms/$code/players/b/connected', false);
+      await pumpFrames(game, tester);
+      expect(ended, isNull); // 바로는 안 끝남
+      db.serverTime += stuckGraceMs + 500;
+      await pumpFrames(game, tester);
+      expect(ended!.opponentLeft, true);
+      expect(ended!.stats.result, MatchResult.win);
+    },
+  );
+
+  onlineTester(db).testGameWidget(
+    'opponent flag drops for 2 seconds and comes back: not over',
+    verify: (game, tester) async {
+      listenEnd(game);
+      await db.set('rooms/$code/players/b', {'name': 'B', 'connected': true});
+      await pumpFrames(game, tester);
+
+      await db.set('rooms/$code/players/b/connected', false);
+      db.serverTime += 2000;
+      await pumpFrames(game, tester);
+      await db.set('rooms/$code/players/b/connected', true);
+      db.serverTime += stuckGraceMs * 3;
+      await pumpFrames(game, tester);
+      expect(ended, isNull);
+    },
+  );
+
+  onlineTester(db).testGameWidget(
+    'opponent entry is removed (room gone) after I saw him: I win after the '
+    'grace',
+    verify: (game, tester) async {
+      listenEnd(game);
+      await db.set('rooms/$code/players/b', {'name': 'B', 'connected': true});
+      await pumpFrames(game, tester);
+      await db.remove('rooms/$code/players/b');
+      await pumpFrames(game, tester);
+      expect(ended, isNull);
+      db.serverTime += stuckGraceMs + 500;
+      await pumpFrames(game, tester);
+      expect(ended!.stats.result, MatchResult.win);
+    },
+  );
+
+  // 시연 위험(docs/demo-risks.md 2·3-1): 끊김·방장 실종에서 끝나지 않고 멈추던 것.
 
   joinerTester(db).testGameWidget(
     'host is already gone when I look (never saw him connected): I win',
@@ -263,6 +299,9 @@ void main() {
       });
       await db.set('rooms/$code/players/a', {'connected': false, 'team': 'A'});
       await db.set('rooms/$code/players/b', {'connected': true, 'team': 'B'});
+      await pumpFrames(game, tester);
+      expect(ended, isNull); // 바로는 안 끝남(유예)
+      db.serverTime += stuckGraceMs + 500;
       await pumpFrames(game, tester);
       expect(ended!.opponentLeft, true);
       expect(ended!.stats.result, MatchResult.win);
@@ -299,7 +338,54 @@ void main() {
 
       await db.set('rooms/$code/players/b/connected', false); // onDisconnect
       await pumpFrames(game, tester);
+      expect(ended, isNull); // 바로는 안 끝남(유예)
+      db.serverTime += stuckGraceMs + 500;
+      await pumpFrames(game, tester);
       expect(ended!.stats.result, MatchResult.lose);
+    },
+  );
+
+  // 오판 방지: 잘못 끝내지 않는다.
+
+  joinerTester(db).testGameWidget(
+    'match just started and the host connected flag is not written yet: not over',
+    verify: (game, tester) async {
+      listenEnd(game);
+      await db.update('rooms/$code/meta', {
+        'hostUid': 'a',
+        'status': 'playing',
+        'endsAt': db.serverTime + 100000,
+      });
+      await db.set('rooms/$code/players/a', {'name': 'A', 'team': 'A'});
+      await db.set('rooms/$code/players/b', {'connected': true, 'team': 'B'});
+      await pumpFrames(game, tester);
+      db.serverTime += 1000;
+      await pumpFrames(game, tester);
+      expect(ended, isNull);
+
+      // 곧 방장의 connected가 써진다.
+      await db.set('rooms/$code/players/a/connected', true);
+      db.serverTime += stuckGraceMs + 2000;
+      await pumpFrames(game, tester);
+      expect(ended, isNull);
+    },
+  );
+
+  joinerTester(db).testGameWidget(
+    'my connected flag drops and comes back within the grace (home button): '
+    'not over',
+    verify: (game, tester) async {
+      listenEnd(game);
+      await bothPlaying(endsIn: 100000);
+      await pumpFrames(game, tester);
+
+      await db.set('rooms/$code/players/b/connected', false);
+      db.serverTime += stuckGraceMs - 1000;
+      await pumpFrames(game, tester);
+      await db.set('rooms/$code/players/b/connected', true);
+      db.serverTime += stuckGraceMs * 3;
+      await pumpFrames(game, tester);
+      expect(ended, isNull);
     },
   );
 

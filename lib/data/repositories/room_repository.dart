@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/room.dart';
 import '../services/local_rtdb_service.dart';
 import '../services/rtdb_service.dart';
+import 'connection_repository.dart';
 
 final roomRepositoryProvider = Provider(
   (ref) => RoomRepository(FirebaseRtdbService()),
@@ -31,6 +32,9 @@ class RoomRepository {
 
   final RtdbService _db;
   final Random _random;
+
+  /// 이 저장소가 쓰는 DB의 연결 상태·재연결.
+  late final connection = ConnectionRepository(_db);
 
   static const maxPlayers = 2;
 

@@ -479,6 +479,19 @@ const quickMatchHeartbeat = Duration(seconds: 5);
 /// 시간이 끝난 뒤 방장이 끝을 기록하지 않으면 참가자가 이 시간 뒤 스스로 끝낸다(ms).
 const hostEndGraceMs = 5000;
 
+/// 연결 표시가 꺼진 것을 확인한 뒤 이 시간 넘게 그대로여야 "끊겼다"고 보고 끝낸다(ms).
+const stuckGraceMs = 3000;
+
+/// 홈에서 프로필을 못 읽었을 때(오프라인 등) 다시 시도하는 간격.
+const profileRetry = Duration(seconds: 3);
+
+/// 서버 응답(광고 보상 저장, 방 만들기·입장, 빠른 대전 시작)을 기다리는 최대 시간.
+/// 넘으면 "인터넷 연결을 확인해 주세요"로 알린다.
+const requestTimeout = Duration(seconds: 8);
+
+/// DB 연결이 안 돼 있을 때 재연결을 시도하고 붙기를 기다리는 시간.
+const connectWait = Duration(seconds: 3);
+
 /// 이미 누가 잡은 자리면 이만큼 뒤에 다시 본다.
 const quickMatchRetry = Duration(milliseconds: 500);
 

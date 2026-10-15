@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'data/repositories/connection_repository.dart';
+import 'data/repositories/room_repository.dart';
 import 'data/services/firebase_setup.dart';
 import 'data/services/push_service.dart';
 import 'ui/home/home_view.dart';
@@ -22,8 +24,53 @@ Future<void> main() async {
   runApp(const ProviderScope(child: TopSoldierApp()));
 }
 
-class TopSoldierApp extends StatelessWidget {
+class TopSoldierApp extends ConsumerStatefulWidget {
   const TopSoldierApp({super.key});
+
+  @override
+  ConsumerState<TopSoldierApp> createState() => _TopSoldierAppState();
+}
+
+class _TopSoldierAppState extends ConsumerState<TopSoldierApp>
+    with WidgetsBindingObserver {
+  bool _wasAway = false;
+
+  ConnectionRepository get _connection =>
+      ref.read(roomRepositoryProvider).connection;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // DB 연결이 켜지고 꺼지는 때를 로그로 남긴다(화면엔 안 보임). Firebase가 없으면(위젯 테스트) 건너뛴다.
+    try {
+      _connection.watch().listen(
+        (c) => debugPrint(
+          '[conn] ${DateTime.now().toIso8601String()} connected=$c',
+        ),
+      );
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// 앱이 다시 앞으로 올 때 DB가 끊겨 있으면 다시 붙인다(로컬 에뮬레이터 모드에선 네트워크가
+  /// 돌아와도 스스로 안 붙었다, demo-risks).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (_wasAway) {
+        unawaited(_connection.ensureConnected().then((_) {}, onError: (_) {}));
+      }
+      _wasAway = false;
+    } else if (state == AppLifecycleState.paused) {
+      _wasAway = true;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

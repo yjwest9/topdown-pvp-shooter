@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:topsoldier/data/repositories/auth_repository.dart';
 import 'package:topsoldier/data/repositories/room_repository.dart';
+import 'package:topsoldier/rules/balance.dart';
+import 'package:topsoldier/ui/format.dart';
 import 'package:topsoldier/ui/lobby/lobby_view_model.dart';
 
 import '../../fakes.dart';
@@ -88,4 +92,43 @@ void main() {
       expect(guest.read(lobbyProvider).code, isNull);
     },
   );
+
+  testWidgets('create room with no DB connection: message, no room', (
+    tester,
+  ) async {
+    final db = FakeRtdbService()..connected = false;
+    final host = lobbyFor('a', db);
+    final f = host.read(lobbyProvider.notifier).createRoom();
+    await tester.pump(connectWait + const Duration(seconds: 1));
+    await f;
+
+    final s = host.read(lobbyProvider);
+    expect(s.error, connectionErrorText);
+    expect(s.busy, false);
+    expect(s.code, isNull);
+    expect(await db.get('rooms'), anyOf(isNull, isEmpty));
+  });
+
+  testWidgets('join with no DB connection: message', (tester) async {
+    final db = FakeRtdbService()..connected = false;
+    final guest = lobbyFor('b', db);
+    final f = guest.read(lobbyProvider.notifier).joinRoom('1234');
+    await tester.pump(connectWait + const Duration(seconds: 1));
+    await f;
+    expect(guest.read(lobbyProvider).error, connectionErrorText);
+  });
+
+  testWidgets('create room: the server does not answer → message after 8 s', (
+    tester,
+  ) async {
+    final db = FakeRtdbService();
+    db.hold = Completer<void>();
+    addTearDown(() => db.hold?.complete());
+    final host = lobbyFor('a', db);
+    final f = host.read(lobbyProvider.notifier).createRoom();
+    await tester.pump(requestTimeout + const Duration(seconds: 1));
+    await f;
+    expect(host.read(lobbyProvider).error, connectionErrorText);
+    expect(host.read(lobbyProvider).busy, false);
+  });
 }
