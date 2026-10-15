@@ -1,5 +1,13 @@
 # 진행 상황
 
+## 2026-10-15 (0.1.6+7 업로드 준비 — chore/release-0.1.6, 병합 전, 학교 PC)
+- 한 것: fix/demo-hardening을 main에 squash 병합·push(f4040ae), feat/next-holiday·fix/demo-hardening 로컬 브랜치 삭제(원격엔 원래 없었음). 기능 변경 없음, `pubspec.yaml` version 0.1.6+7만 바꿈. 0.1.5(versionCode 6) 이후 바뀐 것: 시연 보강(끊김 오판 유예, 오프라인 첫 실행 복귀 시 닉네임 창, 연결 오류 한국어, 광고 보상 실패 알림, 재연결·연결 안내, 상대 이탈 승리 유예, 홈·무기·캐릭터·상점 아래 여백).
+- 확인: format 0 changed, analyze 0, 테스트 457개 통과. 로컬 에뮬레이터 `tool/rules_check.sh` 61개 통과. 실서버 규칙(`firebase database:get /.settings/rules`)과 로컬 `database.rules.json`을 JSON으로 비교 → 같음(배포 안 함). `flutter build appbundle --release --dart-define-from-file=.env.local` → app-release.aab 59.2MB(62,078,492 B), 업로드 키(CN=youngjun seo, SHA256 F7:3C:72:7D…) 서명이 0.1.5와 같음.
+- 같은 설정 릴리스 apk(57.5MB)를 에뮬레이터에 설치(실서버): versionCode 7·0.1.6, 시작·크래시 로그 0, 병합 매니페스트에 AD_ID 권한·테스트 앱 ID 있음. 실서버 릴리스 앱으로 확인: 데이터 끄고 빠른 대전 → 3~4초 안에 "인터넷 연결을 확인해 주세요", 데이터 켜고 10초 뒤 빠른 대전 → 앱 재시작 없이 대기석이 써지고(실서버 `matchmaking/1v1/waiting`) 취소하니 대기석·방이 지워짐. 확인에 쓴 테스트 프로필(users/uid)은 삭제.
+- 주의: 확인하면서 실서버에 익명 계정 1개가 새로 생김(uid `N1WuDMN8pyaFlsmbnVv4qu19iqE2`, 프로필·대기석·방은 지움) → Authentication 콘솔에서 지우기. 크롬 8081(실서버 웹 빌드)은 떠 있고 8080·Firebase 로컬 에뮬레이터는 끔.
+- 다음: 사용자 확인(실서버 릴리스 앱 + 크롬 8081) 후 병합·push·태그 v0.1.6, Play 업로드.
+- 막힌 것: 없음.
+
 ## 2026-10-15 (재연결·연결 안내 — fix/demo-hardening, main 병합)
 - 사용자 확인 결과(로컬 모드, 데이터 버튼): 빠른 대전 오프라인 문구 안 뜸, 광고 중 데이터 끊으면 문구 없음·복구 후에도 보상 없음. 원인 조사: 로컬 모드에선 `.info/connected`가 끊긴 뒤 영영 안 돌아옴(goOffline/goOnline도 소용없음, TCP 시도 자체가 없음), 실서버에선 6~8초 뒤 스스로 돌아옴(demo-risks "수정 3").
 - 한 것: `ConnectionRepository`(`RoomRepository.connection`): `.info/connected` 보기, `ensureConnected`(false면 재연결 한 번, 3초 안에 안 붙으면 false). 빠른 대전·방 만들기·입장은 시작 전 확인 + 8초(`requestTimeout`) 응답 제한 → "인터넷 연결을 확인해 주세요". 광고 보상은 광고 전(`AdReward.offline`)과 보상 직전(`failed`)에 확인. 앱이 다시 앞으로 올 때 끊겨 있으면 재연결. `[conn]` 연결 로그.
