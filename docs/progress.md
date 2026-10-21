@@ -1,5 +1,39 @@
 # 진행 상황
 
+## 2026-10-21 (minSdk 31 취소, 0.1.7 미출시, API 31 동작 확인 — perf/emulator-lag, 병합 전)
+- 결정 변경: 교수님 요청은 "API 31(Android 12)에서 동작"이라 minSdk 24로도 충족. minSdk 31 상향을 취소하고 0.1.7은 Play에 올리지 않음.
+- 한 것: `git revert 3cc7eac`로 minSdk를 `flutter.minSdkVersion`(24)으로 복구(c2d8db3). `chore/release-0.1.7`(43aabd5, 0.1.7+8 + minSdk 31)은 지우지 않고 남겨 둠(병합·사용 안 함).
+- SDK 값: compileSdk 36, targetSdk 36, minSdk 24 (`android/app/build.gradle.kts`는 모두 `flutter.*SdkVersion`, Flutter 3.47.4 기본값). 바꾸지 않음.
+- 확인: format 0 changed, analyze 0, 테스트 470개 통과.
+- API 31 확인: 시스템 이미지 `system-images;android-31;google_apis;x86_64` 설치(약 4.2GB), AVD `Pixel_5_API31` 생성(Android 12, sdk 31). 디버그 apk(minSdk 24, versionName 0.1.6, 실서버 설정) 설치 → Android 12 전체 화면 안내("Got it") → 닉네임 → 홈 화면 → 봇전(보통) → 게임 화면(미니맵, 총 2개, 점프·앉기·재장전, 봇 교전) 뜸. AndroidRuntime 크래시 0. API 31에는 알림 권한 창이 없음(Android 13부터).
+- 실서버 테스트 데이터: `users/Bu475sf1TuY1r2qrinlZ0qdC5lJ3`(Soldier9424) 삭제, null 확인. 콘솔에서 직접 지울 익명 계정 uid: `Bu475sf1TuY1r2qrinlZ0qdC5lJ3`. (앞선 확인의 `RohqBGvUUsQ3MkHJGNs1Q4indMg2`, `895NVKGIIkPsO8cE1a2FzNYLA8r2`도 아직 남아 있으면 같이.)
+- 안 한 것: 렉 수정, pubspec 버전, appbundle 빌드, push·병합·태그·브랜치 삭제.
+- 다음: 발표 준비(시연 영상). 렉은 실제 폰(Play 0.1.6) 확인 후 결정.
+- 막힌 것: 없음.
+
+## 2026-10-21 (minSdk 31 검증 — perf/emulator-lag, 병합 전)
+- 한 것: 커밋 안 된 변경을 둘로 나눠 커밋(3cc7eac minSdk 31, fc9e39a 발표자료 프롬프트·진행 기록). 코드 수정 없음.
+- 확인: `dart format .` 0 changed, `flutter analyze` 0, `flutter test` 470개 전부 통과. `flutter build apk --debug --dart-define-from-file=.env.local` 성공.
+- 에뮬레이터(Pixel_5, API 37)에 디버그 apk 설치(minSdk 31 매니페스트로 설치 성공) → 알림 권한 창 허용 → 닉네임 창 "시작하기" → 홈 화면(빠른 대전·방 만들기·봇전·훈련소, 하단 탭)까지 뜸. AndroidRuntime 크래시 로그 0.
+- 주의: 실서버 설정(.env.local) 빌드라 실서버에 익명 계정 1개와 프로필(닉네임 Soldier7752)이 새로 생김 → Authentication 콘솔에서 지우기(코드로 못 지움). 프로필 데이터는 안 지움.
+- 안 한 것: pubspec 버전, appbundle 빌드, 릴리스 브랜치, push·병합·태그, 렉 관련 수정.
+- 다음: 0.1.7+8 릴리스 여부는 사용자 결정.
+- 막힌 것: 없음.
+
+## 2026-10-19 (minSdk 31 + 발표자료 프롬프트 — perf/emulator-lag 위, 병합 전)
+- 한 것: 교수님 요청으로 `android/app/build.gradle.kts` minSdk를 `flutter.minSdkVersion`(24) → 31(Android 12). 발표자료 PPT용 프롬프트 `docs/presentation-prompt.md`(10분, 구분 슬라이드·목차 포함).
+- 확인 안 함: 이 변경 뒤 apk/aab 빌드와 테스트는 아직 안 돌림(Gradle 설정 한 줄). 다음 업로드(0.1.7) 때 빌드로 확인.
+- 다음: 0.1.7+8 올려 Play 업로드(최소 API 31 반영).
+
+## 2026-10-15 (에뮬레이터 렉 측정 — perf/emulator-lag, 병합 전, 코드 변경 없음)
+- 먼저 feat/duel-map을 main에 squash 병합·push(185c5c6), 브랜치 삭제.
+- 측정(표는 demo-risks.md "에뮬레이터 렉 측정"): 에뮬레이터 봇전(보통) 30초, 디버그·profile·릴리스 모두 11~13fps, raster 75~90ms가 병목(build는 1~5ms). 디버그 전용이 아님.
+- 원인: HUD 글자 그림자 blur. HUD 글자를 끄면 raster 90 → 48ms, blur를 0으로 하면 36ms(21fps). 맵·미니맵·병사·총알은 영향 거의 없음. 실루엣 이전(59954fb)도 13fps라 그림 방식이 원인 아님. 빈 화면 대조군도 28fps라 에뮬레이터 기본 한계가 큼.
+- 코드는 안 고침: blur를 없애는 건 눈에 보이는 변경이라 사용자 확인 필요(demo-risks.md에 방법 (a)(b)). 임시 측정 코드와 측정용 worktree(D:/Projects/_perf_old)는 지움.
+- 주의: 측정 도중 "맵 선택" 파일 방식이 앱에서 읽히지 않아(저장소 권한) 초반 outpost·끄기 측정이 모두 duel로 나온 것을 뒤늦게 발견해 빌드 옵션(--dart-define) 방식으로 다시 쟀다. outpost는 디버그만 유효, profile·릴리스는 중단.
+- 다음: 사용자가 실제 폰(Play 0.1.6)에서 봇전 렉을 확인한 뒤, 느리면 위 (a)/(b) 중 선택.
+- 막힌 것: 없음.
+
 ## 2026-10-15 (1대1 전용 맵 duel — feat/duel-map, 병합 전)
 - 먼저 chore/release-0.1.6을 main에 squash 병합하고 태그 v0.1.6과 함께 push(ae3761e), 브랜치 삭제. decisions 11장에 먼저 반영(PM 설계 좌표 그대로).
 - 한 것: `tool/duel_map_gen.py`(outpost 스크립트에서 N=17과 A쪽 절반 데이터만 바꿈) → `assets/maps/duel.tmx`(17 × 17칸 1190px, 벽 26개·상자 14개), 실행 결과 ASCII가 PM이 준 것과 한 줄도 안 다르게 같음. 미리보기 `docs/maps/duel.png`(`flutter test tool/map_preview_test.dart`; 이 도구는 맵이 게임 안에서 타일 그림으로 구워진 뒤로 빈 그림이 나와서 단순한 색(바닥·벽·상자·진영·스폰)으로 직접 그리도록 고침, outpost.png는 그대로 둠). 게임이 duel을 읽음(`soldier_game.dart`, 빠른 대전·친선전·봇전 모두), 방 meta `map`도 'duel'. outpost.tmx·그림·미니맵 코드는 그대로.
