@@ -23,19 +23,28 @@ double? applyDamage({
 /// 이 변화가 체력을 0으로 만들었으면 킬.
 bool isKill(double before, double after) => before > 0 && after <= 0;
 
-/// 한쪽이 나가면 남은 쪽 승리 → [killsToWin] 선취 → 시간 끝나면 점수 비교.
+/// 한 팀 킬 합계 승리 기준. 1대1은 [killsToWin], 2대2는 [killsToWin2v2].
+int killsToWinFor(int teamSize) => teamSize == 2 ? killsToWin2v2 : killsToWin;
+
+/// [team]에 연결된 사람이 하나도 없다(전원 이탈).
+bool teamGone(Iterable<({String team, bool connected})> players, String team) =>
+    !players.any((p) => p.team == team && p.connected);
+
+/// 한쪽이 나가면 남은 쪽 승리 → [toWin] 선취 → 시간 끝나면 점수 비교.
+/// [aConnected]·[bConnected]는 그 팀에 연결된 사람이 있는지.
 MatchOutcome matchEndState({
   required int scoreA,
   required int scoreB,
   required int remainingMs,
   required bool aConnected,
   required bool bConnected,
+  int toWin = killsToWin,
 }) {
   if (aConnected != bConnected) {
     return aConnected ? MatchOutcome.aWins : MatchOutcome.bWins;
   }
-  if (scoreA >= killsToWin) return MatchOutcome.aWins;
-  if (scoreB >= killsToWin) return MatchOutcome.bWins;
+  if (scoreA >= toWin) return MatchOutcome.aWins;
+  if (scoreB >= toWin) return MatchOutcome.bWins;
   if (remainingMs > 0) return MatchOutcome.ongoing;
   if (scoreA == scoreB) return MatchOutcome.draw;
   return scoreA > scoreB ? MatchOutcome.aWins : MatchOutcome.bWins;

@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../rules/room_teams.dart';
 import '../models/room.dart';
 import '../services/local_rtdb_service.dart';
 import '../services/rtdb_service.dart';
@@ -26,17 +27,20 @@ class RoomException implements Exception {
 String newRoomCode(Random random) =>
     random.nextInt(10000).toString().padLeft(4, '0');
 
-/// 1대1 방. 코드는 처음부터 N명 구조(players·states가 uid 맵).
+/// 친선전·빠른 대전·봇전 방(1대1, 친선전은 2대2도). 코드는 처음부터 N명 구조(players·states가 uid 맵).
 class RoomRepository {
-  RoomRepository(this._db, {Random? random}) : _random = random ?? Random();
+  RoomRepository(this._db, {Random? random, int Function()? clock})
+    : _random = random ?? Random(),
+      _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch);
 
   final RtdbService _db;
   final Random _random;
 
+  /// 내 시계(ms). 테스트는 가짜 DB의 서버 시간을 넣는다.
+  final int Function() _clock;
+
   /// 이 저장소가 쓰는 DB의 연결 상태·재연결.
   late final connection = ConnectionRepository(_db);
-
-  static const maxPlayers = 2;
 
   /// 봇전의 봇 uid.
   static const botUid = 'bot';
@@ -69,12 +73,13 @@ class RoomRepository {
     required String name,
     PlayerCharacter? character,
     String map = 'duel',
+    int teamSize = 1,
   }) async {
     for (var i = 0; i < _createTries; i++) {
       final code = newRoomCode(_random);
       final created = await _db.transaction(
         '${_room(code)}/meta',
-        (current) => current != null ? txAbort : _newMeta(uid, map),
+        (current) => current != null ? txAbort : _newMeta(uid, map, teamSize),
       );
       if (!created.committed) continue;
       await _db.update('${_room(code)}/meta', {'createdAt': serverTimestamp});
@@ -90,11 +95,12 @@ class RoomRepository {
     throw const RoomException('방을 만들지 못했습니다. 다시 시도해 주세요.');
   }
 
-  Map<String, Object?> _newMeta(String uid, String map) => {
+  Map<String, Object?> _newMeta(String uid, String map, int teamSize) => {
     'hostUid': uid,
     'status': RoomMeta.waiting,
-    'mode': 'pvp1v1',
+    'mode': 'pvp${teamSize}v$teamSize',
     'map': map,
+    'teamSize': teamSize,
   };
 
   Future<void> joinRoom(
@@ -105,19 +111,22 @@ class RoomRepository {
   }) async {
     final meta = await _db.get('${_room(code)}/meta');
     if (meta == null) throw const RoomException('없는 방 코드입니다.');
-    if (RoomMeta.fromJson(meta).status != RoomMeta.waiting) {
+    final info = RoomMeta.fromJson(meta);
+    if (info.status != RoomMeta.waiting) {
       throw const RoomException('이미 시작한 방입니다.');
     }
     final others = _players(await _db.get('${_room(code)}/players'))
-        .where((p) => p.connected && p.uid != uid);
-    if (others.length >= maxPlayers) {
+        .where((p) => p.connected && p.uid != uid)
+        .toList();
+    if (roomFull(count: others.length, teamSize: info.teamSize)) {
       throw const RoomException('방이 가득 찼습니다.');
     }
+    int count(String team) => others.where((p) => p.team == team).length;
     await _enter(
       code,
       uid: uid,
       name: name,
-      team: RoomMeta.teamB,
+      team: assignTeam(a: count(teamAId), b: count(teamBId)),
       character: character,
     );
   }
@@ -146,6 +155,44 @@ class RoomRepository {
     await _db.setOnDisconnect('$room/players/$uid/connected', false);
     await _db.removeOnDisconnect('$room/states/$uid');
   }
+
+  // ---------------------------------------------- 팀 이동·자리 바꾸기 (12장)
+  // 각자 자기 `players/{uid}` 아래에만 쓴다(DB 규칙).
+
+  String _me(String code, String uid) => '${_room(code)}/players/$uid';
+
+  /// 내 팀만 바꾼다(상대 팀에 빈자리가 있을 때, 판정은 `rules/room_teams.dart`).
+  Future<void> moveTeam(String code, String uid, String team) =>
+      _db.update(_me(code, uid), {'team': team});
+
+  /// 자리 바꾸기 요청: 내 노드에 상대 uid와 서버 시간.
+  Future<void> requestSwap(String code, String uid, String target) =>
+      _db.update(_me(code, uid), {'swapTo': target, 'swapAt': serverTimestamp});
+
+  /// 요청 취소·시간 초과·무효 정리.
+  Future<void> clearSwapRequest(String code, String uid) =>
+      _db.update(_me(code, uid), {'swapTo': null, 'swapAt': null});
+
+  /// 수락: 내 팀을 요청자 팀으로 바꾸고 표시를 남긴다. 요청자가 보고 자기 팀을 바꾼다.
+  Future<void> acceptSwap(
+    String code,
+    String uid, {
+    required String requester,
+    required String team,
+  }) => _db.update(_me(code, uid), {'team': team, 'swapAccepted': requester});
+
+  Future<void> declineSwap(String code, String uid, String requester) =>
+      _db.update(_me(code, uid), {'swapDeclined': requester});
+
+  /// 요청자: 상대의 수락을 보고 내 팀을 바꾸며 요청을 지운다.
+  Future<void> finishSwap(String code, String uid, String team) => _db.update(
+    _me(code, uid),
+    {'team': team, 'swapTo': null, 'swapAt': null},
+  );
+
+  /// 수락·거절한 쪽이 요청자가 정리한 걸 보고 자기 표시를 지운다.
+  Future<void> clearSwapMarks(String code, String uid) =>
+      _db.update(_me(code, uid), {'swapAccepted': null, 'swapDeclined': null});
 
   /// 방장만. 둘 다 meta를 보고 게임 화면으로 간다. 시각은 서버 시간 추정값.
   Future<void> start(String code, {required int durationMs}) async {
@@ -193,7 +240,7 @@ class RoomRepository {
   }) async {
     final id = _db.newKey('rooms');
     await _db.set('${_room(id)}/meta', {
-      ..._newMeta(uid, 'duel'),
+      ..._newMeta(uid, 'duel', 1),
       'createdAt': serverTimestamp,
     });
     await _enter(
@@ -360,8 +407,7 @@ class RoomRepository {
         };
       });
 
-  Future<int> serverNow() async =>
-      DateTime.now().millisecondsSinceEpoch + await serverTimeOffset().first;
+  Future<int> serverNow() async => _clock() + await serverTimeOffset().first;
 
   /// 서버 시간 − 내 시계(ms).
   Stream<int> serverTimeOffset() =>

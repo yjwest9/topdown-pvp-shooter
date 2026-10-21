@@ -5,7 +5,8 @@
       "$code": {
         ".write": "auth != null && !newData.exists() && data.child('players/' + auth.uid).exists()",
         "meta": {
-          ".write": "auth != null && (data.exists() ? data.child('hostUid').val() === auth.uid : newData.child('hostUid').val() === auth.uid)"
+          // 방장은 그대로. 방장이 나가도 매치가 끝나게, 방 참가자는 playing → ended(결과 기록)만 쓸 수 있다(decisions 12장).
+          ".write": "auth != null && (data.exists() ? (data.child('hostUid').val() === auth.uid || (root.child('rooms/' + $code + '/players/' + auth.uid).exists() && data.child('status').val() === 'playing' && newData.child('status').val() === 'ended' && newData.child('hostUid').val() === data.child('hostUid').val())) : newData.child('hostUid').val() === auth.uid)"
         },
         "players": {
           "$uid": {

@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/models/room.dart';
 import '../../game/net/match_sync.dart';
 import '../../rules/map_select.dart';
 import '../../rules/rewards.dart';
+import '../../rules/room_teams.dart';
 import '../map_chips.dart';
 import '../match/match_view.dart';
 import 'lobby_view_model.dart';
@@ -50,6 +52,11 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
   Widget build(BuildContext context) {
     final vm = ref.read(lobbyProvider.notifier);
     ref.listen(lobbyProvider, (prev, next) {
+      if (prev?.noticeSeq != next.noticeSeq && next.notice != null) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(next.notice!)));
+      }
       if (prev?.code == null && next.code != null) _codeInput.clear();
       if (prev?.started != true && next.started) {
         unawaited(
@@ -59,6 +66,8 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
               code: next.code!,
               uid: next.uid!,
               isHost: next.isHost,
+              teamSize: next.teamSize,
+              allyIndex: next.allyIndex,
             ),
             mapById(next.map),
           ),
@@ -93,7 +102,23 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          MapChips(selected: s.map, onSelected: vm.selectMap),
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final (n, label) in [(1, '1대1'), (2, '2대2')])
+                ChoiceChip(
+                  label: Text(label),
+                  selected: s.teamSize == n,
+                  onSelected: (_) => vm.selectTeamSize(n),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          MapChips(
+            selected: s.map,
+            onSelected: vm.selectMap,
+            lockedTo: s.teamSize == 2 ? 'outpost' : null,
+          ),
           const SizedBox(height: 12),
           FilledButton.tonal(
             onPressed: s.busy ? null : () => unawaited(vm.createRoom()),
@@ -136,6 +161,12 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
   }
 
   Widget _waitingRoom(LobbyState s, LobbyViewModel vm) {
+    final start = s.isHost
+        ? FilledButton(
+            onPressed: s.canStart ? () => unawaited(vm.start()) : null,
+            child: Text(s.canStart ? '시작' : '상대를 기다리는 중'),
+          )
+        : const Text('방장이 시작하기를 기다리는 중');
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -160,24 +191,124 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
           ],
         ),
         const SizedBox(height: 8),
-        Text('맵 ${mapById(s.map).label}'),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('맵 ${mapById(s.map).label}'),
+            Text(' · ${s.teamSize}대${s.teamSize}'),
+          ],
+        ),
         const SizedBox(height: 8),
-        for (final p in s.players)
-          Text(p.uid == s.uid ? '${p.name} (나)' : p.name),
-        const SizedBox(height: 16),
-        if (s.isHost)
-          FilledButton(
-            onPressed: s.canStart ? () => unawaited(vm.start()) : null,
-            child: Text(s.canStart ? '시작' : '상대를 기다리는 중'),
-          )
-        else
-          const Text('방장이 시작하기를 기다리는 중'),
+        if (s.incoming case final req?) _incoming(req, vm),
+        if (s.outgoing case final target?)
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            children: [
+              Text('${target.name}님에게 자리 바꾸기 요청 중…'),
+              TextButton(
+                onPressed: () => unawaited(vm.cancelSwap()),
+                child: const Text('취소'),
+              ),
+            ],
+          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _team(teamAId, s, vm),
+            const SizedBox(width: 24),
+            _team(teamBId, s, vm),
+          ],
+        ),
+        const SizedBox(height: 12),
+        start,
         const SizedBox(height: 8),
         TextButton(
           onPressed: () => unawaited(vm.leaveRoom()),
           child: const Text('나가기'),
         ),
       ],
+    );
+  }
+
+  /// 받은 자리 바꾸기 요청: 수락 / 거절.
+  Widget _incoming(RoomPlayer req, LobbyViewModel vm) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
+          children: [
+            Text('${req.name}님이 자리 바꾸기를 요청했습니다'),
+            FilledButton(
+              onPressed: () => unawaited(vm.acceptSwap()),
+              child: const Text('수락'),
+            ),
+            OutlinedButton(
+              onPressed: () => unawaited(vm.declineSwap()),
+              child: const Text('거절'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 한 팀 칸: teamSize 자리(빈자리 표시), 상대 팀이면 "이 팀으로"와 사람 옆 "자리 바꾸기".
+  Widget _team(String team, LobbyState s, LobbyViewModel vm) {
+    final members = s.teamPlayers(team);
+    final mine = team == s.myTeam;
+    final slots = members.length > s.teamSize ? members.length : s.teamSize;
+    return SizedBox(
+      width: 200,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$team팀${mine ? ' (내 팀)' : ''}',
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+          for (var i = 0; i < slots; i++)
+            if (i < members.length)
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      members[i].uid == s.uid
+                          ? '${members[i].name} (나)'
+                          : members[i].name,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (!mine)
+                    TextButton(
+                      onPressed: s.swapBlock(members[i].uid) == SwapBlock.ok
+                          ? () => unawaited(vm.requestSwap(members[i].uid))
+                          : null,
+                      child: const Text('자리 바꾸기'),
+                    ),
+                ],
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  '빈자리',
+                  style: TextStyle(
+                    color: Theme.of(context).disabledColor,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+          if (!mine && s.canMove)
+            OutlinedButton(
+              onPressed: () => unawaited(vm.moveToOtherTeam()),
+              child: const Text('이 팀으로'),
+            ),
+        ],
+      ),
     );
   }
 }

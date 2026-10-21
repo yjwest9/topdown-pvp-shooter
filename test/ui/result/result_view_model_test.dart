@@ -117,4 +117,30 @@ void main() {
     expect((p.gold, p.exp, p.matches, p.wins, p.kills), (100, 0, 1, 1, 2));
     expect(const ResultViewModel(stats, mode: MatchMode.training).saves, false);
   });
+
+  test(
+    '2v2 result shows the team score (own : enemy); 1v1 has no such row',
+    () {
+      const two = ResultViewModel(
+        MatchStats(
+          matchId: 'm',
+          result: MatchResult.win,
+          kills: 4,
+          deaths: 3,
+          ownScore: 12,
+          enemyScore: 9,
+        ),
+        mode: MatchMode.custom,
+      );
+      expect(two.rows, contains(('팀 점수', '12 : 9')));
+      expect(two.rewarded, false); // 친선전: 보상 없음
+      expect(two.saves, true); // 전적은 친선전과 같게
+
+      const one = ResultViewModel(
+        MatchStats(matchId: 'm', result: MatchResult.win),
+        mode: MatchMode.custom,
+      );
+      expect(one.rows.any((r) => r.$1 == '팀 점수'), false);
+    },
+  );
 }

@@ -2,6 +2,8 @@
 // ponytail: copyWith 없음. 이 모델들은 받은 그대로 쓰고 고쳐 쓰는 곳이 없다. 생기면 추가.
 library;
 
+import '../../rules/room_teams.dart';
+
 Map<Object?, Object?> _map(Object? v) => v as Map<Object?, Object?>;
 double _d(Object? v) => (v as num).toDouble();
 int _i(Object? v) => (v as num?)?.toInt() ?? 0;
@@ -14,6 +16,7 @@ class RoomMeta {
     this.endsAt = 0,
     this.winner,
     this.map = 'duel',
+    this.teamSize = 1,
   });
 
   factory RoomMeta.fromJson(Object? json) {
@@ -24,6 +27,7 @@ class RoomMeta {
       endsAt: _i(m['endsAt']),
       winner: m['winner'] as String?,
       map: m['map'] as String? ?? 'duel',
+      teamSize: teamSizeOf(m['teamSize']),
     );
   }
 
@@ -49,6 +53,9 @@ class RoomMeta {
 
   /// 맵 id(`rules/map_select.dart`). 모르는 값은 읽는 쪽이 duel로 본다.
   final String map;
+
+  /// 한 팀 인원(1 또는 2, decisions 12장). 없으면 1(옛 방·옛 앱).
+  final int teamSize;
 }
 
 /// `rooms/{code}/players/{uid}`
@@ -58,8 +65,13 @@ class RoomPlayer {
     required this.name,
     required this.connected,
     this.team = RoomMeta.teamA,
+    this.hasTeam = true,
     this.character,
     this.characterLevel = 0,
+    this.swapTo,
+    this.swapAt,
+    this.swapAccepted,
+    this.swapDeclined,
   });
 
   factory RoomPlayer.fromJson(String uid, Object? json) {
@@ -69,8 +81,13 @@ class RoomPlayer {
       name: m['name'] as String? ?? '',
       connected: m['connected'] as bool? ?? false,
       team: m['team'] as String? ?? RoomMeta.teamA,
+      hasTeam: m['team'] == RoomMeta.teamA || m['team'] == RoomMeta.teamB,
       character: m['character'] as String?,
       characterLevel: _i(m['characterLevel']),
+      swapTo: m['swapTo'] as String?,
+      swapAt: (m['swapAt'] as num?)?.toInt(),
+      swapAccepted: m['swapAccepted'] as String?,
+      swapDeclined: m['swapDeclined'] as String?,
     );
   }
 
@@ -81,9 +98,29 @@ class RoomPlayer {
   /// 방장 A(남쪽), 참가자 B(북쪽).
   final String team;
 
+  /// 저장된 team이 A 또는 B였다. 없거나 이상한 값이면 false(게임에서 아군이 아니라 적으로 본다).
+  final bool hasTeam;
+
   /// 장착 캐릭터 id와 단계(decisions 13장). 옛 앱·봇은 없음 → 기본 병사 +0.
   final String? character;
   final int characterLevel;
+
+  /// 자리 바꾸기(decisions 12장): 요청(상대 uid와 서버 시간), 수락·거절(요청자 uid).
+  final String? swapTo;
+  final int? swapAt;
+  final String? swapAccepted;
+  final String? swapDeclined;
+
+  /// 자리 바꾸기 판정(`rules/room_teams.dart`)에 넘기는 값.
+  SwapPlayer get swap => (
+    uid: uid,
+    team: team,
+    connected: connected,
+    swapTo: swapTo,
+    swapAt: swapAt,
+    swapAccepted: swapAccepted,
+    swapDeclined: swapDeclined,
+  );
 }
 
 /// `rooms/{code}/hp/{uid}`. 맞힌 쪽이 트랜잭션으로 깎는다.

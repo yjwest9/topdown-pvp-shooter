@@ -101,4 +101,69 @@ void main() {
     expect(resultFor(MatchOutcome.bWins, teamA: false), MatchResult.win);
     expect(resultFor(MatchOutcome.draw, teamA: true), MatchResult.draw);
   });
+
+  group('2v2 (decisions 12장): team kills to 12, time, draw, team gone', () {
+    MatchOutcome end({
+      int a = 0,
+      int b = 0,
+      int ms = 60000,
+      bool aOn = true,
+      bool bOn = true,
+    }) => matchEndState(
+      scoreA: a,
+      scoreB: b,
+      remainingMs: ms,
+      aConnected: aOn,
+      bConnected: bOn,
+      toWin: killsToWinFor(2),
+    );
+
+    test('12 kills for a team, not 7; 1v1 stays at 7', () {
+      expect(killsToWin2v2, 12);
+      expect(killsToWinFor(2), 12);
+      expect(killsToWinFor(1), 7);
+      expect(end(a: 7, b: 6), MatchOutcome.ongoing);
+      expect(end(a: 11, b: 3), MatchOutcome.ongoing);
+      expect(end(a: 12, b: 3), MatchOutcome.aWins);
+      expect(end(a: 4, b: 12), MatchOutcome.bWins);
+      // 1대1 기준은 그대로.
+      expect(
+        matchEndState(
+          scoreA: 7,
+          scoreB: 0,
+          remainingMs: 1000,
+          aConnected: true,
+          bConnected: true,
+        ),
+        MatchOutcome.aWins,
+      );
+    });
+
+    test('time over: higher team score wins, equal is a draw', () {
+      expect(end(a: 9, b: 8, ms: 0), MatchOutcome.aWins);
+      expect(end(a: 8, b: 9, ms: 0), MatchOutcome.bWins);
+      expect(end(a: 8, b: 8, ms: 0), MatchOutcome.draw);
+      expect(end(a: 0, b: 0, ms: 0), MatchOutcome.draw);
+    });
+
+    test('a whole team gone → the other team wins; one gone → keep going', () {
+      final all = [
+        (team: 'A', connected: true),
+        (team: 'A', connected: true),
+        (team: 'B', connected: true),
+        (team: 'B', connected: true),
+      ];
+      expect(teamGone(all, 'B'), false);
+      final oneLeft = [...all]..[3] = (team: 'B', connected: false);
+      expect(teamGone(oneLeft, 'B'), false); // 2대1은 계속
+      final bothLeft = [...oneLeft]..[2] = (team: 'B', connected: false);
+      expect(teamGone(bothLeft, 'B'), true);
+      expect(teamGone(bothLeft, 'A'), false);
+      expect(end(aOn: true, bOn: !teamGone(bothLeft, 'B')), MatchOutcome.aWins);
+      expect(
+        end(aOn: true, bOn: !teamGone(oneLeft, 'B')),
+        MatchOutcome.ongoing,
+      );
+    });
+  });
 }

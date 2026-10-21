@@ -1,6 +1,5 @@
-import 'dart:ui';
-
 import 'package:flame/components.dart';
+import 'package:flutter/painting.dart';
 
 import '../../data/models/room.dart';
 import '../../rules/appearance.dart';
@@ -28,6 +27,9 @@ class RemotePlayer extends PositionComponent
   NetHp? get hp => sync.hp[uid];
   bool get dead => (hp?.value ?? 1) <= 0;
   bool get protected => sync.isProtected(hp);
+
+  /// 같은 팀(2대2). 파랑, 적은 빨강.
+  bool get ally => sync.isAlly(uid);
 
   /// 맞힐 수 있음: 받은 상태가 있고 살아 있음. 숨었는지는 상자 판정이 따로 막는다.
   bool get targetable => state != null && !dead;
@@ -60,11 +62,12 @@ class RemotePlayer extends PositionComponent
   /// 죽었거나 낮은 상자 뒤에 앉아 숨었으면 나에게 안 보인다.
   bool get visible =>
       targetable &&
-      !hiddenBehindLowCover(
-        coverBody,
-        game.player.coverBody,
-        game.map.lowCrates,
-      );
+      (ally ||
+          !hiddenBehindLowCover(
+            coverBody,
+            game.player.coverBody,
+            game.map.lowCrates,
+          ));
 
   @override
   void update(double dt) {
@@ -76,12 +79,18 @@ class RemotePlayer extends PositionComponent
     angle = s.a;
   }
 
-  /// 발밑 팀 원: 상대는 빨강(decisions 3장).
+  /// 발밑 팀 원: 상대는 빨강(decisions 3장), 아군은 파랑(decisions 12장).
   static final _teamFill = Paint()..color = const Color(0x55E0563F);
   static final _teamRing = Paint()
     ..color = const Color(0xFFE0563F)
     ..style = PaintingStyle.stroke
     ..strokeWidth = 3;
+  static final _allyFill = Paint()..color = const Color(0x554FA3E0);
+  static final _allyRing = Paint()
+    ..color = const Color(0xFF4FA3E0)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 3;
+  static final _allyBar = Paint()..color = const Color(0xFF4FA3E0);
   static final _crouchRing = Paint()
     ..color = const Color(0x99E3E6D8)
     ..style = PaintingStyle.stroke
@@ -105,8 +114,8 @@ class RemotePlayer extends PositionComponent
       ..save()
       ..translate(playerRadius, playerRadius)
       ..scale(scale)
-      ..drawCircle(Offset.zero, playerRadius, _teamFill)
-      ..drawCircle(Offset.zero, playerRadius, _teamRing);
+      ..drawCircle(Offset.zero, playerRadius, ally ? _allyFill : _teamFill)
+      ..drawCircle(Offset.zero, playerRadius, ally ? _allyRing : _teamRing);
     // 상대 캐릭터 그림은 방 players의 character로, 포즈는 들고 있는 무기와 재장전 여부로.
     game.art.drawSoldier(canvas, sync.characterOf(uid).id, pose);
     if (crouching) {
@@ -128,7 +137,24 @@ class RemotePlayer extends PositionComponent
     const w = 34.0, h = 4.0, y = -playerRadius - 14;
     canvas
       ..drawRect(const Rect.fromLTWH(-w / 2, y, w, h), _barBack)
-      ..drawRect(Rect.fromLTWH(-w / 2, y, w * ratio, h), _bar)
-      ..restore();
+      ..drawRect(
+        Rect.fromLTWH(-w / 2, y, w * ratio, h),
+        ally ? _allyBar : _bar,
+      );
+    // 이름표: 아군 파랑, 적 빨강.
+    final tag = TextPainter(
+      text: TextSpan(
+        text: sync.nameOf(uid),
+        style: TextStyle(
+          color: ally ? const Color(0xFF4FA3E0) : const Color(0xFFE0563F),
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          shadows: const [Shadow(blurRadius: 2)],
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tag.paint(canvas, Offset(-tag.width / 2, y - tag.height - 1));
+    canvas.restore();
   }
 }

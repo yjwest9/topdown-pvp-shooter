@@ -179,7 +179,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     map = match == null
         ? TestMap()
         : GameMap.fromTmx(await assets.readFile(mapInfo.asset));
-    final spawn = _pickSpawn();
+    final spawn = _pickSpawn(start: true);
     player = Player(
       position: Vector2(spawn.x, spawn.y),
       angle: _spawnAngle,
@@ -301,7 +301,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   double get _spawnAngle => isTeamA ? -pi / 2 : pi / 2;
 
   /// 내 팀 스폰 중 상대와 가장 먼 곳. 상대 위치를 모르면(시작) 상대 진영 스폰 기준.
-  Vec _pickSpawn() {
+  Vec _pickSpawn({bool start = false}) {
     final m = match;
     if (m == null) return TestMap.spawn;
     final enemyTeam = m.team == RoomMeta.teamA
@@ -309,12 +309,17 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
         : RoomMeta.teamA;
     final seen = [
       for (final r in m.remotes.values)
-        if (r.state != null) (x: r.position.x, y: r.position.y),
+        if (r.state != null && !m.isAlly(r.uid))
+          (x: r.position.x, y: r.position.y),
     ];
-    return farthestSpawn(
-      map.spawnsOf(m.team),
-      seen.isEmpty ? map.spawnsOf(enemyTeam) : seen,
-    );
+    final spawns = map.spawnsOf(m.team);
+    final enemies = seen.isEmpty ? map.spawnsOf(enemyTeam) : seen;
+    if (m.teamSize == 1) return farthestSpawn(spawns, enemies);
+    // 2대2(decisions 12장): 시작은 같은 팀끼리 uid 순서로 먼 스폰부터 한 곳씩, 부활은 아군이 선 곳을 피한다.
+    if (start) return startSpawn(spawns, enemies, allyIndex: m.allyIndex);
+    return respawnSpawn(spawns, enemies, [
+      for (final r in m.allies) (x: r.position.x, y: r.position.y),
+    ]);
   }
 
   /// 내 진영 스폰으로 되돌린다(부활). 탄약도 가득.
@@ -363,8 +368,9 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
             if (d.dead) confirmKill('표적');
           },
         ),
+    // 아군은 맞히지 않는다(총알이 통과, decisions 12장).
     for (final r in match?.remotes.values ?? const <RemotePlayer>[])
-      if (r.targetable)
+      if (r.targetable && match!.canHitRemote(r.uid))
         (
           key: r,
           body: r.coverBody,

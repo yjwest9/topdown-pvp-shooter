@@ -66,6 +66,124 @@ void main() {
     expect((await repo.meta(b).first)!.map, 'outpost');
   });
 
+  group('2v2 friendly room (decisions 12장)', () {
+    Future<String> room2v2(FakeRtdbService db, RoomRepository repo) =>
+        repo.createRoom(uid: 'h', name: 'H', teamSize: 2, map: 'outpost');
+
+    Future<Map<String, String>> teams(FakeRtdbService db, String code) async {
+      final ps = (await db.get('rooms/$code/players'))! as Map;
+      return {
+        for (final e in ps.entries)
+          e.key as String: (e.value as Map)['team'] as String,
+      };
+    }
+
+    test('meta carries teamSize; a room without it reads as 1', () async {
+      final db = FakeRtdbService();
+      final repo = RoomRepository(db);
+      final one = await repo.createRoom(uid: 'a', name: 'A');
+      final two = await room2v2(db, repo);
+      expect(await db.get('rooms/$one/meta/teamSize'), 1);
+      expect(await db.get('rooms/$two/meta/teamSize'), 2);
+      expect((await repo.meta(two).first)!.teamSize, 2);
+      expect(
+        RoomMeta.fromJson({'hostUid': 'x', 'status': 'waiting'}).teamSize,
+        1,
+      );
+    });
+
+    test('joiners are auto-assigned to the smaller team, A on a tie → A2 B2; '
+        'a 5th person is refused', () async {
+      final db = FakeRtdbService();
+      final repo = RoomRepository(db);
+      final code = await room2v2(db, repo);
+      for (final id in ['b', 'c', 'd']) {
+        await repo.joinRoom(code, uid: id, name: id.toUpperCase());
+      }
+      final t = await teams(db, code);
+      expect(t, {'h': 'A', 'b': 'B', 'c': 'A', 'd': 'B'});
+      await expectLater(
+        repo.joinRoom(code, uid: 'e', name: 'E'),
+        throwsA(isA<RoomException>()),
+      );
+    });
+
+    test(
+      'someone left: the next joiner fills the team that lost a player',
+      () async {
+        final db = FakeRtdbService();
+        final repo = RoomRepository(db);
+        final code = await room2v2(db, repo);
+        for (final id in ['b', 'c', 'd']) {
+          await repo.joinRoom(code, uid: id, name: id);
+        }
+        await repo.leave(code, 'd'); // B팀이 1명
+        await repo.joinRoom(code, uid: 'e', name: 'E');
+        expect((await teams(db, code))['e'], 'B');
+      },
+    );
+
+    test(
+      '1v1 room is unchanged: the joiner goes to B, a 3rd is refused',
+      () async {
+        final db = FakeRtdbService();
+        final repo = RoomRepository(db);
+        final code = await repo.createRoom(uid: 'a', name: 'A');
+        await repo.joinRoom(code, uid: 'b', name: 'B');
+        expect(await teams(db, code), {'a': 'A', 'b': 'B'});
+        await expectLater(
+          repo.joinRoom(code, uid: 'c', name: 'C'),
+          throwsA(isA<RoomException>()),
+        );
+      },
+    );
+
+    test('moveTeam changes only my own team', () async {
+      final db = FakeRtdbService();
+      final repo = RoomRepository(db);
+      final code = await room2v2(db, repo);
+      await repo.joinRoom(code, uid: 'b', name: 'B');
+      await repo.moveTeam(code, 'h', 'B');
+      expect(await teams(db, code), {'h': 'B', 'b': 'B'});
+    });
+
+    test('swap writes go to my own player node only', () async {
+      final db = FakeRtdbService()..serverTime = 5000;
+      final repo = RoomRepository(db);
+      final code = await room2v2(db, repo);
+      await repo.joinRoom(code, uid: 'b', name: 'B');
+
+      await repo.requestSwap(code, 'h', 'b');
+      var h = (await db.get('rooms/$code/players/h'))! as Map;
+      expect((h['swapTo'], h['swapAt']), ('b', 5000));
+      expect(
+        ((await db.get('rooms/$code/players/b'))! as Map)['swapTo'],
+        isNull,
+      );
+
+      await repo.acceptSwap(code, 'b', requester: 'h', team: 'A');
+      final b = (await db.get('rooms/$code/players/b'))! as Map;
+      expect((b['team'], b['swapAccepted']), ('A', 'h'));
+
+      await repo.finishSwap(code, 'h', 'B');
+      h = (await db.get('rooms/$code/players/h'))! as Map;
+      expect((h['team'], h['swapTo'], h['swapAt']), ('B', null, null));
+
+      await repo.clearSwapMarks(code, 'b');
+      expect(
+        ((await db.get('rooms/$code/players/b'))! as Map)['swapAccepted'],
+        isNull,
+      );
+
+      await repo.declineSwap(code, 'b', 'h');
+      expect(
+        ((await db.get('rooms/$code/players/b'))! as Map)['swapDeclined'],
+        'h',
+      );
+      await repo.clearSwapRequest(code, 'h');
+    });
+  });
+
   test('leave: the room is deleted when the last player leaves', () async {
     final db = FakeRtdbService();
     final repo = RoomRepository(db);

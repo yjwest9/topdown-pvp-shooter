@@ -31,6 +31,7 @@ class Minimap extends PositionComponent
   static final _enemy = Paint()..color = const Color(0x55E0563F);
   static final _view = Paint()..color = const Color(0x55FFFFFF);
   static final _me = Paint()..color = const Color(0xFF5DE0C8);
+  static final _allyDot = Paint()..color = const Color(0xFF4FA3E0);
   static final _meEdge = Paint()
     ..color = const Color(0xFFFFFFFF)
     ..style = PaintingStyle.stroke
@@ -90,6 +91,14 @@ class Minimap extends PositionComponent
         ..close(),
       _view,
     );
+    // 아군은 파란 점(2대2). 적은 안 보인다.
+    for (final a in game.match!.allies) {
+      canvas.drawCircle(
+        Offset(a.position.x * k, a.position.y * k),
+        3.5,
+        _allyDot,
+      );
+    }
     const s = 5.0;
     final arrow = Path()
       ..moveTo(s * 1.3, 0)

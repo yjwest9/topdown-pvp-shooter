@@ -46,6 +46,8 @@ class ResultViewModel {
     ('데스', '${stats.deaths}'),
     ('명중률', '$accuracy  (${stats.hits} / ${stats.shots})'),
     ('크리티컬', '${stats.crits}'),
+    if (stats.ownScore case final own? when stats.enemyScore != null)
+      ('팀 점수', '$own : ${stats.enemyScore}'),
     if (holiday case final h?)
       ('이벤트', '${h.name} 보상 ×$holidayRewardMultiplier'),
   ];

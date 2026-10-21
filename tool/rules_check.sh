@@ -117,5 +117,30 @@ check $(req $TB PUT users/$A/characters/assault '{"level":0}') deny "남의 캐�
 check $(req $TA PATCH users/$A '{"equippedCharacter":"basic"}') allow "장착 'basic'(보유 기록 없어도)"
 check $(req $TA PATCH users/$A '{"equippedCharacter":"assault"}') deny "미보유 캐릭터 장착"
 check $(req $TA PATCH users/$A '{"equippedCharacter":"scout"}') allow "보유 캐릭터 장착"
+# 친선전 2대2: 대기실 팀 이동·자리 바꾸기(decisions 12장). 새 필드(swapTo·swapAt·swapAccepted·swapDeclined)는 본인 노드 안에서만.
+admin PUT rooms/q3 "{\"meta\":{\"hostUid\":\"$A\",\"status\":\"waiting\",\"teamSize\":2},\"players\":{\"$A\":{\"connected\":true,\"team\":\"A\"}}}"
+check $(req $TA PATCH rooms/q3/meta '{"teamSize":2}') allow "방장이 meta teamSize 쓰기"
+check $(req $TB PATCH rooms/q3/meta '{"teamSize":1}') deny "참가자가 meta teamSize 바꾸기"
+check $(req $TB PUT rooms/q3/players/$B '{"name":"b","connected":true,"team":"B"}') allow "입장(내 노드, 팀 배정)"
+check $(req $TA PATCH rooms/q3/players/$A '{"swapTo":"'"$B"'","swapAt":'"$TS"'}') allow "내 노드에 자리 바꾸기 요청(swapTo·swapAt)"
+check $(req $TB PATCH rooms/q3/players/$A '{"swapTo":"x"}') deny "남의 노드에 자리 바꾸기 요청"
+check $(req $TB PATCH rooms/q3/players/$B '{"team":"A","swapAccepted":"'"$A"'"}') allow "내 노드에 수락(내 팀 변경 + swapAccepted)"
+check $(req $TB PATCH rooms/q3/players/$B '{"swapDeclined":"'"$A"'"}') allow "내 노드에 거절(swapDeclined)"
+check $(req $TA PATCH rooms/q3/players/$B '{"team":"B"}') deny "남의 팀 바꾸기"
+check $(req $TA PATCH rooms/q3/players/$A '{"team":"B","swapTo":null,"swapAt":null}') allow "요청자가 내 팀 변경 + 요청 정리"
+check $(req $TB PATCH rooms/q3/players/$B '{"swapAccepted":null,"swapDeclined":null}') allow "수락·거절 표시 정리"
+check $(req $TC PATCH rooms/q3/players/$A '{"team":"B"}') deny "방 밖 사람이 남의 팀 바꾸기"
+admin DELETE rooms/q3
+# 마무리 담당(방장이 나갔을 때 남은 사람)이 결과를 기록한다: 방 참가자는 playing → ended만.
+admin PUT rooms/q4 "{\"meta\":{\"hostUid\":\"$A\",\"status\":\"playing\",\"teamSize\":2},\"players\":{\"$A\":{\"connected\":false,\"team\":\"A\"},\"$B\":{\"connected\":true,\"team\":\"B\"}}}"
+check $(req $TC PATCH rooms/q4/meta '{"status":"ended","winner":"B"}') deny "방 밖 사람이 결과 기록"
+check $(req $TB PATCH rooms/q4/meta '{"status":"waiting"}') deny "참가자가 상태를 playing에서 되돌리기"
+check $(req $TB PATCH rooms/q4/meta '{"hostUid":"'"$B"'"}') deny "참가자가 방장 바꾸기"
+check $(req $TB PATCH rooms/q4/meta '{"teamSize":1}') deny "참가자가 teamSize 바꾸기(playing 중)"
+check $(req $TB PATCH rooms/q4/meta '{"status":"ended","winner":"B"}') allow "방 참가자가 playing → ended 결과 기록"
+admin PUT rooms/q4/meta "{\"hostUid\":\"$A\",\"status\":\"waiting\"}"
+check $(req $TB PATCH rooms/q4/meta '{"status":"ended","winner":"B"}') deny "대기 중(waiting)에는 참가자가 끝내기 불가"
+check $(req $TA PATCH rooms/q4/meta '{"status":"playing"}') allow "방장은 그대로 시작"
+admin DELETE rooms/q4
 for u in $A $B $C; do admin DELETE users/$u; done
 

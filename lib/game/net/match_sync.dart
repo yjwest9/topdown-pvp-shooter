@@ -10,6 +10,7 @@ import '../../rules/balance.dart';
 import '../../rules/character.dart';
 import '../../rules/combat.dart';
 import '../../rules/match.dart';
+import '../../rules/room_teams.dart';
 import '../../rules/sound.dart';
 import '../components/bullet.dart';
 import '../components/remote_player.dart';
@@ -23,6 +24,8 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
     required this.code,
     required this.uid,
     required this.isHost,
+    this.teamSize = 1,
+    this.allyIndex = 0,
     int Function()? clock,
   }) : _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch);
 
@@ -30,10 +33,23 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
   final String code;
   final String uid;
   final bool isHost;
+
+  /// 한 팀 인원(1 또는 2). 처음엔 대기실에서 받은 값, 방 meta를 읽으면 meta 값.
+  int teamSize;
+
+  /// 같은 팀 사람 중 내 순서(uid 순). 2대2 시작 스폰이 겹치지 않게(decisions 12장).
+  final int allyIndex;
   final int Function() _clock;
 
-  /// 방장 A(남쪽), 참가자 B(북쪽).
-  String get team => isHost ? RoomMeta.teamA : RoomMeta.teamB;
+  /// 내 팀. 대기실에서 정한 팀(A는 남쪽, B는 북쪽). 아직 못 읽었으면 방장 A, 참가자 B.
+  String get team {
+    final me = players[uid];
+    return me != null && me.hasTeam
+        ? me.team
+        : (isHost ? RoomMeta.teamA : RoomMeta.teamB);
+  }
+
+  bool get isTeamA => team == RoomMeta.teamA;
 
   /// 매치가 끝나면 한 번 불린다. [opponentLeft]면 상대가 나가서 이긴 것.
   void Function(MatchStats stats, {required bool opponentLeft})? onMatchEnd;
@@ -48,6 +64,7 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
   int scoreA = 0;
   int scoreB = 0;
   int _endsAt = 0;
+  String? _hostUid;
 
   /// 최근 킬 3개(오래된 것 먼저).
   final killLog = <NetKill>[];
@@ -95,6 +112,39 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
       _endsAt == 0 ? matchDurationMs : max(0, _endsAt - serverNow);
 
   String nameOf(String id) => players[id]?.name ?? '?';
+
+  /// 같은 팀(나 제외). team이 없거나 A/B가 아닌 참가자는 아군이 아니라 적이다.
+  bool isAlly(String id) =>
+      id != uid && (players[id]?.hasTeam ?? false) && players[id]!.team == team;
+
+  /// 나 말고, 아군이 아닌 참가자(적).
+  bool _isEnemy(RoomPlayer p) => p.uid != uid && !isAlly(p.uid);
+
+  /// 내 총알이 맞힐 수 있는 상대인가(아군은 통과, decisions 12장).
+  bool canHitRemote(String id) => canHit(
+    shooterTeam: team,
+    targetTeam: (players[id]?.hasTeam ?? false) ? players[id]!.team : '',
+  );
+
+  /// 보이는 아군들(미니맵 파란 점).
+  Iterable<RemotePlayer> get allies => [
+    for (final r in remotes.values)
+      if (isAlly(r.uid) && r.targetable) r,
+  ];
+
+  /// 매치 결과를 기록하는 사람: 방장이 연결돼 있으면 방장, 아니면 uid가 가장 작은 연결된 사람.
+  /// 참가자 목록을 아직 못 받았으면 방장만(1대1과 같게).
+  bool get isFinisher {
+    if (players.isEmpty) return isHost;
+    return finisherUid(
+          hostUid: _hostUid ?? (isHost ? uid : ''),
+          players: [
+            for (final p in players.values)
+              (uid: p.uid, connected: p.connected),
+          ],
+        ) ==
+        uid;
+  }
 
   /// 방 참가자의 캐릭터(강화 반영). 기록이 없으면(옛 앱·봇) 기본 병사 +0.
   CharacterStats characterOf(String id) =>
@@ -144,7 +194,7 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
 
   void _onPlayers(List<RoomPlayer> list) {
     players = {for (final p in list) p.uid: p};
-    if (list.any((p) => p.uid != uid && p.connected)) _sawOpponent = true;
+    if (list.any((p) => _isEnemy(p) && p.connected)) _sawOpponent = true;
     if (players[uid]?.connected ?? false) _sawMeConnected = true;
   }
 
@@ -153,9 +203,9 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
   /// 때만 믿는다(잠깐 꺼졌다 켜지거나 시작 직후 아직 안 써진 경우에 잘못 끝내지 않게).
   void _checkStuck() {
     if (_finished || _closed) return;
-    // 상대가 나갔다: 연결 표시가 꺼졌거나 항목이 사라졌다. 참가자는 방장이 연결된 걸 본 적이
-    // 없어도(시작했는데 꺼져 있음) 인정한다.
-    final others = players.values.where((p) => p.uid != uid);
+    // 상대 팀이 모두 나갔다(2대2에서 한 명만 나가면 계속): 연결 표시가 꺼졌거나 항목이 사라졌다.
+    // 참가자는 방장이 연결된 걸 본 적이 없어도(시작했는데 꺼져 있음) 인정한다.
+    final others = players.values.where(_isEnemy);
     final gone =
         others.every((p) => !p.connected) &&
         (_sawOpponent || (!isHost && _endsAt != 0 && others.isNotEmpty));
@@ -172,8 +222,8 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
       _finish(MatchResult.lose);
       return;
     }
-    if (isHost) return;
-    // 방장이 살아 있는데도 끝 기록이 안 옴: 시간이 끝나고 몇 초 뒤 내 화면의 점수로 끝낸다.
+    if (isFinisher) return;
+    // 마무리 담당이 살아 있는데도 끝 기록이 안 옴: 시간이 끝나고 몇 초 뒤 내 화면의 점수로 끝낸다.
     if (serverNow - _endsAt > hostEndGraceMs) {
       _finish(
         resultFor(
@@ -207,6 +257,8 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
     if (m == null) return;
     final started = _endsAt == 0 && m.endsAt != 0;
     _endsAt = m.endsAt;
+    _hostUid = m.hostUid;
+    teamSize = m.teamSize;
     if (started) onStart?.call('$code-$_endsAt');
     if (m.status != RoomMeta.ended) return;
     final outcome = switch (m.winner) {
@@ -240,6 +292,8 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
     shots: _shots,
     hits: _hits,
     crits: _crits,
+    ownScore: teamSize == 2 ? (isTeamA ? scoreA : scoreB) : null,
+    enemyScore: teamSize == 2 ? (isTeamA ? scoreB : scoreA) : null,
   );
 
   @override
@@ -257,11 +311,12 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
       }
     }
     game.player.blinking = isProtected(myHp);
-    if (isHost) _checkEnd();
+    if (isFinisher) _checkEnd();
     _checkStuck();
   }
 
-  /// 방장만 판정해서 meta에 기록한다. 둘 다 meta를 보고 결과 화면으로 간다.
+  /// 마무리 담당(방장, 방장이 나갔으면 남은 사람 중 uid가 가장 작은 사람)만 판정해서 meta에
+  /// 기록한다. 모두 meta를 보고 결과 화면으로 간다.
   void _checkEnd() {
     if (_endWritten || _finished || _endsAt == 0) return;
     // 상대가 나간 것은 `_checkStuck`이 유예(stuckGraceMs)를 두고 처리한다. 여기서 바로 끝내면
@@ -272,6 +327,7 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
       remainingMs: _endsAt - serverNow,
       aConnected: true,
       bConnected: true,
+      toWin: killsToWinFor(teamSize),
     );
     if (outcome == MatchOutcome.ongoing) return;
     _endWritten = true;

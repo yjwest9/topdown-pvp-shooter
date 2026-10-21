@@ -4,11 +4,19 @@ import '../rules/map_select.dart';
 
 /// 봇전·친선전 맵 고르기(decisions 11장). 이름 옆에 크기만 보인다.
 class MapChips extends StatelessWidget {
-  const MapChips({super.key, required this.selected, required this.onSelected});
+  const MapChips({
+    super.key,
+    required this.selected,
+    required this.onSelected,
+    this.lockedTo,
+  });
 
   /// 고른 맵 id.
   final String selected;
   final ValueChanged<String> onSelected;
+
+  /// 있으면 이 맵만 고를 수 있다(2대2는 outpost 고정). 나머지 칩은 비활성.
+  final String? lockedTo;
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +29,9 @@ class MapChips extends StatelessWidget {
             child: ChoiceChip(
               label: FittedBox(fit: BoxFit.scaleDown, child: Text(m.label)),
               selected: selected == m.id,
-              onSelected: (_) => onSelected(m.id),
+              onSelected: lockedTo != null && lockedTo != m.id
+                  ? null
+                  : (_) => onSelected(m.id),
             ),
           ),
       ],

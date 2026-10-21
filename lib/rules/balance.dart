@@ -512,6 +512,9 @@ const matchDurationMs = 180000;
 /// 먼저 이 킬 수에 닿으면 끝.
 const killsToWin = 7;
 
+/// 친선전 2대2: 3분 안에 팀 킬 합계가 이만큼이면 승리(decisions 12장).
+const killsToWin2v2 = 12;
+
 /// 죽고 나서 부활까지(초). 부스터 선택도 이 시간 안에.
 const respawnDelay = 5.0;
 
