@@ -38,6 +38,9 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
   /// 매치가 끝나면 한 번 불린다. [opponentLeft]면 상대가 나가서 이긴 것.
   void Function(MatchStats stats, {required bool opponentLeft})? onMatchEnd;
 
+  /// 매치가 시작돼(방 meta에 끝나는 시각이 생겨) [statsFor]의 matchId가 정해지면 한 번 불린다.
+  void Function(String matchId)? onStart;
+
   /// uid → 상대.
   final remotes = <String, RemotePlayer>{};
   var players = <String, RoomPlayer>{};
@@ -202,7 +205,9 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
 
   void _onMeta(RoomMeta? m) {
     if (m == null) return;
+    final started = _endsAt == 0 && m.endsAt != 0;
     _endsAt = m.endsAt;
+    if (started) onStart?.call('$code-$_endsAt');
     if (m.status != RoomMeta.ended) return;
     final outcome = switch (m.winner) {
       RoomMeta.teamA => MatchOutcome.aWins,

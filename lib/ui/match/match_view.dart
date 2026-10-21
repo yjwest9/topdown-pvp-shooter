@@ -86,6 +86,10 @@ class _MatchViewState extends ConsumerState<MatchView> {
   @override
   void initState() {
     super.initState();
+    // 빠른 대전만: 시작을 표시해 두면 앱이 강제 종료돼도 다음 실행에서 패배로 기록된다.
+    if (widget.mode == MatchMode.pvp) {
+      widget.match?.onStart = (matchId) => unawaited(_markActive(matchId));
+    }
     widget.match?.onMatchEnd = (stats, {required opponentLeft}) async {
       if (opponentLeft) {
         setState(() => _message = '상대가 나갔습니다');
@@ -93,6 +97,17 @@ class _MatchViewState extends ConsumerState<MatchView> {
       }
       await _exit(result: stats);
     };
+  }
+
+  /// 못 써도(오프라인 등) 매치는 그대로 한다.
+  Future<void> _markActive(String matchId) async {
+    try {
+      await ref
+          .read(profileRepositoryProvider)
+          .setActiveMatch(widget.match!.uid, matchId);
+    } catch (e) {
+      debugPrint('activeMatch 쓰기 실패: $e');
+    }
   }
 
   /// 게임 안 설정: 감도·발사 방식·미니맵·효과음은 바로 적용(저장도), 나가기. 게임은 멈추지 않는다.

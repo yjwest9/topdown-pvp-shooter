@@ -51,6 +51,13 @@
         "diamond": { ".validate": "newData.isNumber() && newData.val() >= 0" },
         // 3600000 = balance.dart의 adCooldown(1시간). 바꾸면 양쪽을 같이 바꿀 것.
         "lastAdAt": { ".validate": "newData.val() === data.val() || (newData.val() === now && (!data.exists() || now - data.val() >= 3600000))" },
+        // 빠른 대전이 끝나기 전에 앱이 꺼졌는지 표시(decisions 9장). startedAt은 서버 시간으로만 새로 쓰고, 안 바뀌면 그대로 통과.
+        "activeMatch": {
+          ".validate": "newData.hasChildren(['matchId', 'startedAt']) && newData.child('matchId').isString() && newData.child('matchId').val().length <= 64 && newData.child('startedAt').isNumber() && (newData.child('startedAt').val() === now || (data.exists() && newData.child('startedAt').val() === data.child('startedAt').val()))",
+          "matchId": {},
+          "startedAt": {},
+          "$other": { ".validate": false }
+        },
         "weapons": {
           "$id": {
             ".validate": "newData.hasChildren(['weaponId', 'grade', 'level']) && newData.child('weaponId').isString() && newData.child('weaponId').val().matches(/^(rifle_standard|rifle_rapid|rifle_precision|rifle_heavy|sniper_bolt|sniper_semi|sniper_light|shotgun_pump|shotgun_auto|shotgun_double|pistol)$/) && (newData.child('grade').val() === 'E' || newData.child('grade').val() === 'D') && newData.child('level').isNumber() && newData.child('level').val() >= 0 && newData.child('level').val() <= 5 && (!data.exists() ? (newData.child('grade').val() === 'E' && newData.child('level').val() === 0) : (newData.child('weaponId').val() === data.child('weaponId').val() && ((newData.child('grade').val() === data.child('grade').val() && (newData.child('level').val() === data.child('level').val() || newData.child('level').val() === data.child('level').val() + 1)) || (data.child('grade').val() === 'E' && data.child('level').val() === 5 && newData.child('grade').val() === 'D' && newData.child('level').val() === 0))))"

@@ -22,12 +22,21 @@ Future<FakeRtdbService> pumpResult(
   required FakeAdService ads,
   MatchMode mode = MatchMode.bot,
 }) async {
+  final db = FakeRtdbService();
+  await ProfileRepository(db).create('u', 'A');
+  return pumpResultWith(tester, ads: ads, db: db, mode: mode);
+}
+
+Future<FakeRtdbService> pumpResultWith(
+  WidgetTester tester, {
+  required FakeAdService ads,
+  required FakeRtdbService db,
+  MatchMode mode = MatchMode.bot,
+}) async {
   tester.view
     ..physicalSize = const Size(740, 360)
     ..devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  final db = FakeRtdbService();
-  await ProfileRepository(db).create('u', 'A');
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -80,6 +89,18 @@ void main() {
     expect(ads.shown, 1);
     // 상점 쿨타임은 건드리지 않는다.
     expect(await db.get('users/u/lastAdAt'), isNull);
+  });
+
+  testWidgets('a normal result save clears the activeMatch of that match', (
+    tester,
+  ) async {
+    final ads = FakeAdService();
+    final db = FakeRtdbService();
+    await ProfileRepository(db).create('u', 'A');
+    await ProfileRepository(db).setActiveMatch('u', 'm1'); // stats.matchId와 같다
+    await pumpResultWith(tester, ads: ads, db: db, mode: MatchMode.pvp);
+    expect(await db.get('users/u/activeMatch'), isNull);
+    expect(await db.get('users/u/lastMatchId'), 'm1');
   });
 
   testWidgets('ad closed early (no reward callback) → gold unchanged, '

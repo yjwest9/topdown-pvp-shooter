@@ -34,6 +34,22 @@ class OwnedWeapon {
   };
 }
 
+/// `users/{uid}/activeMatch`: 시작했지만 아직 결과를 저장하지 않은 빠른 대전(decisions 9장).
+class ActiveMatch {
+  const ActiveMatch({required this.matchId, required this.startedAt});
+
+  factory ActiveMatch.fromJson(Map<Object?, Object?> m) => ActiveMatch(
+    matchId: m['matchId']! as String,
+    startedAt: (m['startedAt'] as num?)?.toInt() ?? 0,
+  );
+
+  /// 결과의 `matchId`(방 + 끝나는 시각)와 같은 값.
+  final String matchId;
+
+  /// 서버 시간(ms).
+  final int startedAt;
+}
+
 /// RTDB `users/{uid}` (decisions 9장, 13장).
 class Profile {
   const Profile({
@@ -53,6 +69,7 @@ class Profile {
     this.lastAdAt,
     this.characters = const {},
     this.equippedCharacter = defaultCharacter,
+    this.activeMatch,
   });
 
   /// 기본 병사 id. 저장소는 rules를 못 읽어서 여기 둔다(balance.dart basicSoldier.id와 같음).
@@ -88,6 +105,11 @@ class Profile {
           e.key! as String: i((e.value as Map<Object?, Object?>?)?['level']),
       },
       equippedCharacter: m['equippedCharacter'] as String? ?? defaultCharacter,
+      activeMatch: switch (m['activeMatch']) {
+        final Map<Object?, Object?> a when a['matchId'] is String =>
+          ActiveMatch.fromJson(a),
+        _ => null,
+      },
     );
   }
 
@@ -122,6 +144,9 @@ class Profile {
 
   /// 장착 캐릭터 id. 없으면 기본 병사.
   final String equippedCharacter;
+
+  /// 끝내지 않은 빠른 대전(강제 종료로 남으면 다음 실행에서 패배로 기록). [toJson]에는 없다.
+  final ActiveMatch? activeMatch;
 
   /// 장착 캐릭터의 단계. 보유 기록이 없으면 0.
   int get equippedCharacterLevel => characters[equippedCharacter] ?? 0;

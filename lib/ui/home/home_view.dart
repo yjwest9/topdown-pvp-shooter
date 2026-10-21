@@ -36,6 +36,16 @@ class HomeView extends ConsumerWidget {
     final s = ref.watch(homeProvider);
     // 설정은 매치를 열 때 바로 쓰도록 미리 읽어 둔다.
     ref.watch(settingsProvider);
+    // 빠른 대전 도중 강제 종료로 패배가 기록됐으면 안내를 한 번.
+    ref.listen(forfeitNoticeProvider, (_, shown) {
+      if (!shown) return;
+      ref.read(forfeitNoticeProvider.notifier).clear();
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('지난 대전을 끝내지 않고 나가 패배로 기록되었습니다.')),
+        );
+    });
     return Scaffold(
       backgroundColor: bgColor,
       // 아래는 안전 영역을 안 둔다: immersiveSticky에서 키보드·시스템 바가 한 번 뜨면 탭바가 밑에서 떠 보였다.

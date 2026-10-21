@@ -15,10 +15,22 @@ import 'package:topsoldier/ui/settings/settings_view_model.dart';
 
 import '../../fakes.dart';
 
-Future<FakeRtdbService> openMatch(WidgetTester tester, MatchMode mode) async {
+Future<FakeRtdbService> openMatch(
+  WidgetTester tester,
+  MatchMode mode, {
+  int endsAt = 0,
+}) async {
   SharedPreferences.setMockInitialValues({});
   final db = FakeRtdbService();
   await ProfileRepository(db).create('u', 'A');
+  if (endsAt != 0) {
+    // 이미 시작한 방(방 meta에 끝나는 시각이 있다).
+    await db.set('rooms/1234/meta', {
+      'hostUid': 'u',
+      'status': 'playing',
+      'endsAt': endsAt,
+    });
+  }
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -146,6 +158,36 @@ void main() {
     final stats = (await db.get('users/u/stats'))! as Map;
     expect((stats['matches'], stats['wins']), (1, 0));
     expect(await db.get('users/u/gold'), 0);
+  });
+
+  testWidgets('quick match start writes users/uid/activeMatch (matchId = '
+      'room-endsAt, server time)', (tester) async {
+    final db = await openMatch(tester, MatchMode.pvp, endsAt: 99000);
+    final a = (await db.get('users/u/activeMatch'))! as Map;
+    expect(a['matchId'], '1234-99000');
+    expect(a['startedAt'], db.serverTime);
+  });
+
+  for (final mode in [MatchMode.bot, MatchMode.custom]) {
+    testWidgets('$mode never writes activeMatch', (tester) async {
+      final db = await openMatch(tester, mode, endsAt: 99000);
+      expect(await db.get('users/u/activeMatch'), isNull);
+    });
+  }
+
+  testWidgets('quick match: leaving (= loss) clears activeMatch in the same '
+      'save', (tester) async {
+    final db = await openMatch(tester, MatchMode.pvp, endsAt: 99000);
+    expect(await db.get('users/u/activeMatch'), isNotNull);
+
+    await exitViaSettings(tester);
+    await tester.tap(find.text('나가기').last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(await db.get('users/u/activeMatch'), isNull);
+    expect(await db.get('users/u/lastMatchId'), '1234-99000');
+    expect(((await db.get('users/u/stats'))! as Map)['matches'], 1);
   });
 
   testWidgets('custom room: leaving is immediate and nothing is recorded', (

@@ -61,13 +61,28 @@ class ProfileRepository {
       // 로컬에 아직 값이 없을 수 있다. null을 그대로 돌려주면 서버 값으로 다시 불린다.
       if (cur == null) return null;
       final before = Profile.fromJson(cur);
-      if (before.lastMatchId == matchId) return txAbort;
+      final m = {...(cur as Map<Object?, Object?>)};
+      // 이 판의 "끝내지 않음" 표시면 같은 쓰기에서 지운다(decisions 9장).
+      final isActive = before.activeMatch?.matchId == matchId;
+      if (before.lastMatchId == matchId) {
+        // 이미 저장된 판: 표시만 남았으면 지우고 전적은 그대로.
+        return isActive ? (m..remove('activeMatch')) : txAbort;
+      }
       final after = apply(before).copyWith(lastMatchId: matchId);
       change = (before: before, after: after);
-      return {...(cur as Map<Object?, Object?>), ...after.toJson()};
+      final next = {...m, ...after.toJson()};
+      if (isActive) next.remove('activeMatch');
+      return next;
     });
     return change;
   }
+
+  /// 빠른 대전이 시작됐다(결과를 저장할 때 [applyMatch]가 지운다). 강제 종료로 남으면 다음
+  /// 실행에서 패배로 기록된다(decisions 9장).
+  Future<void> setActiveMatch(String uid, String matchId) => _db.set(
+    '${_user(uid)}/activeMatch',
+    {'matchId': matchId, 'startedAt': serverTimestamp},
+  );
 
   // ---------------------------------------------------------- 상점 (9장)
 

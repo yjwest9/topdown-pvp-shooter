@@ -353,6 +353,61 @@ void main() {
     });
   });
 
+  group('activeMatch (빠른 대전 강제 종료 = 패배, decisions 9장)', () {
+    Future<ProfileRepository> started(FakeRtdbService db) async {
+      final repo = ProfileRepository(db);
+      await repo.create('u', 'A');
+      await db.update('users/u', {'gold': 100});
+      return repo;
+    }
+
+    Profile lose(Profile p) => p.copyWith(matches: p.matches + 1);
+
+    test('setActiveMatch writes matchId and the server time', () async {
+      final db = FakeRtdbService()..serverTime = 7777;
+      final repo = await started(db);
+      await repo.setActiveMatch('u', 'room1-9000');
+      final a = (await repo.watch('u').first)!.activeMatch!;
+      expect((a.matchId, a.startedAt), ('room1-9000', 7777));
+    });
+
+    test('saving that match clears the marker in the same write', () async {
+      final db = FakeRtdbService();
+      final repo = await started(db);
+      await repo.setActiveMatch('u', 'room1-9000');
+      final change = await repo.applyMatch('u', 'room1-9000', lose);
+      expect(change, isNotNull);
+      final p = (await repo.watch('u').first)!;
+      expect(
+        (p.matches, p.lastMatchId, p.activeMatch),
+        (1, 'room1-9000', null),
+      );
+      expect(await db.get('users/u/activeMatch'), isNull);
+    });
+
+    test('saving another match keeps the marker', () async {
+      final db = FakeRtdbService();
+      final repo = await started(db);
+      await repo.setActiveMatch('u', 'room1-9000');
+      await repo.applyMatch('u', 'bot-1', lose);
+      expect((await repo.watch('u').first)!.activeMatch?.matchId, 'room1-9000');
+    });
+
+    test(
+      'already saved match: only the marker goes, stats not counted twice',
+      () async {
+        final db = FakeRtdbService();
+        final repo = await started(db);
+        await repo.applyMatch('u', 'room1-9000', lose); // 정상 저장
+        await repo.setActiveMatch('u', 'room1-9000'); // 표시가 남은 상황
+        final change = await repo.applyMatch('u', 'room1-9000', lose);
+        expect(change, isNull);
+        final p = (await repo.watch('u').first)!;
+        expect((p.matches, p.activeMatch), (1, null));
+      },
+    );
+  });
+
   group('shop (decisions 9장)', () {
     Future<ProfileRepository> withGold(FakeRtdbService db, int gold) async {
       final repo = ProfileRepository(db);

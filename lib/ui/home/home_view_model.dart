@@ -4,15 +4,20 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/holiday.dart';
+import '../../data/models/match_stats.dart';
 import '../../data/models/profile.dart';
 import '../../data/repositories/ad_repository.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/event_repository.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../data/repositories/room_repository.dart';
+import '../../rules/active_match.dart';
 import '../../rules/balance.dart';
+import '../../rules/match.dart';
 import '../../rules/profile.dart';
+import '../../rules/rewards.dart';
 import '../format.dart';
+import '../result/result_view_model.dart';
 
 /// 오늘이 공휴일이면 그 공휴일(매치 보상 2배 이벤트). 앱 실행 중 한 번만 묻는다.
 final holidayProvider = FutureProvider<Holiday?>(
@@ -53,6 +58,19 @@ class HomeState {
   }
 }
 
+/// 지난 대전을 끝내지 않고 나가 패배로 기록했을 때 홈이 안내를 한 번 띄운다.
+final forfeitNoticeProvider = NotifierProvider<ForfeitNotice, bool>(
+  ForfeitNotice.new,
+);
+
+class ForfeitNotice extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void show() => state = true;
+  void clear() => state = false;
+}
+
 final homeProvider = NotifierProvider<HomeViewModel, HomeState>(
   HomeViewModel.new,
 );
@@ -73,6 +91,7 @@ class HomeViewModel extends Notifier<HomeState> {
   String get defaultNickname => _auth.nickname;
 
   bool _granting = false;
+  bool _settling = false;
   bool _adPreloaded = false;
 
   @override
@@ -111,11 +130,49 @@ class HomeViewModel extends Notifier<HomeState> {
         }
       });
     }
+    // 빠른 대전 도중 강제 종료로 남은 표시가 있으면 그 판을 패배로 한 번 저장한다(decisions 9장).
+    if (p.value case final profile?
+        when profile.activeMatch != null && !_settling) {
+      final action = activeMatchAction(
+        activeMatchId: profile.activeMatch!.matchId,
+        lastMatchId: profile.lastMatchId,
+      );
+      if (action != ActiveMatchAction.none) {
+        _settling = true;
+        Future.microtask(
+          () => _settleActiveMatch(profile.activeMatch!.matchId),
+        );
+      }
+    }
     return HomeState(
       profile: p.value ?? Profile(nickname: _auth.nickname),
       needsNickname: p.hasValue && p.value == null,
       holiday: ref.watch(holidayProvider).value,
     );
+  }
+
+  /// 남은 `activeMatch` 판을 패배(보상 0, 전적 1패)로 저장하고 표시를 지운다. 이미 저장된 판이면
+  /// 표시만 지우고 안내는 없다. 실패하면 다음 실행에서 다시 한다.
+  Future<void> _settleActiveMatch(String matchId) async {
+    try {
+      final uid = await _auth.signIn();
+      final change = await ref
+          .read(profileRepositoryProvider)
+          .applyMatch(
+            uid,
+            matchId,
+            ResultViewModel(
+              MatchStats(matchId: matchId, result: MatchResult.lose),
+              mode: MatchMode.pvp,
+              forfeit: true,
+            ).applyTo,
+          );
+      if (change != null) ref.read(forfeitNoticeProvider.notifier).show();
+    } catch (e) {
+      debugPrint('끝내지 않은 대전 기록 실패: $e');
+    } finally {
+      _settling = false;
+    }
   }
 
   /// 처음이면 프로필을 만들고, 있으면 닉네임만 바꾼다. 안 되면 이유.
