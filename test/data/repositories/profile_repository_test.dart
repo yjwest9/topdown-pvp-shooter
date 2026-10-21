@@ -228,6 +228,117 @@ void main() {
       });
     });
 
+    group('merge (decisions 7장)', () {
+      bool sameFamily(String a, String b) =>
+          a.split('_').first == b.split('_').first;
+
+      /// 기본 라이플(장착)을 E+5로, 같은 계열 [materialId] 무기를 [level]로.
+      Future<(ProfileRepository, FakeRtdbService, String, String)> setup({
+        int gold = 20000,
+        String materialId = 'rifle_rapid',
+        int materialLevel = 5,
+        String materialGrade = 'E',
+      }) async {
+        final db = FakeRtdbService();
+        final repo = await withGold(db, gold);
+        await repo.grantStarter(
+          'u',
+          primary: 'rifle_standard',
+          secondary: 'pistol',
+        );
+        final p = (await repo.watch('u').first)!;
+        final base = p.owned('rifle_standard')!.id;
+        await db.update('users/u/weapons/$base', {'level': 5});
+        await db.update('users/u/weapons/m1', {
+          'weaponId': materialId,
+          'grade': materialGrade,
+          'level': materialLevel,
+          'acquiredAt': 1,
+        });
+        return (repo, db, base, 'm1');
+      }
+
+      Future<bool> merge(
+        ProfileRepository repo,
+        String base,
+        String material,
+      ) => repo.mergeWeapons(
+        'u',
+        base,
+        material,
+        cost: 15000,
+        sameFamily: sameFamily,
+      );
+
+      test('E+5 + E+5 same family: gold −15,000, base D+0 (same weaponId), '
+          'material gone, equipped base stays equipped', () async {
+        final (repo, db, base, material) = await setup();
+        expect(await merge(repo, base, material), true);
+
+        final p = (await repo.watch('u').first)!;
+        expect(p.gold, 5000);
+        final b = p.byId(base)!;
+        expect((b.weaponId, b.grade, b.level), ('rifle_standard', 'D', 0));
+        expect(p.byId(material), isNull);
+        expect(await db.get('users/u/weapons/$material'), isNull);
+        expect(p.primaryId, base);
+        expect(p.weapons.length, 2); // 합성한 라이플 + 권총
+      });
+
+      test('a second call changes nothing (material is gone, no double '
+          'charge)', () async {
+        final (repo, db, base, material) = await setup(gold: 40000);
+        expect(await merge(repo, base, material), true);
+        final after = await db.get('users/u');
+        expect(await merge(repo, base, material), false);
+        expect(await db.get('users/u'), after);
+      });
+
+      Future<void> expectUntouched(
+        Future<(ProfileRepository, FakeRtdbService, String, String)> s,
+        Future<bool> Function(ProfileRepository, String, String) run,
+      ) async {
+        final (repo, db, base, material) = await s;
+        final before = await db.get('users/u');
+        expect(await run(repo, base, material), false);
+        expect(await db.get('users/u'), before);
+      }
+
+      test('not enough gold → nothing changes', () async {
+        await expectUntouched(setup(gold: 14999), (r, b, m) => merge(r, b, m));
+      });
+
+      test('material is not E+5 (E+4) → nothing changes', () async {
+        await expectUntouched(
+          setup(materialLevel: 4),
+          (r, b, m) => merge(r, b, m),
+        );
+      });
+
+      test('material is D grade → nothing changes', () async {
+        await expectUntouched(
+          setup(materialGrade: 'D'),
+          (r, b, m) => merge(r, b, m),
+        );
+      });
+
+      test('different family → nothing changes', () async {
+        await expectUntouched(
+          setup(materialId: 'sniper_bolt'),
+          (r, b, m) => merge(r, b, m),
+        );
+      });
+
+      test(
+        'equipped material is refused; base == material is refused',
+        () async {
+          await expectUntouched(setup(), (r, b, m) => merge(r, m, b));
+          await expectUntouched(setup(), (r, b, m) => merge(r, b, b));
+          await expectUntouched(setup(), (r, b, m) => merge(r, b, 'nope'));
+        },
+      );
+    });
+
     test('match reward keeps weapons and loadout', () async {
       final db = FakeRtdbService();
       final repo = await withGold(db, 0);

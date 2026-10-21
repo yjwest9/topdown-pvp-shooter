@@ -67,6 +67,8 @@ class _MatchViewState extends ConsumerState<MatchView> {
       soundEnabled: settings.soundEnabled,
       primary: loadout.primary,
       secondary: loadout.secondary,
+      primaryGrade: loadout.primaryGrade,
+      secondaryGrade: loadout.secondaryGrade,
       primaryLevel: loadout.primaryLevel,
       secondaryLevel: loadout.secondaryLevel,
       character: characterStats(

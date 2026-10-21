@@ -22,6 +22,8 @@ class Player extends PositionComponent with HasGameReference<SoldierGame> {
     required this.lowCrates,
     this.primaryWeapon = startingPrimary,
     this.secondaryWeapon = startingSecondary,
+    this.primaryGrade = Grade.e,
+    this.secondaryGrade = Grade.e,
     this.primaryLevel = 0,
     this.secondaryLevel = 0,
     this.moveSpeed = 1.0,
@@ -35,6 +37,8 @@ class Player extends PositionComponent with HasGameReference<SoldierGame> {
   final WeaponStats secondaryWeapon;
 
   /// 로드아웃 무기의 강화 단계(등급은 지금 E만).
+  final Grade primaryGrade;
+  final Grade secondaryGrade;
   final int primaryLevel;
   final int secondaryLevel;
 
@@ -87,12 +91,16 @@ class Player extends PositionComponent with HasGameReference<SoldierGame> {
 
   /// 가진 무기마다 탄약 상태를 기억한다(바꿨다 돌아와도 장전 안 됨).
   final _owned = <WeaponStats, WeaponState>{};
-  WeaponState _own(WeaponStats w, [int level = 0]) =>
-      _owned.putIfAbsent(w, () => WeaponState(w, level: level));
+  WeaponState _own(WeaponStats w, [Grade grade = Grade.e, int level = 0]) =>
+      _owned.putIfAbsent(w, () => WeaponState(w, grade: grade, level: level));
 
   /// 로드아웃: 주무기 + 보조(권총).
-  late WeaponState primary = _own(primaryWeapon, primaryLevel);
-  late final WeaponState secondary = _own(secondaryWeapon, secondaryLevel);
+  late WeaponState primary = _own(primaryWeapon, primaryGrade, primaryLevel);
+  late final WeaponState secondary = _own(
+    secondaryWeapon,
+    secondaryGrade,
+    secondaryLevel,
+  );
   bool usingPrimary = true;
 
   WeaponState get weapon => usingPrimary ? primary : secondary;

@@ -276,6 +276,54 @@ class ProfileRepository {
     return applied;
   }
 
+  /// 무기 합성(decisions 7장): 같은 계열 E+[level] 두 개체 → [baseId]가 D+0이 되고
+  /// [materialId]는 삭제. 골드 ≥ [cost], 두 무기가 아직 E+[level], [sameFamily]가 true,
+  /// 재료가 장착 중이 아닐 때만 한 트랜잭션으로 바꾸고 true. 하나라도 안 맞으면(이미
+  /// 합성됨 포함) 아무것도 안 바꾸고 false라서 다시 돌아도 두 번 적용되지 않는다.
+  Future<bool> mergeWeapons(
+    String uid,
+    String baseId,
+    String materialId, {
+    required int cost,
+    int level = 5,
+    required bool Function(String weaponIdA, String weaponIdB) sameFamily,
+  }) async {
+    var merged = false;
+    await _db.transaction(_user(uid), (cur) {
+      merged = false;
+      if (cur == null) return null; // 서버 값으로 다시 불린다
+      final m = {...(cur as Map<Object?, Object?>)};
+      final gold = ((m['gold'] as num?) ?? 0).toInt();
+      final weapons = {...((m['weapons'] as Map<Object?, Object?>?) ?? {})};
+      final base = weapons[baseId] as Map<Object?, Object?>?;
+      final material = weapons[materialId] as Map<Object?, Object?>?;
+      final loadout = (m['loadout'] as Map<Object?, Object?>?) ?? const {};
+      bool maxE(Map<Object?, Object?> w) =>
+          (w['grade'] ?? 'E') == 'E' && (w['level'] as num?)?.toInt() == level;
+      if (baseId == materialId ||
+          base == null ||
+          material == null ||
+          gold < cost ||
+          !maxE(base) ||
+          !maxE(material) ||
+          !sameFamily(
+            base['weaponId']! as String,
+            material['weaponId']! as String,
+          ) ||
+          loadout['primary'] == materialId ||
+          loadout['secondary'] == materialId) {
+        return txAbort;
+      }
+      merged = true;
+      weapons[baseId] = {...base, 'grade': 'D', 'level': 0};
+      weapons.remove(materialId);
+      m['weapons'] = weapons;
+      m['gold'] = gold - cost;
+      return m;
+    });
+    return merged;
+  }
+
   /// 장착. [primary]면 주무기 칸, 아니면 보조 칸에 [ownedId].
   Future<void> equip(String uid, String ownedId, {required bool primary}) =>
       _db.update('${_user(uid)}/loadout', {

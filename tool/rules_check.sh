@@ -47,7 +47,7 @@ W1='{"weaponId":"sniper_bolt","grade":"E","level":0,"acquiredAt":1}'
 check $(req $TA PUT users/$A/weapons/w1 "$W1") allow "내 무기 추가"
 check $(req $TB PUT users/$A/weapons/w2 "$W1") deny "남의 weapons 쓰기"
 check $(req $TA PUT users/$A/weapons/w3 '{"weaponId":"ak47","grade":"E","level":0}') deny "없는 weaponId"
-check $(req $TA PUT users/$A/weapons/w4 '{"weaponId":"pistol","grade":"D","level":0}') deny "등급 D(아직)"
+check $(req $TA PUT users/$A/weapons/w4 '{"weaponId":"pistol","grade":"D","level":0}') deny "새 무기를 D등급으로 만들기"
 check $(req $TA PUT users/$A/weapons/w5 '{"weaponId":"pistol","grade":"E","level":9}') deny "강화 9"
 check $(req $TA PATCH users/$A/loadout '{"primary":"w1"}') allow "보유 무기 장착"
 check $(req $TA PATCH users/$A/loadout '{"primary":"nope"}') deny "없는 개체 장착"
@@ -60,6 +60,28 @@ check $(req $TA PATCH users/$A/weapons/w1 '{"level":1}') allow "단계 그대로
 check $(req $TB PATCH users/$A/weapons/w1 '{"level":2}') deny "남의 무기 강화"
 check $(req $TA PUT users/$A/weapons/w9 '{"weaponId":"pistol","grade":"E","level":3}') deny "새 무기를 +3으로 만들기"
 check $(req $TA PATCH users/$A/weapons/w1 '{"weaponId":"pistol"}') deny "보유 무기 종류 바꾸기"
+M5='{"weaponId":"rifle_standard","grade":"E","level":5,"acquiredAt":1}'
+admin PUT users/$A/weapons/m1 "$M5"
+admin PUT users/$A/weapons/m2 '{"weaponId":"rifle_rapid","grade":"E","level":4,"acquiredAt":1}'
+admin PUT users/$A/weapons/m3 "$M5"
+check $(req $TA PATCH users/$A/weapons/m2 '{"grade":"D","level":0}') deny "합성: E+4 -> D+0"
+check $(req $TA PATCH users/$A/weapons/m1 '{"grade":"D","level":1}') deny "합성: E+5 -> D+1"
+check $(req $TA PATCH users/$A/weapons/m1 '{"grade":"D"}') deny "합성: E+5 -> D인데 단계 5 그대로"
+check $(req $TA PATCH users/$A/weapons/m1 '{"grade":"D","level":0,"weaponId":"pistol"}') deny "합성하면서 종류 바꾸기"
+check $(req $TA PATCH users/$A/weapons/m1 '{"grade":"X","level":0}') deny "알 수 없는 등급"
+check $(req $TB PATCH users/$A/weapons/m1 '{"grade":"D","level":0}') deny "남의 무기 합성"
+check $(req $TB DELETE users/$A/weapons/m3) deny "남의 무기 삭제"
+check $(req $TA PATCH users/$A/weapons/m1 '{"grade":"D","level":0}') allow "합성: E+5 -> D+0"
+check $(req $TA PATCH users/$A/weapons/m1 '{"grade":"E","level":0}') deny "D -> E"
+check $(req $TA PATCH users/$A/weapons/m1 '{"grade":"E","level":5}') deny "D+0 -> E+5"
+check $(req $TA PATCH users/$A/weapons/m1 '{"level":1}') allow "D+0 -> D+1 강화"
+check $(req $TA PATCH users/$A/weapons/m1 '{"level":3}') deny "D 강화 +2 점프"
+check $(req $TA DELETE users/$A/weapons/m3) allow "재료 무기 삭제"
+admin PUT users/$A/weapons/m1 "$M5"
+admin PUT users/$A/weapons/m3 "$M5"
+check $(req $TA PATCH users/$A '{"gold":0,"weapons/m1/grade":"D","weapons/m1/level":0,"weapons/m3":null}') allow "합성 한 번에(골드 차감 + 기준 D+0 + 재료 삭제)"
+admin DELETE users/$A/weapons/m1
+admin DELETE users/$A/weapons/m2
 TS='{".sv":"timestamp"}'
 check $(req $TA PATCH users/$A "{\"lastAdAt\":$TS}") allow "lastAdAt 없을 때 서버 시간으로 쓰기"
 check $(req $TA PATCH users/$A "{\"lastAdAt\":$TS}") deny "1시간 안에 다시 쓰기"

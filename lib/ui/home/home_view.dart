@@ -413,6 +413,8 @@ class _Character extends StatelessWidget {
               withLevel(
                 equippedWeapons(profile).primary.name,
                 equippedWeapons(profile).primaryLevel,
+                grade: equippedWeapons(profile).primaryGrade,
+                badge: true, // 옆에 등급 배지가 있다
               ),
               style: const TextStyle(
                 color: lightColor,

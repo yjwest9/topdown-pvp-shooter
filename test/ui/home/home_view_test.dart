@@ -46,6 +46,44 @@ void main() {
     expect(find.text('저격수'), findsOneWidget);
   });
 
+  testWidgets('D grade weapon on the home screen: badge "D" + "K2 +0" '
+      '(no doubled "D+0")', (tester) async {
+    tester.view
+      ..physicalSize = const Size(740, 360)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+    final db = FakeRtdbService();
+    final repo = ProfileRepository(db);
+    await repo.create('u', '병사');
+    await repo.grantStarter(
+      'u',
+      primary: 'rifle_standard',
+      secondary: 'pistol',
+    );
+    final k2 = (await repo.watch('u').first)!.owned('rifle_standard')!.id;
+    await db.update('users/u/weapons/$k2', {'grade': 'D', 'level': 0});
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          adRepositoryProvider.overrideWithValue(AdRepository(FakeAdService())),
+          authRepositoryProvider.overrideWithValue(
+            AuthRepository(FakeAuthService('u')),
+          ),
+          profileRepositoryProvider.overrideWithValue(repo),
+          holidayProvider.overrideWith((ref) => null),
+        ],
+        child: const MaterialApp(home: HomeView()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('D'), findsOneWidget);
+    expect(find.text('K2 +0'), findsOneWidget);
+    expect(find.textContaining('D+0'), findsNothing);
+  });
+
   /// 처음엔 오프라인(로그인 실패), 곧 온라인이 되는 첫 실행. [withProfile]이면 서버에 프로필이 있다.
   Future<void> pumpOfflineThenOnline(
     WidgetTester tester, {

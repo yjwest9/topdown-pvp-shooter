@@ -101,6 +101,9 @@ enum Grade { e, d }
 const gradeBaseMultiplier = <Grade, double>{Grade.e: 1.00, Grade.d: 1.10};
 const damagePerUpgradeLevel = 0.02;
 
+/// 무기 합성 비용(골드, decisions 7장). 같은 계열 E+5 두 개 → D+0 하나.
+const mergeCost = 15000;
+
 /// 무기·캐릭터 공통 강화 상한.
 const maxUpgradeLevel = 5;
 

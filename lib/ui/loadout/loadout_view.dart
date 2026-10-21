@@ -114,7 +114,7 @@ class _WeaponTile extends StatelessWidget {
         ),
       ),
       title: Text(
-        withLevel(w.name, s.levelOf(w)),
+        withLevel(w.name, s.levelOf(w), grade: s.gradeOf(w)),
         maxLines: 1,
         softWrap: false,
         overflow: TextOverflow.fade,
@@ -163,18 +163,57 @@ class _Detail extends StatelessWidget {
     }
   }
 
+  /// 재료를 고르면 확인 창 → 합성 → 결과 안내.
+  Future<void> _merge(BuildContext context, String materialId) async {
+    final base = s.selected.name;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('합성'),
+        content: Text('$base이(가) D+0이 되고 재료는 사라집니다.\n${commas(mergeCost)} G'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('합성'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final done = await vm.merge(materialId);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            done ? '$base이(가) D+0이 되었습니다' : '합성하지 못했습니다. 다시 시도해 주세요',
+          ),
+        ),
+      );
+  }
+
   /// 등급·강화 배율을 넣은 한 발 데미지(소수 한 자리).
-  static String damageText(WeaponStats w, int level) =>
-      (w.damage * gradeMultiplier(Grade.e, level)).toStringAsFixed(1);
+  static String damageText(WeaponStats w, int level, [Grade grade = Grade.e]) =>
+      (w.damage * gradeMultiplier(grade, level)).toStringAsFixed(1);
 
   @override
   Widget build(BuildContext context) {
     final w = s.selected;
     final level = s.levelOf(w);
+    final grade = s.gradeOf(w);
     final b = statBars(w, weapons);
     final shotgun = w.family == WeaponFamily.shotgun;
     final rows = [
-      ('데미지', b.damage, '${shotgun ? '최대 ' : ''}${damageText(w, level)}'),
+      (
+        '데미지',
+        b.damage,
+        '${shotgun ? '최대 ' : ''}${damageText(w, level, grade)}',
+      ),
       ('연사 속도', b.fireRate, '${(1 / w.fireInterval).toStringAsFixed(1)}발/초'),
       ('사거리', b.range, '${w.range.round()}'),
       ('탄창', b.magazine, '${w.magazine}'),
@@ -182,7 +221,7 @@ class _Detail extends StatelessWidget {
     ];
     final ttkText = ttk(
       w,
-      damageMultiplier: gradeMultiplier(Grade.e, level),
+      damageMultiplier: gradeMultiplier(grade, level),
     ).toStringAsFixed(2);
     // 가로 화면 높이에 맞게 두 칸: 왼쪽은 이름·능력치, 오른쪽은 장단점·강화·장착/구매.
     // 장착/구매 버튼은 오른쪽 칸 맨 아래에 붙어서 스크롤 없이 늘 보인다.
@@ -198,19 +237,30 @@ class _Detail extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      UpgradeFlash(
-                        seq: s.upgradeSeq,
-                        result: s.upgradeResult,
-                        child: Text(
-                          withLevel(w.name, level),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
+                      // 이름이 길면(D+N 등) 글자만 줄인다.
+                      Flexible(
+                        child: UpgradeFlash(
+                          seq: s.upgradeSeq,
+                          result: s.upgradeResult,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              withLevel(
+                                w.name,
+                                level,
+                                grade: grade,
+                                badge: true,
+                              ),
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(width: 10),
-                      const GradeBadge('E'),
+                      GradeBadge(grade == Grade.d ? 'D' : 'E'),
                     ],
                   ),
                   WeaponArt(w.id, width: 220, height: 64, dim: !s.owns(w)),
@@ -250,22 +300,37 @@ class _Detail extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('장점  ${w.pros}'),
-                Text('단점  ${w.cons}'),
-                if (s.owns(w)) ...[
-                  const SizedBox(height: 10),
-                  UpgradePanel(
-                    level: level,
-                    gold: s.profile.gold,
-                    busy: s.busy,
-                    change: level >= maxUpgradeLevel
-                        ? ''
-                        : '데미지 ${damageText(w, level)} → '
-                              '${damageText(w, level + 1)}',
-                    onUpgrade: () => unawaited(_upgrade(context)),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text('장점  ${w.pros}'),
+                        Text('단점  ${w.cons}'),
+                        if (s.owns(w)) ...[
+                          const SizedBox(height: 10),
+                          UpgradePanel(
+                            level: level,
+                            gold: s.profile.gold,
+                            busy: s.busy,
+                            change: level >= maxUpgradeLevel
+                                ? ''
+                                : '데미지 ${damageText(w, level, grade)} → '
+                                      '${damageText(w, level + 1, grade)}',
+                            onUpgrade: () => unawaited(_upgrade(context)),
+                          ),
+                          if (s.canMerge) ...[
+                            const SizedBox(height: 8),
+                            _MergePanel(
+                              s,
+                              (id) => unawaited(_merge(context, id)),
+                            ),
+                          ],
+                        ],
+                      ],
+                    ),
                   ),
-                ],
-                const Spacer(),
+                ),
                 s.owns(w)
                     ? FilledButton(
                         onPressed: s.isEquipped(w)
@@ -286,6 +351,54 @@ class _Detail extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 합성 영역(decisions 7장): 같은 계열 E+5 재료 목록. 장착 중이거나 골드가 모자라면 못 고른다.
+class _MergePanel extends StatelessWidget {
+  const _MergePanel(this.s, this.onPick);
+
+  final LoadoutState s;
+  final void Function(String ownedId) onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final enough = s.profile.gold >= mergeCost;
+    final materials = s.mergeMaterials;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      decoration: BoxDecoration(
+        color: panelColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('합성', style: TextStyle(fontWeight: FontWeight.w900)),
+          Text(
+            '${commas(mergeCost)} G · 같은 계열 E+5 재료 1개',
+            style: const TextStyle(fontSize: 12),
+          ),
+          if (!enough)
+            const Text(
+              '골드 부족',
+              style: TextStyle(fontSize: 12, color: amberColor),
+            ),
+          if (materials.isEmpty)
+            const Text('재료가 없습니다', style: TextStyle(fontSize: 12)),
+          for (final m in materials)
+            OutlinedButton(
+              onPressed: enough && !m.equipped && !s.busy
+                  ? () => onPick(m.owned.id)
+                  : null,
+              child: Text(
+                '${withLevel(m.weapon.name, m.owned.level)}'
+                '${m.equipped ? ' (장착 중)' : ''}',
+              ),
+            ),
         ],
       ),
     );

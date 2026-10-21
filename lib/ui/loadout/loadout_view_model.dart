@@ -7,12 +7,15 @@ import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../rules/balance.dart';
 import '../../rules/upgrade.dart';
+import '../../rules/weapon_merge.dart';
 
 /// 장착한 무기(로드아웃)와 강화 단계. 프로필이 없거나 옛 데이터면 기본 무기 +0.
 ({
   WeaponStats primary,
+  Grade primaryGrade,
   int primaryLevel,
   WeaponStats secondary,
+  Grade secondaryGrade,
   int secondaryLevel,
 })
 equippedWeapons(Profile? p) {
@@ -21,8 +24,10 @@ equippedWeapons(Profile? p) {
   final secondary = weaponById(sw?.weaponId ?? '');
   return (
     primary: primary ?? startingPrimary,
+    primaryGrade: gradeFromString(pw?.grade),
     primaryLevel: primary == null ? 0 : pw!.level,
     secondary: secondary ?? startingSecondary,
+    secondaryGrade: gradeFromString(sw?.grade),
     secondaryLevel: secondary == null ? 0 : sw!.level,
   );
 }
@@ -35,6 +40,7 @@ class LoadoutState {
     this.busy = false,
     this.upgradeResult,
     this.upgradeSeq = 0,
+    this.mergeSeq = 0,
   });
 
   final Profile profile;
@@ -50,6 +56,9 @@ class LoadoutState {
   final UpgradeOutcome? upgradeResult;
   final int upgradeSeq;
 
+  /// 합성에 성공할 때마다 +1(화면이 결과를 한 번 알리는 용도).
+  final int mergeSeq;
+
   List<WeaponStats> get list => [
     for (final w in weapons)
       if (w.family == family) w,
@@ -59,6 +68,43 @@ class LoadoutState {
 
   /// 보유 무기의 강화 단계(없으면 0).
   int levelOf(WeaponStats w) => profile.owned(w.id)?.level ?? 0;
+
+  /// 보유 무기의 등급(없으면 E).
+  Grade gradeOf(WeaponStats w) => gradeFromString(profile.owned(w.id)?.grade);
+
+  OwnedWeapon? get selectedOwned => profile.owned(selected.id);
+
+  /// 합성 판정용 값. 모르는 무기면 null.
+  MergeWeapon? mergeItem(OwnedWeapon? o) {
+    final w = o == null ? null : weaponById(o.weaponId);
+    if (o == null || w == null) return null;
+    return (
+      id: o.id,
+      family: w.family,
+      grade: gradeFromString(o.grade),
+      level: o.level,
+      equipped: o.id == profile.primaryId || o.id == profile.secondaryId,
+    );
+  }
+
+  /// 고른 무기를 기준으로 합성할 수 있는 무기인가(E+5, 라이플·저격·샷건).
+  bool get canMerge {
+    final base = mergeItem(selectedOwned);
+    return base != null && isMergeable(base);
+  }
+
+  /// 재료 후보: 기준과 같은 계열의 다른 E+5 개체. 장착 중이면 [equipped](고를 수 없음).
+  List<({WeaponStats weapon, OwnedWeapon owned, bool equipped})>
+  get mergeMaterials {
+    final base = mergeItem(selectedOwned);
+    if (base == null || !isMergeable(base)) return const [];
+    return [
+      for (final o in profile.weapons)
+        if (mergeItem(o) case final m?
+            when m.id != base.id && isMergeable(m) && m.family == base.family)
+          (weapon: weaponById(o.weaponId)!, owned: o, equipped: m.equipped),
+    ];
+  }
 
   bool isEquipped(WeaponStats w) {
     final e = equippedWeapons(profile);
@@ -74,6 +120,7 @@ class LoadoutState {
     bool? busy,
     UpgradeOutcome? upgradeResult,
     int? upgradeSeq,
+    int? mergeSeq,
   }) => LoadoutState(
     profile: profile ?? this.profile,
     family: family ?? this.family,
@@ -81,6 +128,7 @@ class LoadoutState {
     busy: busy ?? this.busy,
     upgradeResult: upgradeResult ?? this.upgradeResult,
     upgradeSeq: upgradeSeq ?? this.upgradeSeq,
+    mergeSeq: mergeSeq ?? this.mergeSeq,
   );
 }
 
@@ -163,6 +211,37 @@ class LoadoutViewModel extends Notifier<LoadoutState> {
         upgradeSeq: state.upgradeSeq + 1,
       );
       return outcome;
+    } finally {
+      state = state.copyWith(busy: false);
+    }
+  }
+
+  /// 고른 무기(기준)에 [materialId] 무기를 합성한다(decisions 7장). 조건이 안 맞거나 저장 중
+  /// 바뀌어 있었으면(다른 기기 등) 아무것도 안 바꾸고 false.
+  Future<bool> merge(String materialId) async {
+    final p = state.profile;
+    final base = state.mergeItem(state.selectedOwned);
+    final material = state.mergeItem(p.byId(materialId));
+    if (base == null || material == null || state.busy) return false;
+    if (checkMerge(base: base, material: material, gold: p.gold) !=
+        MergeCheck.ok) {
+      return false;
+    }
+    state = state.copyWith(busy: true);
+    try {
+      final applied = await _repo.mergeWeapons(
+        await _auth.signIn(),
+        base.id,
+        materialId,
+        cost: mergeCost,
+        level: maxUpgradeLevel,
+        sameFamily: (a, b) {
+          final fa = weaponById(a)?.family;
+          return fa != null && fa == weaponById(b)?.family;
+        },
+      );
+      if (applied) state = state.copyWith(mergeSeq: state.mergeSeq + 1);
+      return applied;
     } finally {
       state = state.copyWith(busy: false);
     }

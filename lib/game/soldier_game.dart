@@ -47,6 +47,8 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     this.mapInfo = duelMap,
     this.primary = startingPrimary,
     this.secondary = startingSecondary,
+    this.primaryGrade = Grade.e,
+    this.secondaryGrade = Grade.e,
     this.primaryLevel = 0,
     this.secondaryLevel = 0,
     this.primaryFireMode = FireMode.auto,
@@ -64,6 +66,8 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   final WeaponStats secondary;
 
   /// 로드아웃 무기의 강화 단계. 내 총알 데미지에 배율로 들어간다.
+  final Grade primaryGrade;
+  final Grade secondaryGrade;
   final int primaryLevel;
   final int secondaryLevel;
 
@@ -183,6 +187,8 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
       lowCrates: map.lowCrates,
       primaryWeapon: primary,
       secondaryWeapon: secondary,
+      primaryGrade: primaryGrade,
+      secondaryGrade: secondaryGrade,
       primaryLevel: primaryLevel,
       secondaryLevel: secondaryLevel,
       moveSpeed: character.moveSpeed,
