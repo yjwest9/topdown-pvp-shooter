@@ -79,13 +79,17 @@ class HomeViewModel extends Notifier<HomeState> {
   AuthRepository get _auth => ref.read(authRepositoryProvider);
 
   /// 봇전 방(기기 안 메모리 DB, 로그인 없음). 이미 시작한 상태로 온다.
-  Future<({RoomRepository rooms, String code})> botRoom() =>
-      RoomRepository.botRoom(
-        uid: 'me',
-        name: myNickname(ref),
-        durationMs: matchDurationMs,
-        character: myCharacter(ref),
-      );
+  Future<({RoomRepository rooms, String code})> botRoom({
+    String map = 'duel',
+    int teamSize = 1,
+  }) => RoomRepository.botRoom(
+    uid: 'me',
+    name: myNickname(ref),
+    durationMs: matchDurationMs,
+    character: myCharacter(ref),
+    map: map,
+    teamSize: teamSize,
+  );
 
   /// 닉네임 입력 창의 기본값.
   String get defaultNickname => _auth.nickname;

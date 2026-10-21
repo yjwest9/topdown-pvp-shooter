@@ -85,8 +85,11 @@ class _Home extends ConsumerWidget {
     WidgetRef ref,
     BotDifficulty bot, {
     MapInfo map = duelMap,
+    int teamSize = 1,
   }) async {
-    final room = await ref.read(homeProvider.notifier).botRoom();
+    final room = await ref
+        .read(homeProvider.notifier)
+        .botRoom(map: map.id, teamSize: teamSize);
     if (!context.mounted) return;
     await _play(
       context,
@@ -95,6 +98,7 @@ class _Home extends ConsumerWidget {
         code: room.code,
         uid: 'me',
         isHost: true,
+        teamSize: teamSize,
       ),
       bot: bot,
       map: map,
@@ -112,6 +116,7 @@ class _Home extends ConsumerWidget {
 
   Future<void> _chooseBot(BuildContext context, WidgetRef ref) async {
     var map = duelMap.id;
+    var teamSize = 1;
     final bot = await showDialog<BotDifficulty>(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -120,9 +125,27 @@ class _Home extends ConsumerWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Row(
+                spacing: 8,
+                children: [
+                  for (final (n, label) in [(1, '1대1'), (2, '2대2')])
+                    ChoiceChip(
+                      label: Text(label),
+                      selected: teamSize == n,
+                      onSelected: (_) => setState(() {
+                        teamSize = n;
+                        if (n == 2) map = outpostMap.id;
+                      }),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
               child: MapChips(
                 selected: map,
                 onSelected: (id) => setState(() => map = id),
+                lockedTo: teamSize == 2 ? outpostMap.id : null,
               ),
             ),
             for (final (d, label) in [
@@ -139,7 +162,7 @@ class _Home extends ConsumerWidget {
       ),
     );
     if (bot != null && context.mounted) {
-      await _playBot(context, ref, bot, map: mapById(map));
+      await _playBot(context, ref, bot, map: mapById(map), teamSize: teamSize);
     }
   }
 

@@ -231,4 +231,55 @@ void main() {
       isTrue,
     );
   });
+
+  group('pickTarget (봇전 2대2: 보이는 적 중 가장 가까운 적)', () {
+    const walls = [(left: 90.0, top: -50.0, right: 110.0, bottom: 50.0)];
+    BotCandidate c(String id, String team, CoverBody b) =>
+        (id: id, team: team, body: b);
+    BotPick? pick(List<BotCandidate> list, {CoverBody? viewer}) => pickTarget(
+      viewer ?? body(0, 0),
+      'B',
+      list,
+      range: 500,
+      highWalls: walls,
+      lowCrates: const [],
+    );
+
+    test('nearest visible enemy wins', () {
+      final p = pick([
+        c('far', 'A', body(0, 300)),
+        c('near', 'A', body(0, 150)),
+      ]);
+      expect(p, (id: 'near', visible: true));
+    });
+
+    test('allies are never picked, even when they are the nearest', () {
+      final p = pick([
+        c('ally', 'B', body(0, 50)),
+        c('enemy', 'A', body(0, 400)),
+      ]);
+      expect(p, (id: 'enemy', visible: true));
+    });
+
+    test('a nearer enemy behind a wall loses to a farther visible one', () {
+      final p = pick([
+        c('hidden', 'A', body(200, 0)),
+        c('seen', 'A', body(0, 400)),
+      ]);
+      expect(p, (id: 'seen', visible: true));
+    });
+
+    test('nobody visible: head for the nearest enemy (visible=false)', () {
+      final p = pick([
+        c('hidden', 'A', body(200, 0)),
+        c('away', 'A', body(0, 900)),
+      ]);
+      expect(p, (id: 'hidden', visible: false));
+    });
+
+    test('no enemies (only allies): null', () {
+      expect(pick([c('ally', 'B', body(0, 50))]), isNull);
+      expect(pick(const []), isNull);
+    });
+  });
 }

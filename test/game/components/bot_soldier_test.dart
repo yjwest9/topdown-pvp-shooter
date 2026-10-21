@@ -151,6 +151,66 @@ void main() {
     },
   );
 
+  /// duel 5열: 봇(5열 6행) - 낮은 상자(8행) - 나(10행). 체력 30으로 숨게 만들고, 탄을 비워
+  /// 4초짜리 재장전이 걸리게 한다(M249).
+  Future<BotSoldier> hideSetup(SoldierGame game, WidgetTester tester) async {
+    await run(game, tester, 0.1);
+    game.player
+      ..position = Vector2(385, 735)
+      ..angle = pi / 2;
+    final b = botOf(game);
+    b.body.position = Vector2(385, 455);
+    b.body.weapon.ammo = 1;
+    await RoomRepository(db)
+        .setHp(code, bot, const NetHp(value: 30, protectedUntil: 0));
+    await run(game, tester, 6, until: () => b.body.body.crouching);
+    expect(b.body.body.crouching, isTrue);
+    return b;
+  }
+
+  botTester(db).testGameWidget(
+    'hidden bot that spots the player stops hiding at once and shoots back',
+    verify: (game, tester) async {
+      final b = await hideSetup(game, tester);
+      // 상자 옆으로 가서 봇이 보이게 한다(발각). 재장전은 아직 한참 남았다.
+      game.player.position = Vector2(b.body.position.x + 60, b.body.position.y);
+      await run(game, tester, 1, until: () => !b.body.body.crouching);
+      expect(b.body.body.crouching, isFalse, reason: '발각되면 숨기를 끝낸다');
+      await run(game, tester, 1);
+      expect(b.body.body.crouching, isFalse, reason: '다시 숨지 않는다');
+      expect(b.body.weapon.reloading, isTrue);
+    },
+  );
+
+  botTester(db).testGameWidget(
+    'hiding ends after botHideMaxMs even if reload is not done',
+    verify: (game, tester) async {
+      final b = await hideSetup(game, tester);
+      expect(b.body.weapon.reloading, isTrue);
+      // 숨은 지 3초 안에는 앉아 있고, 3초(+걸어간 시간 여유)를 넘기면 나온다.
+      await run(game, tester, botHideMaxMs / 1000 + 0.3);
+      expect(b.body.body.crouching, isFalse);
+      expect(b.body.weapon.reloading, isTrue, reason: '재장전은 아직 안 끝남');
+    },
+  );
+
+  botTester(db).testGameWidget(
+    'reload hide: sits behind the crate while reloading (until the max time)',
+    verify: (game, tester) async {
+      await run(game, tester, 0.1);
+      game.player
+        ..position = Vector2(385, 735)
+        ..angle = pi / 2;
+      final b = botOf(game);
+      b.body.position = Vector2(385, 455);
+      b.body.weapon.ammo = 0;
+      await run(game, tester, 3, until: () => b.body.body.crouching);
+      expect(b.body.body.crouching, isTrue);
+      await run(game, tester, 1);
+      expect(b.body.body.crouching, isTrue, reason: '재장전 중 최소 시간은 앉아 있다');
+    },
+  );
+
   botTester(db).testGameWidget(
     'bot carries its difficulty weapon (normal = M249)',
     verify: (game, tester) async {

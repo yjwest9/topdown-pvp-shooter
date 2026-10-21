@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../data/models/room.dart';
+import '../data/repositories/room_repository.dart';
 import '../data/repositories/sound_repository.dart';
 import '../rules/aim.dart';
 import '../rules/balance.dart';
@@ -206,7 +207,26 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     if (match != null) {
       await add(match!);
       if (bot case final b?) {
-        await add(BotSoldier(match: match!, level: botLevels[b]!));
+        final level = botLevels[b]!;
+        // 2대2(decisions 12장): 적 봇 둘(B) + 아군 봇 하나(A), 난이도는 모두 같다.
+        await addAll([
+          BotSoldier(match: match!, level: level),
+          if (match!.teamSize == 2) ...[
+            BotSoldier(
+              match: match!,
+              level: level,
+              uid: RoomRepository.allyBotUid,
+              team: RoomMeta.teamA,
+              allyIndex: 1,
+            ),
+            BotSoldier(
+              match: match!,
+              level: level,
+              uid: RoomRepository.enemyBot2Uid,
+              allyIndex: 1,
+            ),
+          ],
+        ]);
       }
       // 왼쪽 위. 그 오른쪽에 설정 버튼(Flutter, MatchView).
       minimap = Minimap(position: Vector2(8, 8));

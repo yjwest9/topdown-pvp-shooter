@@ -45,20 +45,33 @@ class RoomRepository {
   /// 봇전의 봇 uid.
   static const botUid = 'bot';
 
+  /// 봇전 2대2의 아군 봇(A)과 두 번째 적 봇(B).
+  static const allyBotUid = 'bot-ally';
+  static const enemyBot2Uid = 'bot-2';
+
   /// 봇전(decisions 12장): 기기 안 메모리 DB에 방을 만들고 나(A)와 봇(B)을 넣어 바로 시작한다.
+  /// [teamSize] 2면 나 + 아군 봇(A) vs 적 봇 둘(B). 입장 순서가 팀을 정한다(적 → 아군 → 적).
   static Future<({RoomRepository rooms, String code})> botRoom({
     required String uid,
     required String name,
     required int durationMs,
     PlayerCharacter? character,
+    String map = 'duel',
+    int teamSize = 1,
   }) async {
     final rooms = RoomRepository(LocalRtdbService());
     final code = await rooms.createRoom(
       uid: uid,
       name: name,
       character: character,
+      map: map,
+      teamSize: teamSize,
     );
     await rooms.joinRoom(code, uid: botUid, name: 'BOT');
+    if (teamSize == 2) {
+      await rooms.joinRoom(code, uid: allyBotUid, name: 'BOT 아군');
+      await rooms.joinRoom(code, uid: enemyBot2Uid, name: 'BOT 2');
+    }
     await rooms.start(code, durationMs: durationMs);
     return (rooms: rooms, code: code);
   }

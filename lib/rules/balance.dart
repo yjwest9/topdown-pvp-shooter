@@ -592,6 +592,7 @@ class BotLevel {
     required this.hideHp,
     required this.jumpPerSecond,
     required this.weapon,
+    this.fireGap = 0,
   });
 
   /// 상대를 보고 첫 발까지(초).
@@ -606,6 +607,9 @@ class BotLevel {
   /// 교전 중 초당 점프 확률.
   final double jumpPerSecond;
 
+  /// 한 발 쏜 뒤 무기 연사 간격에 더해 쉬는 시간(초). 쉬움만 쓴다.
+  final double fireGap;
+
   /// 봇 주무기(라이플만: 봇 AI가 라이플 거리 기준). 2026-10-12 측정(서 있는 나를 10초,
   /// 250/400px): 봇은 옆걸음하며 쏴서 정확한 M14가 가장 세고, M249는 가까우면 세고
   /// 멀면 퍼짐 때문에 약하다. FAMAS는 봇에게 가장 약해서 안 쓴다.
@@ -614,11 +618,12 @@ class BotLevel {
 
 const botLevels = <BotDifficulty, BotLevel>{
   BotDifficulty.easy: BotLevel(
-    reaction: 0.6,
-    aimError: 0.25,
+    reaction: 0.9,
+    aimError: 0.35,
     hideHp: 30,
     jumpPerSecond: 0.1,
     weapon: rifleStandard,
+    fireGap: 0.08,
   ),
   BotDifficulty.normal: BotLevel(
     reaction: 0.35,
@@ -644,3 +649,7 @@ const botCoverSearch = 350.0;
 
 /// 엄폐하면 최소 이 시간(초)은 앉아 있는다.
 const botCoverHold = 2.0;
+
+/// 숨기(엄폐) 시작부터 이 시간(ms)이 지나면 재장전 중이어도 나와 싸운다. 숨은 상대가 발각돼도
+/// 가만히 있어 보이던 문제를 막는다(decisions 12장).
+const botHideMaxMs = 3000;

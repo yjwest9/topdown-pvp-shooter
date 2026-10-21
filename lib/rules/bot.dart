@@ -145,3 +145,47 @@ Vec? coverSpot(
   }
   return best;
 }
+
+/// 봇이 고를 수 있는 참가자(나, 다른 봇).
+typedef BotCandidate = ({String id, String team, CoverBody body});
+
+/// 고른 표적. [visible]이 false면 안 보이지만 길을 따라갈 방향이다.
+typedef BotPick = ({String id, bool visible});
+
+/// 봇전 2대2(decisions 12장): [myTeam]이 아닌 참가자 중 보이는 가장 가까운 적.
+/// 아무도 안 보이면 가장 가까운 적(`visible: false`, 그쪽 길로 간다). 적이 없으면 null.
+BotPick? pickTarget(
+  CoverBody viewer,
+  String myTeam,
+  List<BotCandidate> candidates, {
+  required double range,
+  required List<Box> highWalls,
+  required List<Box> lowCrates,
+}) {
+  double dist(CoverBody b) =>
+      pow(b.pos.x - viewer.pos.x, 2) + pow(b.pos.y - viewer.pos.y, 2) + 0.0;
+  BotPick? best;
+  var bestDist = double.infinity;
+  BotPick? bestAny;
+  var bestAnyDist = double.infinity;
+  for (final c in candidates) {
+    if (c.team == myTeam) continue;
+    final d = dist(c.body);
+    if (d < bestAnyDist) {
+      bestAny = (id: c.id, visible: false);
+      bestAnyDist = d;
+    }
+    if (d < bestDist &&
+        canSee(
+          viewer,
+          c.body,
+          range: range,
+          highWalls: highWalls,
+          lowCrates: lowCrates,
+        )) {
+      best = (id: c.id, visible: true);
+      bestDist = d;
+    }
+  }
+  return best ?? bestAny;
+}

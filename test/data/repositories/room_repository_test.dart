@@ -273,6 +273,34 @@ void main() {
     await r.rooms.damage(r.code, 'me', (cur) => cur.value - 13);
     expect((await next)['me']!.value, 87);
   });
+
+  test(
+    'bot room 2v2: me + ally bot (A) vs two enemy bots (B), outpost',
+    () async {
+      final r = await RoomRepository.botRoom(
+        uid: 'me',
+        name: 'Me',
+        durationMs: 1000,
+        teamSize: 2,
+        map: 'outpost',
+      );
+      final players = await r.rooms.players(r.code).first;
+      expect(
+        {for (final p in players) p.uid: p.team},
+        {
+          'me': RoomMeta.teamA,
+          RoomRepository.allyBotUid: RoomMeta.teamA,
+          RoomRepository.botUid: RoomMeta.teamB,
+          RoomRepository.enemyBot2Uid: RoomMeta.teamB,
+        },
+      );
+      final meta = (await r.rooms.meta(r.code).first)!;
+      expect(
+        (meta.teamSize, meta.map, meta.status),
+        (2, 'outpost', RoomMeta.playing),
+      );
+    },
+  );
 }
 
 /// 실제 DB 규칙처럼 참가자가 없는(이미 지워진) 방을 지우면 거부한다. [beforeRemove]로 끼어들기.
