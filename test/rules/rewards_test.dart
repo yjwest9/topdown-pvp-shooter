@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:topsoldier/rules/balance.dart';
 import 'package:topsoldier/rules/match.dart';
 import 'package:topsoldier/rules/profile.dart';
 import 'package:topsoldier/rules/rewards.dart';
@@ -81,6 +82,33 @@ void main() {
         ),
         (gold: 2700, exp: 60),
       );
+    });
+  });
+
+  group('resultAdBonus (decisions 10장)', () {
+    test('pays the match gold once more', () {
+      expect(resultAdBonus(5600, claimed: false), 5600);
+      expect(resultAdBonus(2500, claimed: false), 2500);
+    });
+
+    test('no reward → no bonus; already claimed → no bonus', () {
+      expect(resultAdBonus(0, claimed: false), 0);
+      expect(resultAdBonus(5600, claimed: true), 0);
+    });
+
+    test('scales with resultAdMultiplier (2 = one extra copy)', () {
+      expect(resultAdMultiplier, 2);
+      expect(5600 + resultAdBonus(5600, claimed: false), 5600 * 2);
+    });
+
+    test('holiday ×2 gold is what gets doubled again', () {
+      final g = matchReward(
+        result: MatchResult.win,
+        kills: 0,
+        mode: MatchMode.pvp,
+        holiday: true,
+      ).gold;
+      expect(resultAdBonus(g, claimed: false), g);
     });
   });
 

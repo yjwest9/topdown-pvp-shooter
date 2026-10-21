@@ -258,6 +258,15 @@ void main() {
       expect((p.gold, p.lastAdAt), (10300, 5000));
     });
 
+    test('addGold: gold +N, lastAdAt (shop cooldown) untouched', () async {
+      final db = FakeRtdbService()..serverTime = 5000;
+      final repo = await withGold(db, 300);
+      await repo.addGold('u', 2500);
+      final p = (await repo.watch('u').first)!;
+      expect(p.gold, 2800);
+      expect(p.lastAdAt, isNull);
+    });
+
     ({int gold, int diamond})? swap(int gold, int diamond) =>
         gold < 100000 ? null : (gold: gold - 100000, diamond: diamond + 100);
 

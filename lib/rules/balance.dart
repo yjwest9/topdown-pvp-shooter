@@ -558,6 +558,9 @@ const adRewardGold = 10000;
 /// 같아야 한다. 바꾸면 거기도 바꿀 것.
 const adCooldown = Duration(hours: 1);
 
+/// 결과 화면 광고(decisions 10장): 그 판 골드 보상이 이 배수가 된다(한 번 더 = 배수 − 1배 지급).
+const resultAdMultiplier = 2;
+
 /// 환전: [exchangeGoldCost] 골드 → [exchangeDiamonds] 다이아.
 const exchangeGoldCost = 100000;
 const exchangeDiamonds = 100;

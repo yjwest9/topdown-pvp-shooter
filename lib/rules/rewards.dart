@@ -41,3 +41,8 @@ Reward matchReward({
     exp: (((win ? winExp : loseExp) + kills * killExp) * rate).round(),
   );
 }
+
+/// 결과 화면 광고(decisions 10장)로 더 받는 골드. 그 판 골드 보상 [matchGold]를 [resultAdMultiplier]배로
+/// 만드는 만큼이고, 보상이 0이거나 이미 받았으면([claimed], 판당 1회) 0.
+int resultAdBonus(int matchGold, {required bool claimed}) =>
+    claimed || matchGold <= 0 ? 0 : matchGold * (resultAdMultiplier - 1);

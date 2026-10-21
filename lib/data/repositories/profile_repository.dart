@@ -90,6 +90,19 @@ class ProfileRepository {
     }
   }
 
+  /// 결과 화면 광고 보상: 골드 +[gold]만. lastAdAt(상점 쿨타임)은 그대로. [rewardAd]처럼
+  /// 서버가 확인하기 전엔 화면에 반영하지 않고, 서버가 받지 못했으면 예외.
+  Future<void> addGold(String uid, int gold) async {
+    final r = await _db.transaction(_user(uid), (cur) {
+      if (cur == null) return null; // 서버 값으로 다시 불린다
+      final m = cur as Map<Object?, Object?>;
+      return {...m, 'gold': ((m['gold'] as num?) ?? 0).toInt() + gold};
+    }, applyLocally: false);
+    if (!r.committed || r.value == null) {
+      throw StateError('보상을 저장하지 못했습니다.');
+    }
+  }
+
   /// 환전 한 번을 트랜잭션으로. [exchange]가 지금 골드·다이아로 새 값을 만든다(null이면
   /// 골드 부족 → 아무것도 안 바꾸고 false).
   Future<bool> exchange(
