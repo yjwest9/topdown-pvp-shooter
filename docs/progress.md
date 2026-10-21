@@ -1,5 +1,16 @@
 # 진행 상황
 
+## 2026-10-21 (0.1.7+9 업로드 준비 + 실서버 규칙 배포 — chore/release-0.1.7, 병합 전)
+- 기존 로컬 chore/release-0.1.7(0.1.7+8, minSdk 31, 미출시)은 삭제(원격에는 없었음). 최신 main(5329c36) 위에서 새로 만듦, minSdk는 24(`flutter.minSdkVersion`) 확인. 앱 코드 변경 없음(`pubspec.yaml` version 0.1.6+7 → 0.1.7+9만). 내용: 봇전·친선전 맵 선택, 결과 화면 광고 2배, 무기 합성. versionCode 8은 Play에 올리기만 하고 출시 안 해서 못 쓰므로 9.
+- 확인: format 0 changed, analyze 0, 테스트 520개 통과. `tool/rules_check.sh` 75개 전부 OK. 첫 실행은 6개 실패(대기석 항목)였는데, 이전 세션의 에뮬레이터(java·node)가 안 꺼진 채 남아 있고 앱이 대기석을 계속 쓰고 있어서(`port taken`) 생긴 환경 문제였다. 남은 프로세스를 끄고 깨끗한 에뮬레이터로 다시 돌려 75개 통과(규칙·코드는 안 건드림).
+- 실서버 규칙 비교: 차이는 `users/$uid/weapons/$id` `.validate` 하나뿐(grade 'E' 고정 → 'E' 또는 'D', 새 무기는 E+0만, E+5 → D+0 한 가지 변경 허용). 합성 관련 변경 외 차이 없음 → `firebase deploy --only database`로 배포, 다시 받아 로컬과 같음(주석 제외 JSON 비교) 확인. `docs/release.md`에 4장 "릴리스와 실서버 DB 규칙" 추가.
+- 빌드: `flutter build appbundle --release --dart-define-from-file=.env.local` → `build/app/outputs/bundle/release/app-release.aab` 59.3MB(62,191,691 B), 업로드 키(CN=youngjun seo, SHA256 F7:3C:72:7D…) 서명이 0.1.6과 같음.
+- 같은 설정 릴리스 apk(57.7MB)를 API 31 에뮬레이터(Pixel_5_API31)에 설치, 실서버: 설치된 패키지 versionCode=9, versionName=0.1.7, minSdk=24, targetSdk=36, AD_ID 권한 있음. 시작·크래시 0. 닉네임 → 홈 → 봇전 outpost(어려움) 1판 → 결과 화면에 "광고 보고 보상 2배" 보임 → 테스트 광고 끝까지 → 골드 0 → 1,250(판 보상) → 2,500(광고 2배, 실서버 규칙에서도 쓰기 통과), 버튼 "2배 받음" → 무기 화면 진입 정상. 합성은 실서버에서 안 함(테스트 데이터가 필요해서).
+- 실서버 테스트 데이터: `users/YyOXOGxrLOhfuJZkJaqiKR2QqDa2`(Soldier6549) 삭제, null 확인. 대기석·방은 이번에 안 생김(rooms는 원래 5개 그대로). 콘솔에서 직접 지울 익명 계정 uid: `YyOXOGxrLOhfuJZkJaqiKR2QqDa2`.
+- 안 한 것: Play 업로드(사용자가 직접), push·병합·태그, 합성 실서버 확인.
+- 다음: 사용자가 aab를 Play에 업로드. 이후 사용자 요청 시 병합·push·태그 v0.1.7.
+- 막힌 것: 없음.
+
 ## 2026-10-21 (결과 직후 빠른 대전 무시 — 원인 확인, 고치지 않음 — fix/home-quick-match-after-result, main 병합)
 - 한 것: 에뮬레이터(API 37, 로컬 모드)에서 봇전 → 결과 → 홈으로 → 바로 빠른 대전을 눌러 재현(4.5초 뒤에도 홈 그대로). 같은 순서로 1초 뒤에 누르면 정상. 위젯 테스트로 홈으로 직후 홈 버튼 위치를 시간대별로 재서 원인 확인. 코드 변경 없음, 문서만.
 - 원인: 결과 화면 "홈으로"(`popUntil`) 때 기본 안드로이드 전환(`PredictiveBackPageTransitionsBuilder`)으로 홈이 왼쪽에서 밀려 들어오는 동안 빠른 대전 버튼이 최종 자리에 없음. 0~60ms 탭 무시, 100ms부터 정상(버튼 x: 0ms 397 → 150ms 529 → 450ms 582 최종). 에뮬레이터는 저fps라 길게 보임. `_quickMatch`·매칭 화면·뷰모델에는 막는 조건이 없음.

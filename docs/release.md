@@ -61,3 +61,21 @@ keytool -genkey -v -keystore D:\keys\topsoldier-upload.jks -keyalg RSA -keysize 
 - .jks는 프로젝트 밖 두 군데 이상에 백업(예: USB, 개인 클라우드). 비밀번호는 비밀번호 관리자에.
 - .jks, key.properties, 비밀번호를 git·채팅·스크린샷에 올리지 않는다.
 - 첫 업로드 때 Play Console에서 **Play 앱 서명**을 켠다(기본값). 실제 앱 서명 키는 Google이 보관하고, 우리 키는 업로드용이 된다.
+
+## 4. 릴리스와 실서버 DB 규칙
+
+앱이 쓰는 데이터가 규칙에 막히면 새 앱이 실서버에서 동작하지 않는다. 규칙이 바뀐 릴리스는 **앱 업로드 전에 규칙을 먼저 배포**한다(옛 앱도 새 규칙에서 동작해야 하므로 규칙은 넓히는 방향으로만).
+
+```bash
+firebase database:get /.settings/rules > live.json   # 실서버 규칙 받기, database.rules.json과 비교(주석 제외)
+bash tool/rules_check.sh                              # 로컬 에뮬레이터(auth, database)를 켠 뒤. 전부 OK여야 한다
+firebase deploy --only database                       # 배포
+firebase database:get /.settings/rules                # 다시 받아 로컬과 같은지 확인
+```
+
+- 에뮬레이터가 이전 실행에서 안 꺼진 채 남아 있으면(`port taken`) 대기석 항목이 실패한다. 남은 `java`·`node` 프로세스를 끄고 다시 켠다.
+
+| 릴리스 | 규칙 배포 | 내용 |
+|---|---|---|
+| 0.1.7+9 (2026-10-21) | **포함** | 무기 합성: 보유 무기 grade에 `D` 허용, E+5 → D+0 한 가지 변경만 허용(그 밖의 등급 변경은 거부), 새 무기는 E+0만. 배포 전 실서버와의 차이는 이것 하나뿐이었고 배포 뒤 실서버 규칙 = 로컬(rules_check 75개 OK) |
+| 0.1.5, 0.1.6 | 없음 | 실서버 규칙과 로컬이 같은 것만 확인하고 배포 안 함 |
