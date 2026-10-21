@@ -12,6 +12,7 @@ import '../../game/net/match_sync.dart';
 import '../../game/soldier_game.dart';
 import '../../rules/balance.dart';
 import '../../rules/character.dart';
+import '../../rules/map_select.dart';
 import '../../rules/match.dart';
 import '../../rules/rewards.dart';
 import '../loadout/loadout_view_model.dart';
@@ -26,6 +27,7 @@ class MatchView extends ConsumerStatefulWidget {
     super.key,
     this.match,
     this.bot,
+    this.mapInfo = duelMap,
     this.mode = MatchMode.training,
   });
 
@@ -33,6 +35,9 @@ class MatchView extends ConsumerStatefulWidget {
 
   /// 봇전 난이도. [match]는 메모리 DB 방.
   final BotDifficulty? bot;
+
+  /// 1대1 맵(빠른 대전은 duel).
+  final MapInfo mapInfo;
 
   /// 보상·나가기 규칙(빠른 대전만 중간에 나가면 패배).
   final MatchMode mode;
@@ -53,6 +58,7 @@ class _MatchViewState extends ConsumerState<MatchView> {
     return SoldierGame(
       match: widget.match,
       bot: widget.bot,
+      mapInfo: widget.mapInfo,
       sensitivity: settings.sensitivity,
       primaryFireMode: settings.primaryFireMode,
       secondaryFireMode: settings.secondaryFireMode,

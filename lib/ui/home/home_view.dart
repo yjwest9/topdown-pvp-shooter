@@ -8,6 +8,7 @@ import '../../data/models/profile.dart';
 import '../../game/net/match_sync.dart';
 import '../../rules/balance.dart';
 import '../../rules/character.dart';
+import '../../rules/map_select.dart';
 import '../../rules/rewards.dart';
 import '../../rules/upgrade.dart';
 import '../character/character_view.dart';
@@ -16,6 +17,7 @@ import '../format.dart';
 import '../loadout/loadout_view.dart';
 import '../loadout/loadout_view_model.dart';
 import '../lobby/lobby_view.dart';
+import '../map_chips.dart';
 import '../match/match_view.dart';
 import '../matchmaking/matchmaking_view.dart';
 import '../settings/settings_view.dart';
@@ -56,11 +58,13 @@ class _Home extends ConsumerWidget {
     BuildContext context, {
     MatchSync? match,
     BotDifficulty? bot,
+    MapInfo map = duelMap,
   }) => Navigator.of(context).push(
     MaterialPageRoute<void>(
       builder: (_) => MatchView(
         match: match,
         bot: bot,
+        mapInfo: map,
         mode: bot == null ? MatchMode.training : MatchMode.bot,
       ),
     ),
@@ -69,8 +73,9 @@ class _Home extends ConsumerWidget {
   Future<void> _playBot(
     BuildContext context,
     WidgetRef ref,
-    BotDifficulty bot,
-  ) async {
+    BotDifficulty bot, {
+    MapInfo map = duelMap,
+  }) async {
     final room = await ref.read(homeProvider.notifier).botRoom();
     if (!context.mounted) return;
     await _play(
@@ -82,6 +87,7 @@ class _Home extends ConsumerWidget {
         isHost: true,
       ),
       bot: bot,
+      map: map,
     );
   }
 
@@ -95,24 +101,36 @@ class _Home extends ConsumerWidget {
   }
 
   Future<void> _chooseBot(BuildContext context, WidgetRef ref) async {
+    var map = duelMap.id;
     final bot = await showDialog<BotDifficulty>(
       context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('봇전 난이도'),
-        children: [
-          for (final (d, label) in [
-            (BotDifficulty.easy, '쉬움'),
-            (BotDifficulty.normal, '보통'),
-            (BotDifficulty.hard, '어려움'),
-          ])
-            SimpleDialogOption(
-              onPressed: () => Navigator.of(context).pop(d),
-              child: Text(label),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => SimpleDialog(
+          title: const Text('봇전 난이도'),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: MapChips(
+                selected: map,
+                onSelected: (id) => setState(() => map = id),
+              ),
             ),
-        ],
+            for (final (d, label) in [
+              (BotDifficulty.easy, '쉬움'),
+              (BotDifficulty.normal, '보통'),
+              (BotDifficulty.hard, '어려움'),
+            ])
+              SimpleDialogOption(
+                onPressed: () => Navigator.of(context).pop(d),
+                child: Text(label),
+              ),
+          ],
+        ),
       ),
     );
-    if (bot != null && context.mounted) await _playBot(context, ref, bot);
+    if (bot != null && context.mounted) {
+      await _playBot(context, ref, bot, map: mapById(map));
+    }
   }
 
   void _open(BuildContext context, Widget page) => unawaited(

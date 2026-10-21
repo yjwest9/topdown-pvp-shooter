@@ -19,6 +19,7 @@ class LobbyState {
     this.busy = false,
     this.error,
     this.started = false,
+    this.map = 'duel',
   });
 
   final String? uid;
@@ -35,6 +36,9 @@ class LobbyState {
   /// 방장이 시작함 → 게임 화면으로.
   final bool started;
 
+  /// 방 만들기 전엔 방장이 고른 맵, 대기실에선 방 meta의 맵. 둘 다 id(`rules/map_select.dart`).
+  final String map;
+
   bool get canStart =>
       isHost && players.length == RoomRepository.maxPlayers && !started;
 
@@ -47,6 +51,7 @@ class LobbyState {
     bool? busy,
     String? error,
     bool? started,
+    String? map,
   }) => LobbyState(
     uid: uid ?? this.uid,
     code: code ?? this.code,
@@ -55,6 +60,7 @@ class LobbyState {
     busy: busy ?? this.busy,
     error: error,
     started: started ?? this.started,
+    map: map ?? this.map,
   );
 }
 
@@ -74,11 +80,15 @@ class LobbyViewModel extends Notifier<LobbyState> {
     return const LobbyState();
   }
 
+  /// 방 만들기 전에 방장이 맵을 고른다.
+  void selectMap(String id) => state = state.copyWith(map: id);
+
   Future<void> createRoom() => _enter((uid, name) async {
     final code = await rooms.createRoom(
       uid: uid,
       name: name,
       character: myCharacter(ref),
+      map: state.map,
     );
     return (code: code, host: true);
   });
@@ -112,7 +122,12 @@ class LobbyViewModel extends Notifier<LobbyState> {
       }
       final uid = await _auth.signIn().timeout(requestTimeout);
       final room = await go(uid, myNickname(ref)).timeout(requestTimeout);
-      state = LobbyState(uid: uid, code: room.code, isHost: room.host);
+      state = LobbyState(
+        uid: uid,
+        code: room.code,
+        isHost: room.host,
+        map: state.map,
+      );
       _watch(room.code);
     } on RoomException catch (e) {
       state = state.copyWith(busy: false, error: e.message);
@@ -135,9 +150,11 @@ class LobbyViewModel extends Notifier<LobbyState> {
             ),
           ),
       rooms.meta(code).listen((m) {
-        if (m?.status == RoomMeta.playing) {
-          state = state.copyWith(started: true);
-        }
+        if (m == null) return;
+        state = state.copyWith(
+          map: m.map,
+          started: m.status == RoomMeta.playing ? true : null,
+        );
       }),
     ]);
   }

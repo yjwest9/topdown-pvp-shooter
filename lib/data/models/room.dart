@@ -13,6 +13,7 @@ class RoomMeta {
     required this.status,
     this.endsAt = 0,
     this.winner,
+    this.map = 'duel',
   });
 
   factory RoomMeta.fromJson(Object? json) {
@@ -22,6 +23,7 @@ class RoomMeta {
       status: m['status'] as String,
       endsAt: _i(m['endsAt']),
       winner: m['winner'] as String?,
+      map: m['map'] as String? ?? 'duel',
     );
   }
 
@@ -44,6 +46,9 @@ class RoomMeta {
 
   /// [teamA], [teamB], [draw]. 끝나기 전엔 null.
   final String? winner;
+
+  /// 맵 id(`rules/map_select.dart`). 모르는 값은 읽는 쪽이 duel로 본다.
+  final String map;
 }
 
 /// `rooms/{code}/players/{uid}`

@@ -14,6 +14,7 @@ import '../data/repositories/sound_repository.dart';
 import '../rules/aim.dart';
 import '../rules/balance.dart';
 import '../rules/combat.dart';
+import '../rules/map_select.dart';
 import '../rules/movement.dart';
 import '../rules/sound.dart';
 import '../rules/spawn.dart';
@@ -43,6 +44,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     this.minimapRotates = true,
     this.onMinimapRotatesChanged,
     this.bot,
+    this.mapInfo = duelMap,
     this.primary = startingPrimary,
     this.secondary = startingSecondary,
     this.primaryLevel = 0,
@@ -70,6 +72,9 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
 
   /// 있으면 봇전([match]는 메모리 DB 방, 상대는 봇).
   final BotDifficulty? bot;
+
+  /// 1대1 맵(decisions 11장). 훈련소는 안 씀.
+  final MapInfo mapInfo;
 
   /// 시점 감도 1~10.
   double sensitivity;
@@ -166,10 +171,10 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     art = GameArt(images);
     final loading = art.load();
     if (loading != null) await loading;
-    // PvP(빠른 대전·친선전·봇전)는 1대1 전용 맵 duel(Tiled, decisions 11장), 훈련소는 하드코딩 테스트 맵 + 표적.
+    // PvP는 고른 맵(빠른 대전은 duel, Tiled, decisions 11장), 훈련소는 하드코딩 테스트 맵 + 표적.
     map = match == null
         ? TestMap()
-        : GameMap.fromTmx(await assets.readFile('maps/duel.tmx'));
+        : GameMap.fromTmx(await assets.readFile(mapInfo.asset));
     final spawn = _pickSpawn();
     player = Player(
       position: Vector2(spawn.x, spawn.y),

@@ -1,5 +1,17 @@
 # 진행 상황
 
+## 2026-10-21 (봇전·친선전 맵 선택 — feat/map-select, 병합 전)
+- 먼저 decisions 11장 반영: "빠른 대전은 duel 고정. 봇전·친선전은 duel(기본) / outpost 중에서 고른다."(사용자 결정)
+- 한 것: `rules/map_select.dart`(`MapInfo` 표: duel 17×17, outpost 31×31, `mapById`는 모르는 값이면 duel). `RoomMeta.map` 추가, `createRoom(map:)`이 방 meta `map`에 씀(빠른 대전 방은 duel 고정). `SoldierGame(mapInfo:)`가 그 맵 파일을 읽음, `MatchView(mapInfo:)`. 방 만들기 화면 맨 위와 봇전 난이도 창 맨 위에 맵 칩 2개(`ui/map_chips.dart`, 이름 옆 크기만). 대기실엔 "맵 duel 17×17" 한 줄. 로비 뷰모델이 방 meta `map`을 읽어 방장·참가자 모두 같은 맵으로 시작.
+- DB 규칙: meta `.write`가 hostUid만 보고 `map` 값을 막지 않아서 고칠 것 없음(`database.rules.json` 그대로). `tool/rules_check.sh` 61개 OK, 배포 안 함.
+- 테스트(먼저 작성): 맵 선택 규칙 3, meta map 쓰기·읽기 1, 로비 뷰모델 2(방장 outpost → 둘 다 outpost / 안 고르면 duel), 로비 화면 1(칩 기본 duel, outpost 고르면 대기실에 표시), 봇전 outpost 1(게임이 2170px 맵을 읽고 봇이 길을 찾아 정지한 나를 맞힘). 총 478개 통과, format 0 changed, analyze 0.
+- 눈으로 확인한 것: Android 에뮬레이터(API 31, 로컬 Firebase 에뮬레이터 모드)에서 봇전 → 난이도 창에 칩 2개(duel 선택됨) → outpost + 보통 → outpost 미니맵으로 시작, 가만히 서 있으니 봇이 길을 찾아와 처치(전사 5번, 크래시 없음).
+- 못 한 것: 크롬(로컬 8080) 확인. 웹 빌드·서버는 떴지만 크롬 탭 렌더러가 멈춰 화면 캡처가 4번 연속 시간 초과(첫 화면 닉네임 창까지만 보임). 친선전 두 창 입장 확인도 못 함(로비 뷰모델 테스트로 대신 검증). 사용자가 크롬에서 직접 확인 필요.
+- 맵 칩 레이아웃(이어서): 칩 2개를 봇전 난이도 창과 방 만들기 화면 모두 가로 한 줄로(`Row` + 칩 안 글자 `FittedBox`, 좁으면 글자만 줄어듦). 에뮬레이터 캡처로 두 화면 확인. format·analyze 0, 테스트 478개 통과.
+- 범위 밖으로 둠: 빠른 대전 맵 선택, 2대2, 맵 미리보기 그림, 맵 내용 수정, 새 패키지.
+- 다음: 사용자 확인(친선전 outpost 방 만들기 → 두 창 입장, 봇전 duel 기본값) 후 병합.
+- 막힌 것: 크롬 자동 확인(위).
+
 ## 2026-10-21 (minSdk 31 취소, 0.1.7 미출시, API 31 동작 확인 — perf/emulator-lag, 병합 전)
 - 결정 변경: 교수님 요청은 "API 31(Android 12)에서 동작"이라 minSdk 24로도 충족. minSdk 31 상향을 취소하고 0.1.7은 Play에 올리지 않음.
 - 한 것: `git revert 3cc7eac`로 minSdk를 `flutter.minSdkVersion`(24)으로 복구(c2d8db3). `chore/release-0.1.7`(43aabd5, 0.1.7+8 + minSdk 31)은 지우지 않고 남겨 둠(병합·사용 안 함).

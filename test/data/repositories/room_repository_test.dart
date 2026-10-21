@@ -55,6 +55,17 @@ void main() {
     expect(await db.get('rooms/$code/states/host'), isNull);
   });
 
+  test('create: meta map defaults to duel, host can pick outpost', () async {
+    final db = FakeRtdbService();
+    final repo = RoomRepository(db);
+    final a = await repo.createRoom(uid: 'a', name: 'A');
+    final b = await repo.createRoom(uid: 'b', name: 'B', map: 'outpost');
+
+    expect(await db.get('rooms/$a/meta/map'), 'duel');
+    expect(await db.get('rooms/$b/meta/map'), 'outpost');
+    expect((await repo.meta(b).first)!.map, 'outpost');
+  });
+
   test('leave: the room is deleted when the last player leaves', () async {
     final db = FakeRtdbService();
     final repo = RoomRepository(db);

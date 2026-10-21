@@ -34,4 +34,33 @@ void main() {
       '',
     );
   });
+
+  testWidgets('map chips: duel is selected by default, outpost → waiting room '
+      'shows the chosen map', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(
+            AuthRepository(FakeAuthService('a')),
+          ),
+          roomRepositoryProvider.overrideWithValue(
+            RoomRepository(FakeRtdbService()),
+          ),
+        ],
+        child: const MaterialApp(home: LobbyView()),
+      ),
+    );
+
+    ChoiceChip chip(String label) =>
+        tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, label));
+    expect(chip('duel 17×17').selected, isTrue);
+    expect(chip('outpost 31×31').selected, isFalse);
+
+    await tester.tap(find.text('outpost 31×31'));
+    await tester.pump();
+    await tester.tap(find.text('방 만들기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('맵 outpost 31×31'), findsOneWidget);
+  });
 }

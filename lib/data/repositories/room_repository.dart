@@ -68,12 +68,13 @@ class RoomRepository {
     required String uid,
     required String name,
     PlayerCharacter? character,
+    String map = 'duel',
   }) async {
     for (var i = 0; i < _createTries; i++) {
       final code = newRoomCode(_random);
       final created = await _db.transaction(
         '${_room(code)}/meta',
-        (current) => current != null ? txAbort : _newMeta(uid),
+        (current) => current != null ? txAbort : _newMeta(uid, map),
       );
       if (!created.committed) continue;
       await _db.update('${_room(code)}/meta', {'createdAt': serverTimestamp});
@@ -89,11 +90,11 @@ class RoomRepository {
     throw const RoomException('방을 만들지 못했습니다. 다시 시도해 주세요.');
   }
 
-  Map<String, Object?> _newMeta(String uid) => {
+  Map<String, Object?> _newMeta(String uid, String map) => {
     'hostUid': uid,
     'status': RoomMeta.waiting,
     'mode': 'pvp1v1',
-    'map': 'duel',
+    'map': map,
   };
 
   Future<void> joinRoom(
@@ -192,7 +193,7 @@ class RoomRepository {
   }) async {
     final id = _db.newKey('rooms');
     await _db.set('${_room(id)}/meta', {
-      ..._newMeta(uid),
+      ..._newMeta(uid, 'duel'),
       'createdAt': serverTimestamp,
     });
     await _enter(

@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../game/net/match_sync.dart';
+import '../../rules/map_select.dart';
 import '../../rules/rewards.dart';
+import '../map_chips.dart';
 import '../match/match_view.dart';
 import 'lobby_view_model.dart';
 
@@ -25,12 +27,13 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
     super.dispose();
   }
 
-  Future<void> _play(MatchSync match) async {
+  Future<void> _play(MatchSync match, MapInfo map) async {
     // 결과 화면에서 홈으로 가면 이 화면도 닫히므로 미리 잡아 둔다.
     final vm = ref.read(lobbyProvider.notifier);
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => MatchView(match: match, mode: MatchMode.custom),
+        builder: (_) =>
+            MatchView(match: match, mapInfo: map, mode: MatchMode.custom),
       ),
     );
     vm.backToMenu();
@@ -57,6 +60,7 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
               uid: next.uid!,
               isHost: next.isHost,
             ),
+            mapById(next.map),
           ),
         );
       }
@@ -89,6 +93,8 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          MapChips(selected: s.map, onSelected: vm.selectMap),
+          const SizedBox(height: 12),
           FilledButton.tonal(
             onPressed: s.busy ? null : () => unawaited(vm.createRoom()),
             child: const Text('방 만들기'),
@@ -153,7 +159,9 @@ class _LobbyViewState extends ConsumerState<LobbyView> {
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
+        Text('맵 ${mapById(s.map).label}'),
+        const SizedBox(height: 8),
         for (final p in s.players)
           Text(p.uid == s.uid ? '${p.name} (나)' : p.name),
         const SizedBox(height: 16),

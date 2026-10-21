@@ -57,6 +57,39 @@ void main() {
     expect(guest.read(lobbyProvider).started, true);
   });
 
+  test(
+    'host picks outpost → both clients see outpost; default is duel',
+    () async {
+      final db = FakeRtdbService();
+      final host = lobbyFor('a', db);
+      final guest = lobbyFor('b', db);
+      expect(host.read(lobbyProvider).map, 'duel');
+
+      host.read(lobbyProvider.notifier).selectMap('outpost');
+      await host.read(lobbyProvider.notifier).createRoom();
+      await guest
+          .read(lobbyProvider.notifier)
+          .joinRoom(host.read(lobbyProvider).code!);
+      await pumpEventQueue();
+
+      expect(host.read(lobbyProvider).map, 'outpost');
+      expect(guest.read(lobbyProvider).map, 'outpost');
+    },
+  );
+
+  test('room made without picking stays duel for the guest too', () async {
+    final db = FakeRtdbService();
+    final host = lobbyFor('a', db);
+    final guest = lobbyFor('b', db);
+    await host.read(lobbyProvider.notifier).createRoom();
+    await guest
+        .read(lobbyProvider.notifier)
+        .joinRoom(host.read(lobbyProvider).code!);
+    await pumpEventQueue();
+
+    expect(guest.read(lobbyProvider).map, 'duel');
+  });
+
   test('join with unknown code shows an error and stays in menu', () async {
     final guest = lobbyFor('b', FakeRtdbService());
     await guest.read(lobbyProvider.notifier).joinRoom('4321');

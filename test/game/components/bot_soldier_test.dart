@@ -13,6 +13,7 @@ import 'package:topsoldier/game/net/match_sync.dart';
 import 'package:topsoldier/game/soldier_game.dart';
 import 'package:topsoldier/rules/balance.dart';
 import 'package:topsoldier/rules/cover.dart';
+import 'package:topsoldier/rules/map_select.dart';
 
 import '../../fakes.dart';
 
@@ -20,9 +21,13 @@ const code = '1234';
 const bot = RoomRepository.botUid;
 
 /// 나는 'a'(A팀), 상대는 보통 봇. [db.serverTime]이 시계.
-GameTester<SoldierGame> botTester(FakeRtdbService db) => GameTester(
+GameTester<SoldierGame> botTester(
+  FakeRtdbService db, {
+  MapInfo map = duelMap,
+}) => GameTester(
   () => SoldierGame(
     random: Random(7),
+    mapInfo: map,
     bot: BotDifficulty.normal,
     match: MatchSync(
       rooms: RoomRepository(db),
@@ -95,6 +100,22 @@ void main() {
         until: () => hpOf('a') > 0 && hpOf('a') < basicSoldier.hp,
       );
       expect(botOf(game).body.position.distanceTo(start), greaterThan(500));
+      expect(hpOf('a'), lessThan(basicSoldier.hp));
+    },
+  );
+
+  botTester(db, map: outpostMap).testGameWidget(
+    'outpost: the game loads it and the bot finds its way to a still player',
+    verify: (game, tester) async {
+      expect((game.map.width, game.map.height), (2170, 2170));
+      final start = botOf(game).body.position.clone();
+      await run(
+        game,
+        tester,
+        120,
+        until: () => hpOf('a') > 0 && hpOf('a') < basicSoldier.hp,
+      );
+      expect(botOf(game).body.position.distanceTo(start), greaterThan(800));
       expect(hpOf('a'), lessThan(basicSoldier.hp));
     },
   );
