@@ -32,6 +32,7 @@ Future<FakeRtdbService> pumpResultWith(
   required FakeAdService ads,
   required FakeRtdbService db,
   MatchMode mode = MatchMode.bot,
+  MatchStats stats = stats,
 }) async {
   tester.view
     ..physicalSize = const Size(740, 360)
@@ -133,5 +134,30 @@ void main() {
   testWidgets('ad fails to load → button hidden', (tester) async {
     await pumpResult(tester, ads: FakeAdService(loads: false));
     expect(find.textContaining('2배'), findsNothing);
+  });
+
+  testWidgets('2대2 + 광고 버튼 + 레벨업 → 가로 화면 한 장에 홈으로까지 보인다', (tester) async {
+    final db = FakeRtdbService();
+    await ProfileRepository(db).create('u', 'A');
+    await db.set('users/u/exp', 99); // 이번 판 경험치로 레벨업
+    await pumpResultWith(
+      tester,
+      ads: FakeAdService(),
+      db: db,
+      stats: const MatchStats(
+        matchId: 'm1',
+        result: MatchResult.win,
+        kills: 2,
+        ownScore: 12,
+        enemyScore: 10,
+      ),
+    );
+    expect(find.text('팀 점수'), findsOneWidget);
+    expect(find.text(doubleText), findsOneWidget);
+    expect(find.textContaining('LEVEL UP'), findsOneWidget);
+    final height = tester.view.physicalSize.height;
+    for (final text in ['승리', doubleText, '홈으로']) {
+      expect(tester.getRect(find.text(text)).bottom, lessThanOrEqualTo(height));
+    }
   });
 }

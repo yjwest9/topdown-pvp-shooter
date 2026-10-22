@@ -1,5 +1,17 @@
 # 진행 상황
 
+## 2026-10-22 (브랜치 정리: 0.1.8·결과 화면 수정 main 병합, 태그 v0.1.8)
+- `chore/release-0.1.8`을 main에 squash 병합(`981751c`, 트리는 빌드한 0.1.8+10과 같음)하고 태그 `v0.1.8`. 이어서 `fix/result-screen-fit` squash 병합. 로컬·원격 브랜치는 main 하나만 남김(`feat/2v2-friendly`는 `90f1ead`와 내용이 같아 삭제).
+- `docs/presentation-prompt.md` 삭제(사용자 요청, 저장소에 둘 문서 아님).
+- 발표용 apk(저장소 밖 `D:\presentation-apk\`, 실서버 연결, 업로드 키 서명): `topsoldier-0.1.8.apk`(검토 중인 0.1.8과 같은 코드), `topsoldier-0.1.8-result-fix.apk`(+결과 화면 두 열). 둘 다 0.1.8+10이라 Play로 설치한 앱 위에는 서명이 달라 안 깔림.
+- 실서버 테스트 계정 정리 대상 추가: `OSN1WZyrVCNJPMcYYyP7odwD2x63`(닉네임 Soldie233, 발표용으로 골드 1,000,000·다이아 10,000 넣음). Soldier6156y와 함께 발표 뒤 콘솔에서 정리.
+
+## 2026-10-22 (결과 화면 한 장에 맞추기 — fix/result-screen-fit)
+- 문제: 결과 화면이 한 열로 쌓여서, 2대2(팀 점수 행)에 "광고 보고 보상 2배" 버튼까지 있으면 가로 화면 높이를 넘어 스크롤되고 "홈으로"가 잘렸다(740×360 기준 홈으로 아래 끝 471).
+- 수정: 두 열로 배치. 왼쪽 승패·기록, 오른쪽 보상·광고 버튼·레벨업·홈으로(광고 버튼은 decisions 10장대로 보상 표시 바로 아래). 보상 한 줄은 좁으면 줄바꿈(`Wrap`).
+- 테스트 먼저: 2대2 + 광고 버튼 + 레벨업에서 740×360 한 화면에 승리·광고 버튼·홈으로가 들어가는지(수정 전 실패 확인). format 0 changed, analyze 0, 테스트 614개 통과.
+- 화면 확인: Pixel_5 에뮬레이터(로컬 Firebase) 봇전 2대2 결과 화면이 스크롤 없이 한 장에 보임. 발표용 `D:\presentation-screens\12_result_ad.png` 교체.
+- 0.1.8 aab(`chore/release-0.1.8`)에는 안 들어 있음.
 ## 2026-10-22 (0.1.8+10 릴리스 확인: aab 빌드, 릴리스 apk 에뮬레이터 확인, 테스트 계정 정리 보류)
 - 검사: format 0 changed, analyze 0, 테스트 613개 통과, `rules_check` 102개 OK(FAIL 0). 실서버 규칙과 로컬 `database.rules.json`은 주석 제거 후 JSON 비교로 같음(배포 안 함).
 - aab: `build\app\outputs\bundle\release\app-release.aab`(59.5MB, 62,387,356바이트). 서명 CN=youngjun seo, SHA256 F7:3C:72:7D:46:1F:A3:DD:51:9B:DF:2B:A1:90:08:EB:3B:A3:8E:86:8D:30:7A:45:B3:9D:17:EF:E6:EC:CA:63 = 0.1.7과 같은 업로드 키. Play 업로드·main 병합·태그는 안 함.

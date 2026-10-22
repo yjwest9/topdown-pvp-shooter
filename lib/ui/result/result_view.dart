@@ -174,74 +174,92 @@ class _ResultViewState extends ConsumerState<ResultView> {
       fontSize: 18,
       fontWeight: FontWeight.w800,
     );
+    // 가로 화면 한 장에 다 들어가게 두 열: 왼쪽 승패·기록, 오른쪽 보상·버튼.
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: SizedBox(
-              width: 320,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    vm.title,
-                    style: TextStyle(
-                      fontSize: 44,
-                      fontWeight: FontWeight.w900,
-                      color: color,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  for (final (label, value) in vm.rows)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [Text(label), Text(value)],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 280,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        vm.title,
+                        style: TextStyle(
+                          fontSize: 44,
+                          fontWeight: FontWeight.w900,
+                          color: color,
+                        ),
                       ),
-                    ),
-                  const SizedBox(height: 12),
-                  if (vm.rewarded)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        Text(vm.goldText, style: amber),
-                        Text(vm.expText, style: amber),
+                      const SizedBox(height: 16),
+                      for (final (label, value) in vm.rows)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [Text(label), Text(value)],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 32),
+                SizedBox(
+                  width: 300,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (vm.rewarded)
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 24,
+                          children: [
+                            Text(vm.goldText, style: amber),
+                            Text(vm.expText, style: amber),
+                          ],
+                        )
+                      else
+                        const Text('친선전 · 보상 없음'),
+                      if (_matchGold > 0 && _ad != AdStatus.failed) ...[
+                        const SizedBox(height: 12),
+                        _doubleButton(),
                       ],
-                    )
-                  else
-                    const Text('친선전 · 보상 없음'),
-                  if (_matchGold > 0 && _ad != AdStatus.failed) ...[
-                    const SizedBox(height: 12),
-                    _doubleButton(),
-                  ],
-                  FutureBuilder(
-                    future: _saved,
-                    builder: (context, snap) {
-                      final saved = snap.data;
-                      final text = saved == null
-                          ? null
-                          : ResultViewModel.levelUpText(
-                              saved.before,
-                              saved.after,
-                            );
-                      if (text == null) return const SizedBox(height: 8);
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(text, style: amber.copyWith(fontSize: 24)),
-                      );
-                    },
+                      FutureBuilder(
+                        future: _saved,
+                        builder: (context, snap) {
+                          final saved = snap.data;
+                          final text = saved == null
+                              ? null
+                              : ResultViewModel.levelUpText(
+                                  saved.before,
+                                  saved.after,
+                                );
+                          if (text == null) return const SizedBox(height: 8);
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              text,
+                              style: amber.copyWith(fontSize: 24),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      FilledButton(
+                        onPressed: () =>
+                            Navigator.of(context)
+                                .popUntil((route) => route.isFirst),
+                        child: const Text('홈으로'),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 20),
-                  FilledButton(
-                    onPressed: () =>
-                        Navigator.of(context)
-                            .popUntil((route) => route.isFirst),
-                    child: const Text('홈으로'),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
