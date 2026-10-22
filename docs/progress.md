@@ -1,5 +1,32 @@
 # 진행 상황
 
+## 2026-10-22 (0.1.8+10 릴리스 확인: aab 빌드, 릴리스 apk 에뮬레이터 확인, 테스트 계정 정리 보류)
+- 검사: format 0 changed, analyze 0, 테스트 613개 통과, `rules_check` 102개 OK(FAIL 0). 실서버 규칙과 로컬 `database.rules.json`은 주석 제거 후 JSON 비교로 같음(배포 안 함).
+- aab: `build\app\outputs\bundle\release\app-release.aab`(59.5MB, 62,387,356바이트). 서명 CN=youngjun seo, SHA256 F7:3C:72:7D:46:1F:A3:DD:51:9B:DF:2B:A1:90:08:EB:3B:A3:8E:86:8D:30:7A:45:B3:9D:17:EF:E6:EC:CA:63 = 0.1.7과 같은 업로드 키. Play 업로드·main 병합·태그는 안 함.
+- 릴리스 apk(같은 설정, 57.8MB) 매니페스트: versionCode 10, versionName 0.1.8, minSdk 24, `AD_ID` 권한 있음, apk 서명도 같은 키. 에뮬레이터 `Pixel_5_API31`(WHPX 가속)에 설치해 실서버로 확인(어제 PC와 달리 이 PC는 에뮬레이터가 켜짐).
+
+| 확인 | 결과 |
+|---|---|
+| 앱 시작 | 크래시 없음(crash 버퍼·FATAL·ANR 없음) |
+| 봇전 2대2 쉬움 1판 | outpost 자동 선택·duel 비활성, 경기 완료(패배, 팀 점수 10:11) |
+| 결과 화면 | "광고 보고 보상 2배" 버튼 있음, +1,250G +25EXP 저장 |
+| 방 만들기 | 2대2 칩 있음 |
+| 대기실 | A팀(내 팀)/B팀 칸 표시(방 3397), 나가면 방 삭제(`rooms/3397` null 확인) |
+
+- 정리 보류: 테스트 계정 `Soldier6156y`(익명 계정)가 실서버에 남아 있음. 발표 뒤 사용자가 Firebase 콘솔에서 직접 정리: Authentication의 가장 최근 익명 계정 = Soldier6156y, 그 uid로 Realtime DB `users/<uid>`도 삭제. 실서버 데이터 읽기는 하지 않아 uid는 기록하지 못함.
+- 다음: 사용자가 Play 비공개 테스트에 aab 업로드, 이후 main 병합·태그 `v0.1.8`.
+
+## 2026-10-21 (봇전 2대2 main 병합, 0.1.8 릴리스 브랜치에 반영)
+- `feat/bot-2v2`를 main에 squash 병합·push(`7f7720e`). `chore/release-0.1.8`에 main을 merge(충돌은 progress.md뿐, 양쪽 살림). 0.1.8에 봇전 2대2 포함. aab는 업로드 키 받은 뒤 빌드(태그 `v0.1.8`도 그때).
+
+## 2026-10-21 (0.1.8+10 릴리스 준비: 업로드 키·하드웨어 가속 없음으로 aab 빌드·에뮬레이터 확인 대기)
+- 병합·규칙 배포 완료: `feat/2v2-friendly`를 main에 squash 병합·push(`90f1ead`), 원격 브랜치 삭제(원격 브랜치는 main만). `chore/release-0.1.8`에서 `rules_check` 102개 OK, 실서버 규칙과 로컬 차이는 `meta` 쓰기(참가자 playing → ended)와 `users/$uid/activeMatch` 두 가지뿐이었고 `firebase deploy --only database` 후 실서버 = 로컬. `pubspec.yaml` 0.1.8+10 커밋(`8a9e044`).
+- 집 PC 빌드 환경 설치: JDK 21(이미 있음) + Android command-line tools(`C:\Android\sdk`, Android Studio 안 씀) + platform-tools, build-tools 36.0.0, android-36, emulator, android-31 google_apis x86_64. `flutter config`로 SDK·JDK 지정, 라이선스 수락, `flutter doctor`의 Android 항목 OK. AVD `Pixel_5_API31` 생성.
+- 못 한 것과 이유:
+  - 6단계 aab 빌드: 업로드 키 파일(`C:\keys	opsoldier-upload.jks`)이 이 PC에 없어 빌드 안 함. 키를 복사해 두면 `flutter build appbundle --release --dart-define-from-file=.env.local`, 서명이 0.1.7과 같은 키(CN=youngjun seo)인지 확인, 이어서 7~9단계.
+  - 7단계 에뮬레이터 확인(홈 → 봇전 → 결과, 2대2 칩·대기실 A/B 칸): 하드웨어 가속(하이퍼바이저) 없음으로 에뮬레이터가 안 켜진다. 켜려면 Windows 하이퍼바이저 플랫폼 등에 관리자 권한과 재부팅이 필요해 멈춤.
+- 대신 확인한 것: 디버그 apk 빌드 성공(543초), 매니페스트 versionCode 10·versionName 0.1.8·minSdk 24·AD_ID 권한 있음. format 0 changed, analyze 0, 테스트 599개 통과. 이 PC에서 실서버에 만든 프로필·방·익명 계정은 없다(규칙 읽기·배포만).
+
 ## 2026-10-21 (봇 숨기 멈춤 수정 + 쉬움 낮춤 — feat/bot-2v2, 병합 전)
 - 원인(숨기): 체력으로 숨는 조건은 "보일 때 + 이번 생 첫 체력 저하"이고, 숨은 동안 `_hide`가 `_fight`를 건너뛰어 발사가 꺼진다. 나올 조건은 "최소 2초 + 재장전 끝"뿐이라 M249(재장전 4초)는 발각돼도 4초 넘게 앉아만 있었다. main(1대1 봇전)도 같은 코드라 똑같이 발생 — 이번 표적 변경(`pickTarget`) 때문이 아님. 테스트로 재현 확인(발각 후에도 계속 앉음).
 - 수정: 자리에 앉은 뒤 적이 보이면 즉시 숨기 종료 + 교전, 숨기 시작부터 `botHideMaxMs`=3000ms(balance.dart) 지나면 종료. 둘 다 그 재장전이 끝날 때까지 재숨기 금지(계속 숨었다 나왔다 반복 방지). 재장전 숨기 기본 동작은 그대로. 테스트 3개 추가(체력 숨기→발각 시 반격, →3초 뒤 나옴, 재장전 숨기 유지).
