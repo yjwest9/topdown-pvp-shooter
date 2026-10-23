@@ -318,6 +318,7 @@ Open API 1개 이상 / 푸시 알림 1개 이상 / Firebase / REST·JSON / MVVM 
 - (2026-10-14) `lastAdAt`도 RTDB `users/{uid}/lastAdAt`.
 - **Firestore**(계획): `users/{uid}` { fcmToken }, `users/{uid}/weapons/{id}`, `users/{uid}/characters/{id}`, `matches/{id}`, `config/balance`(밸런스·경제 설정).
 - 로그인 [잠정]: 익명 로그인 + 닉네임.
+- (2026-10-23) **구글 계정 연결**(친구 초대 1단계): 설정에 "구글 계정 연결" 하나. 익명 계정에 구글을 `linkWithCredential`로 붙여 uid가 그대로라 골드·무기·전적이 유지된다. 그 구글이 이미 다른 uid에 붙어 있으면 확인 창("지금 기기의 데이터는 사라집니다") 후 그 계정으로 로그인을 바꾸고 앱 상태를 처음부터 다시 만든다(버려진 익명 uid의 `users/{uid}`는 DB에 남음). 로그인 없이 익명 플레이는 그대로. 안드로이드는 `google_sign_in`, 웹은 `linkWithPopup`. DB 규칙 변경 없음. 이메일은 본인 설정 화면에만 보이고 다른 사람에게 공개하지 않는다.
 - 테스트: 에뮬레이터 1개 + 크롬 1개로 1대1, 나머지는 봇. Firebase 로컬 에뮬레이터 사용.
 
 ## 14. 기술과 아키텍처

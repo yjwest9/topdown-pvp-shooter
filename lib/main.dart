@@ -9,6 +9,7 @@ import 'data/repositories/room_repository.dart';
 import 'data/services/firebase_setup.dart';
 import 'data/services/push_service.dart';
 import 'ui/home/home_view.dart';
+import 'ui/restart_scope.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +22,7 @@ Future<void> main() async {
   unawaited(
     FirebasePushService().subscribeEvents().then((_) {}, onError: (_) {}),
   );
-  runApp(const ProviderScope(child: TopSoldierApp()));
+  runApp(const RestartScope(child: ProviderScope(child: TopSoldierApp())));
 }
 
 class TopSoldierApp extends ConsumerStatefulWidget {

@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/settings_repository.dart';
+import '../../data/services/auth_service.dart';
 import '../../rules/balance.dart';
 
 class SettingsState {
@@ -88,5 +90,29 @@ class SettingsViewModel extends AsyncNotifier<SettingsState> {
           : _now.copyWith(secondaryFireMode: mode),
     );
     await _repo.setFireAuto(primary: primary, auto: mode == FireMode.auto);
+  }
+}
+
+/// 구글 계정 연결 상태. state는 연결된 이메일(연결 전이면 null).
+final googleLinkProvider = NotifierProvider<GoogleLinkViewModel, String?>(
+  GoogleLinkViewModel.new,
+);
+
+class GoogleLinkViewModel extends Notifier<String?> {
+  AuthRepository get _auth => ref.read(authRepositoryProvider);
+
+  @override
+  String? build() => _auth.googleEmail;
+
+  /// 연결되면 이메일을 보여 준다. [GoogleLink.exists]면 화면이 확인을 받고 [switchAccount].
+  Future<GoogleLink> link() async {
+    final result = await _auth.linkGoogle();
+    if (result == GoogleLink.linked) state = _auth.googleEmail;
+    return result;
+  }
+
+  Future<void> switchAccount() async {
+    await _auth.switchToGoogle();
+    state = _auth.googleEmail;
   }
 }

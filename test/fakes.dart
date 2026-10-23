@@ -6,11 +6,37 @@ import 'package:topsoldier/data/services/rtdb_service.dart';
 import 'package:topsoldier/data/services/sound_service.dart';
 
 class FakeAuthService implements AuthService {
-  FakeAuthService(this.uid);
-  final String uid;
+  FakeAuthService(this.uid, {this.linkResult = GoogleLink.linked});
+  String uid;
+  GoogleLink linkResult;
+
+  /// [GoogleLink.exists]일 때 바꿔 들어갈 계정의 uid.
+  String existingUid = 'google-uid';
+
+  @override
+  String? googleEmail;
 
   @override
   Future<String> signInAnonymously() async => uid;
+
+  @override
+  Future<GoogleLink> linkGoogle() async {
+    if (linkResult == GoogleLink.linked) googleEmail = 'me@gmail.com';
+    return linkResult;
+  }
+
+  @override
+  Future<String> switchToGoogle() async {
+    googleEmail = 'me@gmail.com';
+    return uid = existingUid;
+  }
+}
+
+/// 구글 연결을 쓰지 않는 가짜 로그인용.
+mixin NoGoogleAuth {
+  String? get googleEmail => null;
+  Future<GoogleLink> linkGoogle() async => GoogleLink.cancelled;
+  Future<String> switchToGoogle() async => throw UnimplementedError();
 }
 
 /// 광고 SDK 대신. [earn]이 false면 광고를 중간에 닫은 것.
@@ -237,7 +263,7 @@ class FakeRtdbService implements RtdbService {
 }
 
 /// 로그인이 안 되는 것(오프라인). 예외 문구는 firebase 원문처럼 영어.
-class OfflineAuthService implements AuthService {
+class OfflineAuthService with NoGoogleAuth implements AuthService {
   @override
   Future<String> signInAnonymously() async => throw Exception(
     '[firebase_auth/unknown] An internal error has occurred. '
@@ -246,7 +272,7 @@ class OfflineAuthService implements AuthService {
 }
 
 /// 처음 [failures]번은 로그인이 안 되고(오프라인), 그 뒤엔 된다(온라인 복귀).
-class FlakyAuthService implements AuthService {
+class FlakyAuthService with NoGoogleAuth implements AuthService {
   FlakyAuthService(this.uid, {this.failures = 1});
   final String uid;
   int failures;

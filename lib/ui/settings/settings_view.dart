@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/settings_repository.dart';
+import '../../data/services/auth_service.dart';
 import '../../rules/balance.dart';
 import '../home/nickname_form.dart';
+import '../restart_scope.dart';
 import '../style.dart';
 import 'settings_view_model.dart';
 
@@ -17,6 +19,7 @@ class SettingsView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(settingsProvider).value ?? const SettingsState();
     final vm = ref.read(settingsProvider.notifier);
+    final email = ref.watch(googleLinkProvider);
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
@@ -110,6 +113,15 @@ class SettingsView extends ConsumerWidget {
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
+              title: const Text('구글 계정 연결'),
+              subtitle: Text(email ?? '연결하면 기기를 바꿔도 골드·무기·전적을 이어 갑니다'),
+              trailing: email == null ? const Icon(Icons.chevron_right) : null,
+              onTap: email == null
+                  ? () => unawaited(_link(context, ref))
+                  : null,
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
               title: const Text('앱 버전'),
               trailing: Text(ref.watch(appVersionProvider).value ?? ''),
             ),
@@ -117,5 +129,40 @@ class SettingsView extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// 구글 연결. 이미 다른 계정에 붙은 구글이면 확인을 받고 그 계정으로 바꾼다(지금 데이터는 사라짐).
+Future<void> _link(BuildContext context, WidgetRef ref) async {
+  final vm = ref.read(googleLinkProvider.notifier);
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    final result = await vm.link();
+    if (result != GoogleLink.exists || !context.mounted) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('이미 사용 중인 구글 계정'),
+        content: const Text(
+          '이 구글 계정에는 저장된 데이터가 있습니다.\n'
+          '그 계정으로 바꾸면 지금 기기의 골드·무기·전적은 사라집니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('바꾸기'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await vm.switchAccount();
+    if (context.mounted) RestartScope.restart(context);
+  } catch (_) {
+    messenger.showSnackBar(const SnackBar(content: Text('구글 계정을 연결하지 못했습니다')));
   }
 }

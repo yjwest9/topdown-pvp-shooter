@@ -1,5 +1,10 @@
 # 진행 상황
 
+## 2026-10-23 (구글 계정 연결 1단계, `feat/google-link`)
+- `google_sign_in ^7.2.0` 추가(사용자 허락). `AuthService`에 `googleEmail`·`linkGoogle`·`switchToGoogle`, 설정 화면 "구글 계정 연결"(이미 쓰는 계정이면 확인 창 → 전환 → `RestartScope`로 앱 상태 재생성). decisions 13장에 기록. 테스트: auth_repository_test, settings_view_test(연결·취소·전환 확인).
+- 콘솔 작업 완료(Chrome으로 진행): Authentication에서 Google 사용 설정(공개용 이름 TOP SOLDIER, 지원 이메일 yjwest9@gmail.com). Android 앱에 SHA 지문 6개 등록: 디버그(이 PC) SHA-1·256, 업로드 키 SHA-1·256, Play 앱 서명 키 SHA-1·256. `google-services.json` 교체(oauth_client: Android 3 + 웹 1). 학교 PC 디버그 키 지문은 아직 안 넣음.
+- 실기기 확인은 콘솔 작업 뒤. 웹(Chrome)은 `linkWithPopup`이라 콘솔에서 Google만 켜면 된다.
+
 ## 2026-10-23 (0.1.8+10 Play 업로드 완료)
 - 업로드 키(`C:\Projects\keys\topsoldier-upload.jks`, 저장소 밖)로 `main`의 `6bfc65a`에서 aab 빌드(58.8MB), `jarsigner -verify` 통과 후 사용자가 Play 비공개 테스트에 업로드. `android/key.properties`의 `storeFile`은 이 경로(gitignore, 커밋 안 함).
 - 태그 `v0.1.8`은 `981751c`에 그대로 둠. 업로드한 aab에는 그 뒤 `9c1c509`(결과 화면 두 열)가 더 들어 있어 태그와 코드가 이 한 곳 다름. 같은 versionCode 10이라 다음 릴리스는 0.1.9+11부터 태그와 일치.

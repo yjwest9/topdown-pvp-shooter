@@ -13,7 +13,36 @@
           "package_name": "com.yjseo.topsoldier"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "825779638613-511718g93vnuic4icaofdht1njahfqo0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yjseo.topsoldier",
+            "certificate_hash": "76b35e636e8230d122c2c8015817ee83c25e89e9"
+          }
+        },
+        {
+          "client_id": "825779638613-p5m5s83q5i9jddjt1crl3553odnp9n5j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yjseo.topsoldier",
+            "certificate_hash": "153160d8a7e86dc36e068abb445db2bab75a05c3"
+          }
+        },
+        {
+          "client_id": "825779638613-rrkjvq7i194vrti5h2i9p7b82gkmkelc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yjseo.topsoldier",
+            "certificate_hash": "19d61193a6895bacc709dab6e70024d6d71b019a"
+          }
+        },
+        {
+          "client_id": "825779638613-78omq0e5sn1mgm7bkdsu3tvgccduklcq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDBePDmxN_LpZTHBmLuRMOFDnhTEDIYvh8"
@@ -21,7 +50,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "825779638613-78omq0e5sn1mgm7bkdsu3tvgccduklcq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
