@@ -653,3 +653,7 @@ const botCoverHold = 2.0;
 /// 숨기(엄폐) 시작부터 이 시간(ms)이 지나면 재장전 중이어도 나와 싸운다. 숨은 상대가 발각돼도
 /// 가만히 있어 보이던 문제를 막는다(decisions 12장).
 const botHideMaxMs = 3000;
+
+/// 친구 최대 수와 받은 요청을 한 번에 보여 주는 최대 수(decisions 18장).
+const friendMax = 50;
+const friendRequestMax = 20;

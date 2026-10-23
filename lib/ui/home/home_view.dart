@@ -14,6 +14,7 @@ import '../../rules/upgrade.dart';
 import '../character/character_view.dart';
 import '../character_figure.dart';
 import '../format.dart';
+import '../friends/friends_view.dart';
 import '../loadout/loadout_view.dart';
 import '../loadout/loadout_view_model.dart';
 import '../lobby/lobby_view.dart';
@@ -260,6 +261,7 @@ class _Home extends ConsumerWidget {
                 (Icons.gps_fixed, '무기', const LoadoutView()),
                 (Icons.person, '캐릭터', const CharacterView()),
                 (Icons.storefront, '상점', const ShopView()),
+                (Icons.group, '친구', const FriendsView()),
                 (Icons.settings, '설정', const SettingsView()),
               ])
                 Expanded(

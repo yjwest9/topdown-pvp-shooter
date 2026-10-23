@@ -1,5 +1,11 @@
 # 진행 상황
 
+## 2026-10-24 (친구 2단계 — feat/friends, 병합 전, 1시간 30분에서 멈춤)
+- decisions 18장 "친구" 추가(보낸 요청 색인 `users/{uid}/sentRequests`, 닉네임·레벨 공개 읽기, 받은 요청 20개는 받는 쪽 화면에서 지킴). `rules/friends.dart`(코드 생성·입력 정리·요청 가능 여부·상태·마지막 접속) + `friendMax`·`friendRequestMax`, `FriendRepository`(코드 선점 트랜잭션, 요청·수락·거절·취소·삭제 다중 경로 쓰기, presence onDisconnect), 친구 화면·홈 메뉴 "친구".
+- DB 규칙: friendCodes·friendRequests·users/$uid/friends·friendCode·nickname/level 읽기·presence. `rules_check.sh` 142개 OK(기존 102 + 친구 40). 실서버 배포 안 함.
+- 함께 고친 버그: 첫 실행에 `signIn()`이 동시에 두 번 불리면 익명 계정이 둘 생겨 DB 인증이 엇갈림 → 진행 중 로그인 공유(테스트 추가). `FirebaseRtdbService`가 루트 경로 `''`를 SDK에 넘겨 실패 → `ref()`.
+- 테스트 656개 통과(루트 경로 수정 전 실행), analyze 0. 로컬 웹(8080) 확인: 친구 메뉴·내 코드·복사·익명 안내·형식 오류 안내까지 확인. **남은 것**: 루트 경로 수정 후 요청→수락→목록·거절·취소·삭제·접속 표시·없는 코드/내 코드 안내를 웹에서 다시 확인(두 번째 사용자 스크립트는 scratchpad의 friend_b.sh).
+
 ## 2026-10-24 (노트북 환경 설치)
 - 노트북(i5-1155G7, RAM 7.7GB, C: 하나): Flutter 3.47.7(`C:\Projects\flutter`), Android Studio 2026.2.1(jbr = JDK 25, `C:\Program Files\Android\Android Studio\jbr`), SDK `%LOCALAPPDATA%\Android\Sdk`(platform-tools 37.0.1, build-tools 36.0.0, platforms android-36, emulator 37.2.12, NDK 28.2.13676358, CMake 3.22.1), Node 24.22.1, firebase-tools 15.34.1(yjwest9 로그인, topsoldier 확인). 사용자 환경 변수 `JAVA_HOME`·`ANDROID_HOME`·PATH(jbr\bin, platform-tools, emulator), `flutter config --android-sdk/--jdk-dir`.
 - AVD `Pixel_5_Laptop`(API 35 google_apis_playstore x86_64, RAM 2GB) 만들었으나 부팅 안 됨: 하드웨어 가속 없음(AEHD 미설치, WHPX 미확인·관리자 권한과 재부팅 필요). 메모리도 빠듯해 이 노트북은 웹으로만 확인.

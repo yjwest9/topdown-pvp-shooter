@@ -57,7 +57,9 @@ abstract class RtdbService {
 }
 
 class FirebaseRtdbService implements RtdbService {
-  DatabaseReference _ref(String path) => rtdb.ref(path);
+  // ''는 루트(여러 경로를 한 번에 쓰는 update용). SDK는 빈 경로를 받지 않는다.
+  DatabaseReference _ref(String path) =>
+      path.isEmpty ? rtdb.ref() : rtdb.ref(path);
 
   @override
   Future<Object?> get(String path) async => (await _ref(path).get()).value;

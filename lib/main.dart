@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'data/repositories/auth_repository.dart';
 import 'data/repositories/connection_repository.dart';
+import 'data/repositories/friend_repository.dart';
 import 'data/repositories/room_repository.dart';
 import 'data/services/firebase_setup.dart';
 import 'data/services/push_service.dart';
@@ -35,6 +37,7 @@ class TopSoldierApp extends ConsumerStatefulWidget {
 class _TopSoldierAppState extends ConsumerState<TopSoldierApp>
     with WidgetsBindingObserver {
   bool _wasAway = false;
+  StreamSubscription<Object?>? _online;
 
   ConnectionRepository get _connection =>
       ref.read(roomRepositoryProvider).connection;
@@ -51,11 +54,19 @@ class _TopSoldierAppState extends ConsumerState<TopSoldierApp>
         ),
       );
     } catch (_) {}
+    // 친구 목록의 접속 표시(decisions 18장). 로그인이 안 되면(오프라인·위젯 테스트) 건너뛴다.
+    unawaited(
+      ref.read(authRepositoryProvider).signIn().then((uid) {
+        if (!mounted) return;
+        _online = ref.read(friendRepositoryProvider).keepOnline(uid);
+      }, onError: (_) {}),
+    );
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    unawaited(_online?.cancel());
     super.dispose();
   }
 
