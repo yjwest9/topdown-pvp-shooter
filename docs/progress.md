@@ -1,5 +1,10 @@
 # 진행 상황
 
+## 2026-10-23 (0.1.8+10 Play 업로드 완료)
+- 업로드 키(`C:\Projects\keys\topsoldier-upload.jks`, 저장소 밖)로 `main`의 `6bfc65a`에서 aab 빌드(58.8MB), `jarsigner -verify` 통과 후 사용자가 Play 비공개 테스트에 업로드. `android/key.properties`의 `storeFile`은 이 경로(gitignore, 커밋 안 함).
+- 태그 `v0.1.8`은 `981751c`에 그대로 둠. 업로드한 aab에는 그 뒤 `9c1c509`(결과 화면 두 열)가 더 들어 있어 태그와 코드가 이 한 곳 다름. 같은 versionCode 10이라 다음 릴리스는 0.1.9+11부터 태그와 일치.
+- `chore/release-0.1.8` 로컬 브랜치 삭제(squash로 main에 이미 들어가 있었음). 브랜치는 main 하나.
+
 ## 2026-10-22 (브랜치 정리: 0.1.8·결과 화면 수정 main 병합, 태그 v0.1.8)
 - `chore/release-0.1.8`을 main에 squash 병합(`981751c`, 트리는 빌드한 0.1.8+10과 같음)하고 태그 `v0.1.8`. 이어서 `fix/result-screen-fit` squash 병합. 로컬·원격 브랜치는 main 하나만 남김(`feat/2v2-friendly`는 `90f1ead`와 내용이 같아 삭제).
 - `docs/presentation-prompt.md` 삭제(사용자 요청, 저장소에 둘 문서 아님).
