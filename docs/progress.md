@@ -1,5 +1,12 @@
 # 진행 상황
 
+## 2026-10-24 (노트북 환경 설치)
+- 노트북(i5-1155G7, RAM 7.7GB, C: 하나): Flutter 3.47.7(`C:\Projects\flutter`), Android Studio 2026.2.1(jbr = JDK 25, `C:\Program Files\Android\Android Studio\jbr`), SDK `%LOCALAPPDATA%\Android\Sdk`(platform-tools 37.0.1, build-tools 36.0.0, platforms android-36, emulator 37.2.12, NDK 28.2.13676358, CMake 3.22.1), Node 24.22.1, firebase-tools 15.34.1(yjwest9 로그인, topsoldier 확인). 사용자 환경 변수 `JAVA_HOME`·`ANDROID_HOME`·PATH(jbr\bin, platform-tools, emulator), `flutter config --android-sdk/--jdk-dir`.
+- AVD `Pixel_5_Laptop`(API 35 google_apis_playstore x86_64, RAM 2GB) 만들었으나 부팅 안 됨: 하드웨어 가속 없음(AEHD 미설치, WHPX 미확인·관리자 권한과 재부팅 필요). 메모리도 빠듯해 이 노트북은 웹으로만 확인.
+- `tool/rules_check.sh`(Git Bash + Firebase 로컬 에뮬레이터) 102개 OK. 디버그 apk 빌드 성공(첫 빌드 12분).
+- 이 노트북 디버그 키 지문(Firebase 콘솔 Android 앱에 추가 필요): SHA-1 `BA:81:14:38:67:F2:41:BF:28:5B:3C:96:AC:F0:E5:87:86:42:24:96`, SHA-256 `F7:77:27:E7:09:1A:91:E5:A0:27:49:B0:6D:D2:E8:70:FB:3C:3A:C9:AA:FC:B1:E7:8F:DF:5A:54:72:B6:7B:C3`.
+- 할 수 있는 것: 웹 실행, 테스트, 규칙 확인, 디버그·서명 빌드(`key.properties`와 업로드 키 있음). 못 하는 것: 에뮬레이터. 한국어 로캘에서 jbr keytool `-v`가 오류 나므로 `JAVA_TOOL_OPTIONS=-Duser.language=en`으로 실행.
+
 ## 2026-10-23 (구글 계정 연결 1단계, `feat/google-link`)
 - `google_sign_in ^7.2.0` 추가(사용자 허락). `AuthService`에 `googleEmail`·`linkGoogle`·`switchToGoogle`, 설정 화면 "구글 계정 연결"(이미 쓰는 계정이면 확인 창 → 전환 → `RestartScope`로 앱 상태 재생성). decisions 13장에 기록. 테스트: auth_repository_test, settings_view_test(연결·취소·전환 확인).
 - 콘솔 작업 완료(Chrome으로 진행): Authentication에서 Google 사용 설정(공개용 이름 TOP SOLDIER, 지원 이메일 yjwest9@gmail.com). Android 앱에 SHA 지문 6개 등록: 디버그(이 PC) SHA-1·256, 업로드 키 SHA-1·256, Play 앱 서명 키 SHA-1·256. `google-services.json` 교체(oauth_client: Android 3 + 웹 1). 학교 PC 디버그 키 지문은 아직 안 넣음.
