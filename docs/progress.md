@@ -1,5 +1,13 @@
 # 진행 상황
 
+## 2026-10-30 (친구 웹 확인 다시 — feat/friends, 진행 중)
+- **버그: 웹 에뮬레이터 모드에서 Auth만 실서버로 붙고 있었다**(DB만 에뮬레이터). 증상: 앱 uid가 로컬 DB(`users`·`friendCodes`·`presence`)에는 있는데 Auth 에뮬레이터 목록에는 없음. 사용자가 F12 Network로 `identitytoolkit.googleapis.com` 요청, 실서버 콘솔에 같은 uid가 있는 것까지 확인. 에뮬레이터 DB는 토큰 서명을 안 봐서 겉으로는 정상으로 보였다. 새 Chrome 프로필로 띄워도 같았으므로 프로필(`.dart_tool/chrome-device`)은 원인이 아니었다.
+- 원인: `firebase_auth_web`이 `Firebase.initializeApp` 안에서 Auth를 먼저 초기화하고, 그 뒤의 `useAuthEmulator`는 JS SDK가 `auth/emulator-config-failed`로 거절하는데 플러그인(`firebase_auth_web.dart:566-577`)이 그 오류를 삼킨다. 어떤 요청이 먼저 나가는지는 확인하지 못함(결과로만 확인). 안드로이드는 같은 구조가 아님(코드로만 확인, 실행 안 함).
+- 수정: 웹 + `USE_EMULATOR`면 `initializeApp` 전에 `presetAuthEmulatorOrigin('http://localhost:9099')`로 sessionStorage `[DEFAULT]-firebaseEmulatorOrigin`을 심는다(플러그인이 초기화 때 읽어 먼저 연결). `lib/data/services/auth_emulator_origin{,_stub,_web}.dart`(조건부 import), 새 패키지 없음. 한계: 플러그인 조건상 localhost + 디버그 모드에서만 동작, 플러그인을 올리면 조용히 안 먹을 수 있음. 테스트는 없음(브라우저 JS SDK 초기화 순서라 VM 테스트로 재현 불가).
+- 확인: 고친 뒤 새 Chrome 프로필에서 Auth 에뮬레이터에 앱 uid(`hiigsV5b…`)가 생김, Network 요청 주소 `localhost:9099`, 실서버 콘솔에 그 uid 없음(사용자 확인). `multiplayer-test.md` 3장에 시작 전 확인 절차 추가.
+- **실서버 익명 계정 정리(사용자 몫, 발표 뒤)**: 10/24·10/30 웹 확인 때 실서버 Authentication에 익명 계정이 생겼다. 아는 uid: `2jZMs9gEsxb1c9AF7TT7rHcRGp22`(goat), `peIcON0qQod06Ni6rci5N4WKaKt1`(best). 10/24·10/26 웹 확인 때 생긴 계정은 uid를 모른다(콘솔에서 해당 날짜 생성 익명 계정). 실서버 DB에는 쓰지 않았으므로 `users/{uid}` 정리는 필요 없음(DB는 로컬 에뮬레이터였음). 삭제는 안 했다.
+- 같은 날 `tool/rules_check.sh`에 "남의 무기 읽기"(deny) 추가(160번 줄). 새로 잰 숫자: format 0 changed, analyze 0, test 658개 통과, rules_check 143개 OK(FAIL 0).
+
 ## 2026-10-24 (친구 2단계 — feat/friends, 병합 전, 1시간 30분에서 멈춤)
 - decisions 18장 "친구" 추가(보낸 요청 색인 `users/{uid}/sentRequests`, 닉네임·레벨 공개 읽기, 받은 요청 20개는 받는 쪽 화면에서 지킴). `rules/friends.dart`(코드 생성·입력 정리·요청 가능 여부·상태·마지막 접속) + `friendMax`·`friendRequestMax`, `FriendRepository`(코드 선점 트랜잭션, 요청·수락·거절·취소·삭제 다중 경로 쓰기, presence onDisconnect), 친구 화면·홈 메뉴 "친구".
 - DB 규칙: friendCodes·friendRequests·users/$uid/friends·friendCode·nickname/level 읽기·presence. `rules_check.sh` 142개 OK(기존 102 + 친구 40). 실서버 배포 안 함.

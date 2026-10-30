@@ -156,6 +156,9 @@ check $(req $TA PUT users/$A/friendCode '"TS-ZZZ999"') deny "내 것이 아닌 �
 check $(req $TB GET users/$A/nickname) allow "남의 닉네임 읽기(친구 목록)"
 check $(req $TB GET users/$A/level) allow "남의 레벨 읽기(친구 목록)"
 check $(req $TB GET users/$A/gold) deny "남의 골드 읽기"
+admin PUT users/$A/weapons/rd1 "$W1"
+check $(req $TB GET users/$A/weapons/rd1) deny "남의 무기 읽기"
+admin DELETE users/$A/weapons/rd1
 RQ="{\"name\":\"a\",\"t\":$TS}"
 check $(req $TA PUT friendRequests/$B/$A "$RQ") allow "친구 요청 보내기"
 check $(req $TC PUT friendRequests/$B/$A "$RQ") deny "남인 척 요청 보내기"
