@@ -1,6 +1,19 @@
 # 진행 상황
 
-## 2026-10-30 (친구 웹 확인 다시 — feat/friends, 진행 중)
+## 2026-10-30 (친구 웹 확인 다시 — feat/friends, 병합 전)
+- **친구 흐름 웹 확인 결과(로컬 에뮬레이터 Auth+DB, 실서버 확인은 0.1.9 릴리스 때)**: A = 웹 앱(Chrome 새 프로필, 닉네임 three, 코드 `TS-YC9GJD`, uid `hiigsV5b…`), B = `friend_b.sh`(가짜 참가자 Bravo, Lv7, `TS-BRAV24`, uid `C8KA2g…`, Auth 에뮬레이터 목록에 있음 확인). DB는 `Authorization: Bearer owner`로 조회.
+
+| 흐름 | DB 결과 | 화면 결과(A, 사용자 확인) | 비고 |
+|---|---|---|---|
+| 1. B→A 요청 | `friendRequests/A/B`·`B/sentRequests/A` 생김 | 받은 요청에 Bravo 표시 | |
+| 2. A 수락 | 요청 삭제, 양쪽 `friends`에 서로(`since` 같음) | 친구 목록에 Bravo, 접속 중 | 받은 요청 칸 비워짐·Lv7 표시는 사용자가 따로 말하지 않음(확인됨으로 적지 않음) |
+| 3. 접속 표시 | `presence/B` false→true | 오프라인 ↔ 접속 중으로 바뀜(둘 다 봤음) | 오프라인 때 문구 내용은 기록 못 함 |
+| 4. A가 B 삭제 | 양쪽 `friends` null | 목록에서 사라짐 | |
+| 5. 재요청→A 거절 | `friendRequests/A` null, 양쪽 friends 없음 | 요청 사라짐, 목록 비어 있음 | |
+| 6. A→B 요청→A 취소 | 도착(`friendRequests/B/A`, `A/sentRequests/B`) 후 둘 다 null | 취소 후 보낸 요청에서 사라짐 | 요청 직후 보낸 요청 칸 표시는 사용자가 따로 말하지 않음 |
+
+- 막혀야 하는 것은 `rules_check` 케이스로 갈음(143개 OK): "요청 없이 남의 친구 목록에 쓰기", "보낸 사람이 상대 목록에 쓰기(수락 전)", "남의 프로필 읽기", "남의 골드 읽기", "남의 무기 읽기"(이번에 추가) 모두 deny.
+- 못 한 것: 앱 B(두 번째 클라이언트)가 없어 **보낸 사람 앱이 `sentRequests` 색인을 지우는 동작**은 확인 못 함(가짜 B는 스크립트라 남음, decisions 18장 설계). 이전 기록의 "없는 코드/내 코드 안내", 접속 끊김(`onDisconnect`) 표시는 이번 흐름 범위 밖이라 안 함. 범위 밖: 초대 버튼(3단계).
 - **버그: 웹 에뮬레이터 모드에서 Auth만 실서버로 붙고 있었다**(DB만 에뮬레이터). 증상: 앱 uid가 로컬 DB(`users`·`friendCodes`·`presence`)에는 있는데 Auth 에뮬레이터 목록에는 없음. 사용자가 F12 Network로 `identitytoolkit.googleapis.com` 요청, 실서버 콘솔에 같은 uid가 있는 것까지 확인. 에뮬레이터 DB는 토큰 서명을 안 봐서 겉으로는 정상으로 보였다. 새 Chrome 프로필로 띄워도 같았으므로 프로필(`.dart_tool/chrome-device`)은 원인이 아니었다.
 - 원인: `firebase_auth_web`이 `Firebase.initializeApp` 안에서 Auth를 먼저 초기화하고, 그 뒤의 `useAuthEmulator`는 JS SDK가 `auth/emulator-config-failed`로 거절하는데 플러그인(`firebase_auth_web.dart:566-577`)이 그 오류를 삼킨다. 어떤 요청이 먼저 나가는지는 확인하지 못함(결과로만 확인). 안드로이드는 같은 구조가 아님(코드로만 확인, 실행 안 함).
 - 수정: 웹 + `USE_EMULATOR`면 `initializeApp` 전에 `presetAuthEmulatorOrigin('http://localhost:9099')`로 sessionStorage `[DEFAULT]-firebaseEmulatorOrigin`을 심는다(플러그인이 초기화 때 읽어 먼저 연결). `lib/data/services/auth_emulator_origin{,_stub,_web}.dart`(조건부 import), 새 패키지 없음. 한계: 플러그인 조건상 localhost + 디버그 모드에서만 동작, 플러그인을 올리면 조용히 안 먹을 수 있음. 테스트는 없음(브라우저 JS SDK 초기화 순서라 VM 테스트로 재현 불가).
