@@ -1,5 +1,36 @@
 # 진행 상황
 
+## 2026-11-02 (0.1.9 출시 전 버그 수정: 친구 목록이 비어 보임 — chore/release-0.1.9)
+- 증상(실서버 흐름 4): 구글 연결 뒤 친구 목록이 비어 보임. **구글 연결과 무관했다.** 로컬 에뮬레이터에서 구글 연결 없이도, DB에 친구가 이미 있는 계정으로 앱을 새로 열면 `친구 (0/50)`으로 재현됨(`users/{uid}/friends`는 앱 토큰으로 읽혀 권한 문제 아님, 스트림은 친구를 정상 전달).
+- 원인: `lib/ui/friends/friends_view_model.dart`의 `state = state.copyWith(code: await _repo.myCode(me));` 에서 Dart는 `state`를 `await`보다 먼저 읽는다. 코드를 기다리는 사이 도착한 친구·요청이 오래된 상태(빈 목록)로 덮어써짐. 이전 흐름들은 친구가 없는 상태에서 시작해 드러나지 않았고, 실서버는 지연이 길어 항상 졌다.
+- 수정: `final code = await ...; state = state.copyWith(code: code);` (화면 변화 없음). 같은 패턴(`await` 앞에서 state 읽기)을 lib 전체에서 찾았고 이 한 곳뿐. 구글 연결 뒤 골드·무기 등 다른 화면이 안 불러오는 문제는 같은 원인이 아니고, 코드상 연결로 상태를 비우는 곳은 없음(연결은 uid 그대로, `RestartScope`는 계정 전환 때만).
+- 테스트: `friends already in the DB survive the code load`(수정 전 실패 확인 → 수정 후 통과). 숫자: format 0 changed, analyze 0, test 659개 통과, rules_check 143개 OK.
+- 확인: 에뮬레이터 모드 웹에서 가짜 친구(Bravo) 시드 + 에뮬레이터 Auth API로 구글 연결(같은 uid, `google.com`) → 새로고침 → 친구 화면 `친구 (1/50)`, Bravo Lv.7, 접속 중. 브라우저 조작은 Claude in Chrome으로 직접 함(사용자 확인 불필요). 한계: 구글 로그인 팝업 자체는 안 거침(서버 쪽 연결만), 실서버·안드로이드는 재확인 안 함. 실서버의 두 테스트 계정은 이미 지웠으므로 실서버에서의 수정 확인은 0.1.9 설치 뒤.
+- 새 aab: `build/app/outputs/bundle/release/app-release.aab`(60.0MB, 2026-11-02 18:27 빌드), `jarsigner -verify` 통과, 서명 CN=youngjun seo·SHA-256 `F7:3C:72:7D…:CA:63`(업로드 키). 릴리스 apk 정적 확인: versionCode 11 / 0.1.9, minSdk 24, targetSdk 36, 권한 1부와 동일.
+
+## 2026-11-02 (0.1.9+11 릴리스 2부 — 실서버 규칙 배포·웹 확인, chore/release-0.1.9)
+- **규칙 배포: 2026-11-02 17:01:47~17:01:56(KST)** `firebase deploy --only database`. 배포 직전 비교가 1부와 같은 친구 경로 추가 16개뿐임을 확인했고, 배포 뒤 실서버 규칙을 다시 받아 저장소와 비교해 차이 0.
+- Play 앱 서명 키 SHA-1 `76:B3:5E:63…:89:E9`는 Firebase 안드로이드 앱 SHA-1 목록에 등록돼 있음(업로드 키 `15:31:60:D8…`도 등록, 나머지 `19:D6:11:93…`은 다른 PC 디버그 키로 추정, 이 노트북 디버그 키 `BA:81:14:38…`는 미등록).
+- **실서버 웹 확인**(에뮬레이터 없이, 새 Chrome 프로필 둘). 시작 전 `identitytoolkit.googleapis.com`(실서버) 사용자 확인. 테스트 계정: A `RelA` uid `qkWuGf733vWhPxsn0RN4TrDGcId2` 코드 `TS-RFESM9`, B `RelB` uid `QCU7pFHkwMe63mf7JH38N05HChx1` 코드 `TS-AD9KRB`.
+
+| 흐름 | DB | 화면(사용자 확인) |
+|---|---|---|
+| 1. B→A 요청 | `friendRequests/A/B`, `B/sentRequests/A` 생김 | B 보낸 요청에 RelA, A 받은 요청에 RelB |
+| 2. A 수락 | 요청·`sentRequests` null, 양쪽 `friends`에 서로(`since` 같음) | 양쪽 친구 목록에 서로, 접속 중, B 보낸 요청에서 사라짐 |
+| 3. B 창 닫기 | `presence/B` online:false, lastSeen 갱신(onDisconnect 동작) | A 화면에서 B가 오프라인으로 바뀜 |
+| 4. A 구글 연결 | A uid 그대로, Auth 로그인 방식 google.com, 새 계정 없음, 닉네임·코드·`friends` DB 그대로 | 연결 성공, 닉네임·코드 그대로, "이미 쓰는 계정" 문구 안 뜸. **버그: 친구 목록이 비어 보임**(RelB 안 보임) |
+
+- **버그(고치지 않고 기록, 릴리스 판단은 PM·사용자)**: 구글 연결 직후 A의 친구 화면에 친구가 하나도 안 보인다. 친구 화면을 나갔다 들어와도, 새로고침해도 마찬가지. DB `users/A/friends`에는 RelB가 있고 F12 Console에 빨간 오류 없음. 원인은 모름(권한 거부는 아님). 골드가 0이라 "골드 유지"는 약한 확인. 에뮬레이터 모드에서는 구글 연결을 안 해 봤으므로 연결 때문에 생기는 문제인지 구분 못 함.
+- **실서버 DB 정리(사용자 "확인" 받음)**: `/users/{A}`, `/users/{B}`, `/friendCodes/TS-RFESM9`, `/friendCodes/TS-AD9KRB`, `/presence/{A}`, `/presence/{B}` 삭제. 삭제 뒤 `friendCodes`·`presence`·`friendRequests` null, `users` 17→15명. `rooms` 5개는 이번 테스트가 아니라 건드리지 않음.
+- **Authentication 계정은 안 지움**(사용자가 콘솔에서): `qkWuGf733vWhPxsn0RN4TrDGcId2`(google.com 연결됨), `QCU7pFHkwMe63mf7JH38N05HChx1`(익명). 이전 기록의 정리 대상(10/22·10/24·10/30 계정)도 그대로 남아 있음.
+
+## 2026-11-02 (0.1.9+11 릴리스 1부 — chore/release-0.1.9, 병합·태그·Play 업로드 전)
+- main `6bc6936`에서 브랜치. 검사: format 0 changed, analyze 0, test 658개 통과, rules_check 143개 OK. 이번 릴리스는 사용자 결정으로 기기·에뮬레이터 실행 없음(정적 확인으로 대신).
+- 실서버 규칙 비교(읽기만, 배포 안 함): 저장소 규칙이 실서버보다 **추가만** 있고 전부 친구 경로(`users/$uid/nickname·level .read`, `friendCode .validate`, `friends/$fid`, `friendCodes`, `friendRequests`, `presence`). 기존 경로 규칙은 그대로. 넓어진 권한: 로그인한 누구나 남의 nickname·level 읽기, 수락 대상이 자기 항목을 상대 `friends`에 쓰기(요청이 있을 때만). 0.1.8 앱은 이 경로를 안 써서 영향 없음. **실서버 배포는 아직 안 함**(0.1.9 앱을 올리기 전에 배포 필요).
+- SHA 지문(`apps:android:sha:list`): SHA-1 3개·SHA-256 3개 등록. 업로드 키 SHA-1 `15:31:60:D8…:05:C3`, SHA-256 `F7:3C:72:7D…:CA:63` 둘 다 목록에 있음.
+- 빌드: `app-release.aab` 60.0MB, `jarsigner -verify` 통과, 서명 CN=youngjun seo(업로드 키)와 SHA-256 일치. 릴리스 apk로 정적 확인: com.yjseo.topsoldier, versionCode 11 / 0.1.9, minSdk 24, targetSdk 36.
+- 권한: v0.1.8을 같은 설정으로 빌드해 비교 → 추가된 것은 `USE_BIOMETRIC`, `USE_FINGERPRINT` 두 개뿐(둘 다 일반 권한, 설치 시 창 없음). 출처는 androidx.biometric 1.1.0(병합 매니페스트 리포트로 확인). 0.1.8 이후 추가된 패키지는 google_sign_in뿐이라 그 전이 의존으로 추정(의존 경로는 안 따라가 봄). 막으려면 매니페스트에 `tools:node="remove"`가 필요하나 이번엔 안 함.
+
 ## 2026-11-02 (feat/friends main 병합)
 - `feat/friends`를 main에 squash 병합(`6a9028b`, "feat: 친구 2단계(코드·요청·목록·접속) + 웹 에뮬레이터 Auth 수정")하고 push. 병합 트리는 `feat/friends`(`f86494a`)와 같다. `feat/friends` 브랜치는 로컬·원격 모두 남겨 둠.
 - 병합한 main에서 새로 잰 숫자: format 0 changed, analyze 0, test 658개 통과, rules_check 143개 OK(FAIL 0).

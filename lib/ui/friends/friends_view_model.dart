@@ -103,7 +103,9 @@ class FriendsViewModel extends Notifier<FriendsState> {
             }
           }),
         ]);
-        state = state.copyWith(code: await _repo.myCode(me));
+        // await 뒤에 state를 읽어야 그 사이 도착한 친구·요청이 안 지워진다.
+        final code = await _repo.myCode(me);
+        state = state.copyWith(code: code);
       } catch (e) {
         debugPrint('친구 화면 불러오기 실패: $e');
       }

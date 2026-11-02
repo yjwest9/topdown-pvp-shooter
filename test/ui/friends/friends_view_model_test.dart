@@ -45,6 +45,14 @@ void main() {
     expect(a.read(friendsProvider).anonymous, isTrue);
   });
 
+  test('friends already in the DB survive the code load', () async {
+    await db.set('users/a/friends/b', {'since': 1});
+    final a = device('a');
+    await codeOf(a);
+    await pumpEventQueue();
+    expect(a.read(friendsProvider).friends, {'b'});
+  });
+
   test('A sends to B → B accepts → both friends, lists clean', () async {
     final a = device('a'), b = device('b');
     final bCode = await codeOf(b);
