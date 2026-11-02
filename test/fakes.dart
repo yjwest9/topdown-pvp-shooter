@@ -189,7 +189,7 @@ class FakeRtdbService implements RtdbService {
   Future<void> update(String path, Map<String, Object?> value) async {
     // 실제 RTDB처럼 한 번에 적용하고 한 번만 알린다.
     for (final e in value.entries) {
-      _write('$path/${e.key}', e.value, notify: false);
+      _write(path.isEmpty ? e.key : '$path/${e.key}', e.value, notify: false);
     }
     _changed.add(null);
   }

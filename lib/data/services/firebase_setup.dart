@@ -4,6 +4,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../firebase_options.dart';
+import 'auth_emulator_origin.dart';
 
 /// 앱이 쓰는 Realtime Database. [initFirebase] 뒤에 쓴다.
 FirebaseDatabase get rtdb => _rtdb ?? FirebaseDatabase.instance;
@@ -13,6 +14,9 @@ FirebaseDatabase? _rtdb;
 /// 안드로이드 에뮬레이터에서 PC의 localhost는 10.0.2.2.
 Future<void> initFirebase({required bool useEmulator}) async {
   final options = DefaultFirebaseOptions.currentPlatform;
+  if (useEmulator && kIsWeb) {
+    presetAuthEmulatorOrigin('http://localhost:9099');
+  }
   await Firebase.initializeApp(options: options);
   if (!useEmulator) return;
   if (kIsWeb) {

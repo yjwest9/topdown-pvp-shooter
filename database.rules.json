@@ -45,8 +45,17 @@
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid",
-        "nickname": { ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 12" },
-        "level": { ".validate": "newData.isNumber() && newData.val() >= 1" },
+        // 친구 목록에 보이는 닉네임·레벨만 로그인한 누구나 읽는다(decisions 18장).
+        "nickname": { ".read": "auth != null", ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 12" },
+        "level": { ".read": "auth != null", ".validate": "newData.isNumber() && newData.val() >= 1" },
+        "friendCode": { ".validate": "newData.isString() && root.child('friendCodes/' + newData.val()).val() === $uid" },
+        // 본인 쓰기는 위 users/$uid. 상대는 나에게 받은 요청을 수락할 때만 쓰고, 언제든 지울 수 있다.
+        "friends": {
+          "$fid": {
+            ".write": "auth != null && auth.uid === $fid && auth.uid !== $uid && (!newData.exists() || (!data.exists() && root.child('friendRequests/' + auth.uid + '/' + $uid).exists()))",
+            ".validate": "newData.hasChildren(['since']) && newData.child('since').isNumber() && (newData.child('since').val() === now || newData.child('since').val() === data.child('since').val())"
+          }
+        },
         "exp": { ".validate": "newData.isNumber() && newData.val() >= 0" },
         "gold": { ".validate": "newData.isNumber() && newData.val() >= 0" },
         "diamond": { ".validate": "newData.isNumber() && newData.val() >= 0" },
@@ -82,6 +91,34 @@
           ".read": "auth != null",
           ".write": "auth != null && ((!newData.exists() && data.child('uid').val() === auth.uid) || (newData.child('uid').val() === auth.uid && newData.child('t').isNumber() && newData.child('t').val() <= now + 5000 && (((!data.exists() || data.child('t').val() < now - 15000) && !newData.child('takenBy').exists()) || (data.child('uid').val() === auth.uid && (!newData.child('takenBy').exists() || newData.child('takenBy').val() === data.child('takenBy').val())))) || (data.exists() && data.child('uid').val() !== auth.uid && !data.child('takenBy').exists() && newData.child('takenBy').val() === auth.uid && newData.child('uid').val() === data.child('uid').val() && newData.child('roomId').val() === data.child('roomId').val() && newData.child('name').val() === data.child('name').val() && newData.child('t').val() === data.child('t').val()))"
         }
+      }
+    },
+    // 친구(decisions 18장).
+    "friendCodes": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.val() === auth.uid) || (data.val() === auth.uid && !newData.exists()))",
+        ".validate": "$code.matches(/^TS-[A-HJ-NP-Z2-9]{6}$/) && newData.isString()"
+      }
+    },
+    "friendRequests": {
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$from": {
+          ".read": "auth != null && auth.uid === $from",
+          ".write": "auth != null && $from !== $to && (auth.uid === $from || (auth.uid === $to && !newData.exists()))",
+          ".validate": "newData.hasChildren(['name', 't']) && newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 12 && newData.child('t').val() === now",
+          "name": {},
+          "t": {},
+          "$other": { ".validate": false }
+        }
+      }
+    },
+    "presence": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['online', 'lastSeen']) && newData.child('online').isBoolean() && newData.child('lastSeen').isNumber()"
       }
     }
   }

@@ -19,7 +19,17 @@ class AuthRepository {
   /// 임시 닉네임 "Soldier" + 4자리. 닉네임 입력은 나중.
   late final String nickname = 'Soldier${1000 + _random.nextInt(9000)}';
 
-  Future<String> signIn() async => uid ??= await _auth.signInAnonymously();
+  Future<String>? _pending;
+
+  /// 동시에 불려도 로그인은 한 번만(첫 실행에 익명 계정이 둘 생기면 DB 인증이 엇갈린다).
+  Future<String> signIn() async {
+    if (uid case final u?) return u;
+    try {
+      return uid = await (_pending ??= _auth.signInAnonymously());
+    } finally {
+      _pending = null;
+    }
+  }
 
   /// 연결된 구글 이메일. 연결 안 됐으면 null.
   String? get googleEmail => _auth.googleEmail;

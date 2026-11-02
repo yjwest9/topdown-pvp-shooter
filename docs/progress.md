@@ -1,5 +1,45 @@
 # 진행 상황
 
+## 2026-11-02 (보낸 요청 목록 정리 확인 — feat/friends, 병합 전)
+- 두 번째 클라이언트로 `forgetSent`(보낸 사람 앱이 `sentRequests` 색인을 지우는 동작)를 확인. 웹 앱 하나(localhost:8080)를 새 Chrome 프로필 두 개로 열었다(A `Aaa`, B `Bbb`). 로컬 Auth+DB 에뮬레이터. 시작 전 점검: Network `identitytoolkit` 요청이 `localhost:9099`(사용자 확인), Auth 에뮬레이터 목록(projectId `topsoldier`)에 A·B uid 둘 다 있고 DB `users`와 일치.
+
+| 흐름 | DB 결과 | 화면 결과(사용자 확인) |
+|---|---|---|
+| 1. B→A 요청 | `friendRequests/A/B`, `B/sentRequests/A` 생김 | B 보낸 요청에 Aaa, A 받은 요청에 Bbb |
+| 2. A 거절 | `friendRequests`·`B/sentRequests` null, 친구 없음 | B 보낸 요청에서 새로고침 없이 바로 사라짐, 새로고침 후에도 없음 |
+| 3. 재요청→A 수락 | 요청·`sentRequests` 모두 null, 양쪽 `friends`에 서로(`since` 같음) | B 보낸 요청에서 사라짐, 양쪽 친구 목록에 서로 표시 |
+
+- 버그 없음, 코드 변경 없음. 숫자: format 0 changed, analyze 0, test 658개 통과, rules_check 143개 OK(FAIL 0).
+- 못 한 것: 접속 끊김(`onDisconnect`) 표시, 없는 코드/내 코드 안내(범위 밖), 실서버 확인(0.1.9 때).
+- 환경 메모: 시스템 `java`는 25(JDK 21 권장이지만 이번 에뮬레이터는 정상 기동). `rules_check.sh`는 에뮬레이터를 켜 둔 상태에서 돌려야 한다(꺼져 있으면 허용 케이스가 전부 FAIL로 나옴).
+
+## 2026-10-30 (친구 웹 확인 다시 — feat/friends, 병합 전)
+- **친구 흐름 웹 확인 결과(로컬 에뮬레이터 Auth+DB, 실서버 확인은 0.1.9 릴리스 때)**: A = 웹 앱(Chrome 새 프로필, 닉네임 three, 코드 `TS-YC9GJD`, uid `hiigsV5b…`), B = `friend_b.sh`(가짜 참가자 Bravo, Lv7, `TS-BRAV24`, uid `C8KA2g…`, Auth 에뮬레이터 목록에 있음 확인). DB는 `Authorization: Bearer owner`로 조회.
+
+| 흐름 | DB 결과 | 화면 결과(A, 사용자 확인) | 비고 |
+|---|---|---|---|
+| 1. B→A 요청 | `friendRequests/A/B`·`B/sentRequests/A` 생김 | 받은 요청에 Bravo 표시 | |
+| 2. A 수락 | 요청 삭제, 양쪽 `friends`에 서로(`since` 같음) | 친구 목록에 Bravo, 접속 중 | 받은 요청 칸 비워짐·Lv7 표시는 사용자가 따로 말하지 않음(확인됨으로 적지 않음) |
+| 3. 접속 표시 | `presence/B` false→true | 오프라인 ↔ 접속 중으로 바뀜(둘 다 봤음) | 오프라인 때 문구 내용은 기록 못 함 |
+| 4. A가 B 삭제 | 양쪽 `friends` null | 목록에서 사라짐 | |
+| 5. 재요청→A 거절 | `friendRequests/A` null, 양쪽 friends 없음 | 요청 사라짐, 목록 비어 있음 | |
+| 6. A→B 요청→A 취소 | 도착(`friendRequests/B/A`, `A/sentRequests/B`) 후 둘 다 null | 취소 후 보낸 요청에서 사라짐 | 요청 직후 보낸 요청 칸 표시는 사용자가 따로 말하지 않음 |
+
+- 막혀야 하는 것은 `rules_check` 케이스로 갈음(143개 OK): "요청 없이 남의 친구 목록에 쓰기", "보낸 사람이 상대 목록에 쓰기(수락 전)", "남의 프로필 읽기", "남의 골드 읽기", "남의 무기 읽기"(이번에 추가) 모두 deny.
+- 못 한 것: 앱 B(두 번째 클라이언트)가 없어 **보낸 사람 앱이 `sentRequests` 색인을 지우는 동작**은 확인 못 함(가짜 B는 스크립트라 남음, decisions 18장 설계). 이전 기록의 "없는 코드/내 코드 안내", 접속 끊김(`onDisconnect`) 표시는 이번 흐름 범위 밖이라 안 함. 범위 밖: 초대 버튼(3단계).
+- **버그: 웹 에뮬레이터 모드에서 Auth만 실서버로 붙고 있었다**(DB만 에뮬레이터). 증상: 앱 uid가 로컬 DB(`users`·`friendCodes`·`presence`)에는 있는데 Auth 에뮬레이터 목록에는 없음. 사용자가 F12 Network로 `identitytoolkit.googleapis.com` 요청, 실서버 콘솔에 같은 uid가 있는 것까지 확인. 에뮬레이터 DB는 토큰 서명을 안 봐서 겉으로는 정상으로 보였다. 새 Chrome 프로필로 띄워도 같았으므로 프로필(`.dart_tool/chrome-device`)은 원인이 아니었다.
+- 원인: `firebase_auth_web`이 `Firebase.initializeApp` 안에서 Auth를 먼저 초기화하고, 그 뒤의 `useAuthEmulator`는 JS SDK가 `auth/emulator-config-failed`로 거절하는데 플러그인(`firebase_auth_web.dart:566-577`)이 그 오류를 삼킨다. 어떤 요청이 먼저 나가는지는 확인하지 못함(결과로만 확인). 안드로이드는 같은 구조가 아님(코드로만 확인, 실행 안 함).
+- 수정: 웹 + `USE_EMULATOR`면 `initializeApp` 전에 `presetAuthEmulatorOrigin('http://localhost:9099')`로 sessionStorage `[DEFAULT]-firebaseEmulatorOrigin`을 심는다(플러그인이 초기화 때 읽어 먼저 연결). `lib/data/services/auth_emulator_origin{,_stub,_web}.dart`(조건부 import), 새 패키지 없음. 한계: 플러그인 조건상 localhost + 디버그 모드에서만 동작, 플러그인을 올리면 조용히 안 먹을 수 있음. 테스트는 없음(브라우저 JS SDK 초기화 순서라 VM 테스트로 재현 불가).
+- 확인: 고친 뒤 새 Chrome 프로필에서 Auth 에뮬레이터에 앱 uid(`hiigsV5b…`)가 생김, Network 요청 주소 `localhost:9099`, 실서버 콘솔에 그 uid 없음(사용자 확인). `multiplayer-test.md` 3장에 시작 전 확인 절차 추가.
+- **실서버 익명 계정 정리(사용자 몫, 발표 뒤)**: 10/24·10/30 웹 확인 때 실서버 Authentication에 익명 계정이 생겼다. 아는 uid: `2jZMs9gEsxb1c9AF7TT7rHcRGp22`(goat), `peIcON0qQod06Ni6rci5N4WKaKt1`(best). 10/24·10/26 웹 확인 때 생긴 계정은 uid를 모른다(콘솔에서 해당 날짜 생성 익명 계정). 실서버 DB에는 쓰지 않았으므로 `users/{uid}` 정리는 필요 없음(DB는 로컬 에뮬레이터였음). 삭제는 안 했다.
+- 같은 날 `tool/rules_check.sh`에 "남의 무기 읽기"(deny) 추가(160번 줄). 새로 잰 숫자: format 0 changed, analyze 0, test 658개 통과, rules_check 143개 OK(FAIL 0).
+
+## 2026-10-24 (친구 2단계 — feat/friends, 병합 전, 1시간 30분에서 멈춤)
+- decisions 18장 "친구" 추가(보낸 요청 색인 `users/{uid}/sentRequests`, 닉네임·레벨 공개 읽기, 받은 요청 20개는 받는 쪽 화면에서 지킴). `rules/friends.dart`(코드 생성·입력 정리·요청 가능 여부·상태·마지막 접속) + `friendMax`·`friendRequestMax`, `FriendRepository`(코드 선점 트랜잭션, 요청·수락·거절·취소·삭제 다중 경로 쓰기, presence onDisconnect), 친구 화면·홈 메뉴 "친구".
+- DB 규칙: friendCodes·friendRequests·users/$uid/friends·friendCode·nickname/level 읽기·presence. `rules_check.sh` 142개 OK(기존 102 + 친구 40). 실서버 배포 안 함.
+- 함께 고친 버그: 첫 실행에 `signIn()`이 동시에 두 번 불리면 익명 계정이 둘 생겨 DB 인증이 엇갈림 → 진행 중 로그인 공유(테스트 추가). `FirebaseRtdbService`가 루트 경로 `''`를 SDK에 넘겨 실패 → `ref()`.
+- 테스트 656개 통과(루트 경로 수정 전 실행), analyze 0. 로컬 웹(8080) 확인: 친구 메뉴·내 코드·복사·익명 안내·형식 오류 안내까지 확인. **남은 것**: 루트 경로 수정 후 요청→수락→목록·거절·취소·삭제·접속 표시·없는 코드/내 코드 안내를 웹에서 다시 확인(두 번째 사용자 스크립트는 scratchpad의 friend_b.sh).
+
 ## 2026-10-24 (노트북 환경 설치)
 - 노트북(i5-1155G7, RAM 7.7GB, C: 하나): Flutter 3.47.7(`C:\Projects\flutter`), Android Studio 2026.2.1(jbr = JDK 25, `C:\Program Files\Android\Android Studio\jbr`), SDK `%LOCALAPPDATA%\Android\Sdk`(platform-tools 37.0.1, build-tools 36.0.0, platforms android-36, emulator 37.2.12, NDK 28.2.13676358, CMake 3.22.1), Node 24.22.1, firebase-tools 15.34.1(yjwest9 로그인, topsoldier 확인). 사용자 환경 변수 `JAVA_HOME`·`ANDROID_HOME`·PATH(jbr\bin, platform-tools, emulator), `flutter config --android-sdk/--jdk-dir`.
 - AVD `Pixel_5_Laptop`(API 35 google_apis_playstore x86_64, RAM 2GB) 만들었으나 부팅 안 됨: 하드웨어 가속 없음(AEHD 미설치, WHPX 미확인·관리자 권한과 재부팅 필요). 메모리도 빠듯해 이 노트북은 웹으로만 확인.

@@ -34,6 +34,8 @@ flutter run -d chrome --dart-define=USE_EMULATOR=true
 ```
 
 - 크롬은 `localhost`로 접속한다.
+- **시작 전에 먼저 확인**: 앱을 연 뒤 F12 → Network → 필터 `identitytoolkit` → F5. 요청 주소가 `localhost:9099`여야 한다(`identitytoolkit.googleapis.com`이면 로그인이 실서버로 간 것). 보조 확인: Auth 에뮬레이터 `accounts:batchGet`(헤더 `Authorization: Bearer owner`)에 앱 uid가 있어야 한다. DB는 에뮬레이터라도 토큰 서명을 안 봐서 Auth가 실서버여도 화면은 멀쩡해 보인다.
+- 이 보장은 `lib/data/services/auth_emulator_origin_web.dart`가 플러그인(firebase_auth_web)이 읽는 sessionStorage 값을 심는 데 기대고 있다. 플러그인을 올리면 이 수정이 조용히 안 먹을 수 있으니, 올린 뒤에는 위 확인을 다시 한다.
 - 웹 조작: WASD 이동, ←→ 회전, Space 점프, C 앉기, Shift 달리기, ↑ 사격.
 
 ## 4. 1대1 순서
