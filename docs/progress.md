@@ -1,5 +1,10 @@
 # 진행 상황
 
+## 2026-11-02 (feat/friends main 병합)
+- `feat/friends`를 main에 squash 병합(`6a9028b`, "feat: 친구 2단계(코드·요청·목록·접속) + 웹 에뮬레이터 Auth 수정")하고 push. 병합 트리는 `feat/friends`(`f86494a`)와 같다. `feat/friends` 브랜치는 로컬·원격 모두 남겨 둠.
+- 병합한 main에서 새로 잰 숫자: format 0 changed, analyze 0, test 658개 통과, rules_check 143개 OK(FAIL 0).
+- 실서버 규칙 미배포, 실서버 확인은 0.1.9 때. 태그·버전 변경 없음.
+
 ## 2026-11-02 (보낸 요청 목록 정리 확인 — feat/friends, 병합 전)
 - 두 번째 클라이언트로 `forgetSent`(보낸 사람 앱이 `sentRequests` 색인을 지우는 동작)를 확인. 웹 앱 하나(localhost:8080)를 새 Chrome 프로필 두 개로 열었다(A `Aaa`, B `Bbb`). 로컬 Auth+DB 에뮬레이터. 시작 전 점검: Network `identitytoolkit` 요청이 `localhost:9099`(사용자 확인), Auth 에뮬레이터 목록(projectId `topsoldier`)에 A·B uid 둘 다 있고 DB `users`와 일치.
 
