@@ -1,5 +1,24 @@
 # 진행 상황
 
+## 2026-11-04 (0.1.9 친구 목록 수정 실서버 웹 확인 — docs/verify-friends-live, 코드 변경 없음)
+- **0.1.9+11은 Google Play 검토를 통과했다**(11/04 확인). 테스터 제보 없음. 0.1.9 출시 기록(11/02)에는 "검토 중"이라는 문구가 없어 고칠 곳이 없었다(그 기록은 업로드 사실만 적고 있다). 106행 근처의 "검토 중인 0.1.8"은 0.1.8 때 기록이라 그대로 둠.
+- **남은 확인 ②(실서버 친구 목록 수정) 처리됨: 통과.** ①(안드로이드 구글 로그인), ③(안드로이드 친구 흐름·접속 표시)은 그대로 남아 있다.
+- 방법: `flutter run`을 실서버 모드(`USE_EMULATOR` 없음)로 1개, 참가자 둘은 크롬 프로필 둘. A = TestA(uid `nadx1d9tyDhVmAnNVG9S2sgDU622`, 코드 `TS-75639N`), B = VerB(uid `PXQLlaOgwabEIMf46BkRHW1FEd42`, 코드 `TS-BWVFMF`). 둘 다 익명.
+- 시작 전 점검: B 창 Network에서 Auth 요청이 `identitytoolkit.googleapis.com`(실서버)이고 `localhost:9099`는 없음. **DB 주소는 웹소켓이라 Network 목록으로 확인하지 못했다**(에뮬레이터 플래그 없이 띄웠고, 실서버 DB에서 두 계정 데이터가 조회돼 실서버로 갔음을 사후 확인). A 창의 Network는 사용자가 직접 보지 않았다.
+
+| 항목 | 결과 | 근거 |
+|---|---|---|
+| 1. 익명 입장·uid | 통과 | 위 uid 둘(둘 다 `isAnonymous`, B는 IndexedDB 값, A는 사용자가 Console에서 읽어 준 값) |
+| 2. 요청→수락 | 통과 | A가 B 코드로 요청 → B 받은 요청에 TestA → 수락 → B 친구 (1/50) TestA 접속 중, A에도 VerB 표시(사용자 확인). DB에서 두 `friends`에 서로, `friendRequests` null |
+| 3. 새로고침 3번 | 통과 | B: 3번 모두 `친구 (1/50)`, TestA 접속 중으로 바로 표시(화면 확인). A: F5 3번 모두 정상 표시(사용자 확인). 이번 수정의 핵심 |
+| 4. 창 닫기→오프라인 | 통과 | B 연결을 끊자 A 화면에서 VerB가 오프라인 표시로 바뀜(사용자 확인). DB `presence/B` `online:false` |
+
+- **도구 문제(앱 버그 아님으로 추정, 검증은 안 함)**: `flutter run -d chrome`이 띄운 A 창은 F5를 하거나 주소를 다시 열면 화면이 안 떴다(Console 빨간 오류 없음, 서버는 응답). 같은 서버를 연 B(일반 크롬)는 새로고침 3번 다 정상. 그래서 서버를 `flutter run -d web-server`로 바꿔 띄우고 A는 같은 프로필을 일반 크롬으로 열어 A의 F5 3번을 확인했다. 즉 항목 3의 A쪽은 디버그 연결이 없는 모드에서 한 확인이다.
+- 관찰: B 새로고침 직후 잠깐 닉네임이 기본값(`Soldier7648`)으로 보였다가 `VerB`로 바뀜(uid는 그대로). 로딩 중 임시 표시로 보이며 기록만 한다.
+- **실서버 DB 정리(사용자 "확인" 받음, 삭제 뒤 재조회 전부 null)**: `/users/{A}`, `/users/{B}`, `/friendCodes/TS-75639N`, `/friendCodes/TS-BWVFMF`, `/presence/{A}`, `/presence/{B}`. `friendRequests`는 원래 비어 있었다. `rooms`·다른 사용자는 건드리지 않음.
+- **Authentication 계정은 안 지움**(사용자가 콘솔에서): `nadx1d9tyDhVmAnNVG9S2sgDU622`, `PXQLlaOgwabEIMf46BkRHW1FEd42`(둘 다 익명). 이전 기록의 정리 대상도 그대로 남아 있음.
+- 코드·테스트·빌드·규칙 배포 없음(format/analyze/test 안 돌림).
+
 ## 2026-11-02 (0.1.9+11 출시: Play 비공개 테스트 업로드, main 병합, 태그 v0.1.9)
 - 사용자가 2026-11-02에 `app-release.aab`(versionCode 11, versionName 0.1.9, 18:27 빌드, 업로드 키 서명)를 Play 비공개 테스트에 올림. `chore/release-0.1.9`를 main에 squash 병합(`5ad571a`)하고 태그 `v0.1.9`를 이 커밋에 붙여 push. 이번엔 업로드한 aab와 태그 코드가 같다(0.1.8 때와 달리 어긋남 없음). `chore/release-0.1.9`·`feat/friends` 브랜치는 남겨 둠.
 - 실서버 DB 규칙 배포: 2026-11-02 17:01(KST)(친구 경로 추가 16개, 배포 후 저장소와 차이 0).
