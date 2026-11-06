@@ -17,6 +17,18 @@ void main() {
     expect(await db.get('users/u/createdAt'), db.serverTime);
   });
 
+  test('create on an existing profile changes nothing (덮어쓰기 방지)', () async {
+    final db = FakeRtdbService();
+    final repo = ProfileRepository(db);
+    await repo.create('u', 'A');
+    await db.update('users/u', {'gold': 777});
+
+    await repo.create('u', 'B2');
+
+    final p = (await repo.watch('u').first)!;
+    expect((p.nickname, p.gold), ('A', 777));
+  });
+
   test('the same matchId is added only once', () async {
     final repo = ProfileRepository(FakeRtdbService());
     await repo.create('u', 'A');

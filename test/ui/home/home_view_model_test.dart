@@ -43,6 +43,19 @@ void main() {
     expect(ads.loadCalls, 1);
   });
 
+  test('nickname is unknown while the profile loads, known once it is read '
+      '(임시 닉네임을 화면에 내지 않음)', () async {
+    final db = FakeRtdbService();
+    await ProfileRepository(db).create('u', '탑솔져');
+    final c = home(db);
+
+    expect(c.read(homeProvider).nicknameKnown, false); // 아직 로딩 중
+    await pumpEventQueue();
+
+    final s = c.read(homeProvider);
+    expect((s.nicknameKnown, s.profile.nickname), (true, '탑솔져'));
+  });
+
   test(
     'first run: no profile → nickname form, then the profile shows',
     () async {

@@ -290,7 +290,7 @@ class _TopBar extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(s.profile.nickname),
+        title: Text(s.nicknameKnown ? s.profile.nickname : ''),
         content: SizedBox(
           width: 300,
           child: Column(
@@ -346,7 +346,7 @@ class _TopBar extends StatelessWidget {
                 children: [
                   Flexible(
                     child: Text(
-                      p.nickname,
+                      s.nicknameKnown ? p.nickname : '',
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: lightColor,

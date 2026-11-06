@@ -81,7 +81,12 @@ void main() {
     expect((s.levelOf(basicSoldier), s.profile.gold), (1, 8000));
     expect(s.upgradeSeq, 1);
 
-    final failing = await characterScreen(db, gold: 10000, roll: 0.99);
+    // 새 프로필이어야 하므로 새 DB(같은 DB에서 create는 이제 기존 프로필을 덮어쓰지 않는다).
+    final failing = await characterScreen(
+      FakeRtdbService(),
+      gold: 10000,
+      roll: 0.99,
+    );
     expect(
       await failing.read(characterProvider.notifier).upgrade(),
       UpgradeOutcome.fail,

@@ -40,10 +40,18 @@ class ProfileRepository {
   Stream<Profile?> watch(String uid) =>
       _db.watch(_user(uid)).map((v) => v == null ? null : Profile.fromJson(v));
 
-  Future<void> create(String uid, String nickname) => _db.set(_user(uid), {
-    ...Profile(nickname: nickname).toJson(),
-    'createdAt': serverTimestamp,
-  });
+  /// 프로필이 없을 때만 만든다(이미 있으면 골드·무기·친구를 덮어쓰지 않게 아무것도 안 함).
+  Future<void> create(String uid, String nickname) async {
+    await _db.transaction(
+      _user(uid),
+      (cur) => cur != null
+          ? txAbort
+          : {
+              ...Profile(nickname: nickname).toJson(),
+              'createdAt': serverTimestamp,
+            },
+    );
+  }
 
   Future<void> setNickname(String uid, String nickname) =>
       _db.update(_user(uid), {'nickname': nickname});

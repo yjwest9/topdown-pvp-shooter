@@ -28,11 +28,15 @@ class HomeState {
   const HomeState({
     required this.profile,
     this.needsNickname = false,
+    this.nicknameKnown = true,
     this.holiday,
   });
 
   /// 아직 못 읽었거나(로딩·오프라인) 없으면 임시 닉네임의 빈 프로필.
   final Profile profile;
+
+  /// false면 [profile]의 닉네임은 임시 값이라 화면에 내지 않는다(로딩·오프라인 동안).
+  final bool nicknameKnown;
 
   /// 첫 실행: 프로필이 없다 → 닉네임 입력.
   final bool needsNickname;
@@ -151,6 +155,7 @@ class HomeViewModel extends Notifier<HomeState> {
     return HomeState(
       profile: p.value ?? Profile(nickname: _auth.nickname),
       needsNickname: p.hasValue && p.value == null,
+      nicknameKnown: p.value != null,
       holiday: ref.watch(holidayProvider).value,
     );
   }
