@@ -326,6 +326,14 @@ class _Detail extends StatelessWidget {
                               (id) => unawaited(_merge(context, id)),
                             ),
                           ],
+                          // D등급 다이아 직접 구매(decisions 7장): 가격이 정해지기 전까지 비활성.
+                          if (w.family != WeaponFamily.pistol) ...[
+                            const SizedBox(height: 8),
+                            const FilledButton(
+                              onPressed: null,
+                              child: Text('D등급 구매 · 준비 중'),
+                            ),
+                          ],
                         ],
                       ],
                     ),

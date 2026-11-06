@@ -60,7 +60,7 @@ void main() {
 
     expect(find.text('K2'), findsWidgets);
     expect(find.text('장착 중'), findsOneWidget); // K2는 장착 중
-    expect(find.textContaining('구매'), findsNothing);
+    expect(find.textContaining('구매 20,000'), findsNothing); // E등급 구매 버튼
 
     await tester.tap(find.text('FAMAS'));
     await tester.pump();
@@ -153,6 +153,20 @@ void main() {
     final b = find.widgetWithText(OutlinedButton, 'FAMAS +5');
     expect(tester.widget<OutlinedButton>(b).onPressed, isNull);
     expect(find.textContaining('골드 부족'), findsWidgets);
+  });
+
+  testWidgets('D-grade buy button is disabled "준비 중", not for the pistol', (
+    tester,
+  ) async {
+    await open(tester, const LoadoutView(), gold: 5000);
+    final button = find.widgetWithText(FilledButton, 'D등급 구매 · 준비 중');
+    expect(button, findsOneWidget); // 보유한 K2(라이플)
+    expect(tester.widget<FilledButton>(button).onPressed, isNull);
+
+    await tester.tap(find.text('보조'));
+    await tester.pump();
+    expect(find.text('M9'), findsWidgets);
+    expect(find.text('D등급 구매 · 준비 중'), findsNothing);
   });
 
   testWidgets('no merge area for an E+0 weapon', (tester) async {
