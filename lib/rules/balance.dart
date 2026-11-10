@@ -113,7 +113,8 @@ const upgradeChances = <double>[0.9, 0.8, 0.7, 0.6, 0.5];
 
 // ---------------------------------------------------------------- 무기 (6장)
 
-enum WeaponFamily { rifle, sniper, shotgun, pistol }
+/// melee(칼)는 보조 칸을 권총과 나눠 쓴다. 탄약·장전이 없다.
+enum WeaponFamily { rifle, sniper, shotgun, pistol, melee }
 
 /// 발사 방식. 무기마다가 아니라 주무기·보조무기 칸마다 정한다(설정, decisions 2장).
 enum FireMode { auto, manual }
@@ -165,14 +166,14 @@ class WeaponStats {
   final double critChance;
   final double critMultiplier;
 
-  /// 총알이 날아가는 거리(px).
+  /// 총알이 날아가는 거리(px). 칼은 휘두르는 거리.
   final double range;
   final int magazine;
 
   /// 재장전 시간(초).
   final double reloadTime;
 
-  /// 기본 퍼짐(rad). 단발은 조준선 ±spread, 샷건은 부채꼴 전체 폭.
+  /// 기본 퍼짐(rad). 단발은 조준선 ±spread, 샷건은 부채꼴 전체 폭, 칼은 부채꼴 전체 폭.
   final double spread;
 
   final int pellets;
@@ -184,6 +185,11 @@ class WeaponStats {
   final double moveSpreadScale;
 
   double get pelletDamage => damage / pellets;
+
+  bool get isMelee => family == WeaponFamily.melee;
+
+  /// 보조 칸에 들어가는 무기(권총·칼). 나머지는 주무기 칸.
+  bool get isSecondary => family == WeaponFamily.pistol || isMelee;
 }
 
 // [잠정] 초기 수치.
@@ -359,6 +365,22 @@ const pistol = WeaponStats(
   reloadTime: 1.2,
   spread: 0.03,
 );
+const knife = WeaponStats(
+  id: 'knife',
+  name: '칼',
+  pros: '탄약 없음, 빠른 이동',
+  cons: '닿아야 함(사거리 80)',
+  family: WeaponFamily.melee,
+  damage: 40,
+  fireInterval: 0.40,
+  critChance: 0.15,
+  critMultiplier: 2.0,
+  range: 80,
+  magazine: 0,
+  reloadTime: 0,
+  spread: pi / 3,
+  moveSpeed: 1.15,
+);
 
 /// 기본 지급 무기(decisions 6장). 등급은 E.
 const startingPrimary = rifleStandard;
@@ -387,6 +409,7 @@ const weapons = <WeaponStats>[
   shotgunAuto,
   shotgunDouble,
   pistol,
+  knife,
 ];
 
 // ------------------------------------------------------------ 캐릭터 (8장)

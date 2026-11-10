@@ -216,7 +216,7 @@ class _Detail extends StatelessWidget {
       ),
       ('연사 속도', b.fireRate, '${(1 / w.fireInterval).toStringAsFixed(1)}발/초'),
       ('사거리', b.range, '${w.range.round()}'),
-      ('탄창', b.magazine, '${w.magazine}'),
+      ('탄창', b.magazine, w.isMelee ? '없음' : '${w.magazine}'),
       ('기동성', b.mobility, '×${w.moveSpeed}'),
     ];
     final ttkText = ttk(
@@ -327,7 +327,7 @@ class _Detail extends StatelessWidget {
                             ),
                           ],
                           // D등급 다이아 직접 구매(decisions 7장): 가격이 정해지기 전까지 비활성.
-                          if (w.family != WeaponFamily.pistol) ...[
+                          if (!w.isSecondary) ...[
                             const SizedBox(height: 8),
                             const FilledButton(
                               onPressed: null,

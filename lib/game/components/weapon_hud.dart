@@ -98,7 +98,9 @@ class WeaponSlot extends PositionComponent with TapCallbacks {
       withLevel(w.weapon.name, w.level, grade: w.grade),
       Vector2(8, 16),
     );
-    _ammo.render(canvas, '${w.ammo} / ${w.weapon.magazine}', Vector2(8, 31));
+    if (!w.weapon.isMelee) {
+      _ammo.render(canvas, '${w.ammo} / ${w.weapon.magazine}', Vector2(8, 31));
+    }
     // 오른쪽 아래에 든 총 그림(decisions 17장).
     paintWeapon(
       canvas,

@@ -188,6 +188,7 @@ class NetState {
     required this.up,
     required this.weapon,
     this.reloading = false,
+    this.sw = 0,
     this.t = 0,
   });
 
@@ -201,6 +202,7 @@ class NetState {
       up: _d(m['up']),
       weapon: m['weapon'] as String,
       reloading: m['rl'] as bool? ?? false,
+      sw: _i(m['sw']),
       t: _i(m['t']),
     );
   }
@@ -223,6 +225,10 @@ class NetState {
   /// 재장전 중(상대 화면의 reload 포즈, decisions 3장). 옛 앱은 안 보내서 false.
   final bool reloading;
 
+  /// 칼을 휘두른 횟수(누적). 늘어나면 상대 화면에 호 이펙트. 칼은 `shots`에 쓰지 않는다.
+  /// 옛 앱은 안 보내서 0.
+  final int sw;
+
   /// 서버 시간(ms). 보낼 때는 무시되고 서버가 채운다.
   final int t;
 
@@ -234,6 +240,7 @@ class NetState {
     'up': up,
     'weapon': weapon,
     'rl': reloading,
+    'sw': sw,
   };
 }
 

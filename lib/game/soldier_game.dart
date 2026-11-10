@@ -16,6 +16,7 @@ import '../rules/aim.dart';
 import '../rules/balance.dart';
 import '../rules/combat.dart';
 import '../rules/map_select.dart';
+import '../rules/melee.dart';
 import '../rules/movement.dart';
 import '../rules/sound.dart';
 import '../rules/spawn.dart';
@@ -23,6 +24,7 @@ import '../rules/weapon_state.dart';
 import 'components/bot_soldier.dart';
 import 'components/bullet.dart';
 import 'components/fire_button.dart';
+import 'components/floating_text.dart';
 import 'components/game_map.dart';
 import 'components/kill_feedback.dart';
 import 'components/match_hud.dart';
@@ -30,6 +32,7 @@ import 'components/minimap.dart';
 import 'components/player.dart';
 import 'components/remote_player.dart';
 import 'components/round_button.dart';
+import 'components/swing_arc.dart';
 import 'components/target_dummy.dart';
 import 'components/test_map.dart';
 import 'components/touch_controls.dart';
@@ -141,6 +144,9 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   /// 주무기·보조무기 칸의 발사 방식(설정).
   FireMode primaryFireMode;
   FireMode secondaryFireMode;
+
+  /// 칼을 휘두른 횟수(누적). 상태에 실려 상대 화면의 호 이펙트가 된다.
+  int swings = 0;
 
   /// 사격 버튼을 누르고 있음(터치).
   bool fireButtonHeld = false;
@@ -411,7 +417,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   /// 탄이 없거나 재장전 중이면 false(달리기를 끊지 않게).
   bool _wantsToFire() {
     final w = player.weapon;
-    if (w.ammo == 0 || w.reloading) return false;
+    if ((!w.weapon.isMelee && w.ammo == 0) || w.reloading) return false;
     if (_triggerHeld) return true;
     if (_fireMode != FireMode.auto) return false;
     return autoFireTarget(
@@ -429,6 +435,7 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
   void _updateFiring(double dt) {
     final w = player.weapon..tick(dt);
     if (!player.firing || !canFire(player.stance) || !w.tryFire()) return;
+    if (w.weapon.isMelee) return _swing(w);
     playSfx(fireSound(w.weapon)); // 펠릿이 여러 개여도 한 번
     final angles = shotAngles(
       w.weapon,
@@ -452,6 +459,66 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     ]);
     for (final a in angles) {
       match?.sendShot(muzzle, a, w.weapon.id);
+    }
+  }
+
+  /// 칼 휘두르기: 부채꼴 안의 대상마다 총알과 같은 미스·크리 굴림 → 피해. 총알·shots는 안 쓴다.
+  void _swing(WeaponState w) {
+    swings++;
+    match?.countSwing();
+    playSfx(fireSound(w.weapon), volume: hitSoundVolume);
+    world.add(
+      SwingArc(
+        position: player.position.clone(),
+        angle: player.angle,
+        weapon: w.weapon,
+      ),
+    );
+    final targets = hitTargets;
+    final hits = meleeHits(
+      attacker: player.coverBody,
+      angle: player.angle,
+      weapon: w.weapon,
+      targets: [
+        for (final t in targets)
+          (
+            key: t.key,
+            body: t.body,
+            stance: t.stance,
+            protected: t.protected,
+            ally: false, // hitTargets에 아군은 없다
+          ),
+      ],
+      highWalls: map.highWalls,
+      lowCrates: map.lowCrates,
+    );
+    for (final t in targets) {
+      if (!hits.contains(t.key)) continue;
+      final at = Vector2(t.body.pos.x, t.body.pos.y);
+      final hit = resolveHit(
+        baseDamage: w.weapon.damage,
+        critMultiplier: w.weapon.critMultiplier,
+        gradeMultiplier: gradeMultiplier(w.grade, w.level),
+        missChance: missChance(
+          accuracy: character.accuracy,
+          evasion: t.evasion,
+          airborne: t.body.airborne,
+        ),
+        critChance: critChance(
+          weaponCrit: w.weapon.critChance,
+          characterCrit: character.crit,
+        ),
+        missRoll: random.nextDouble(),
+        critRoll: random.nextDouble(),
+      );
+      if (hit.miss) {
+        world.add(FloatingText.miss(at: at));
+        continue;
+      }
+      t.onHit(hit, w.weapon);
+      world.add(FloatingText.damage(hit.damage, at: at, crit: hit.crit));
+      world.add(HitMarker(position: at));
+      playHitSound();
     }
   }
 

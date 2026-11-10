@@ -169,6 +169,19 @@ void main() {
     expect(find.text('D등급 구매 · 준비 중'), findsNothing);
   });
 
+  testWidgets('knife in the secondary tab: buy 20,000, no ammo row value, no '
+      'D-grade button', (tester) async {
+    await open(tester, const LoadoutView(), gold: 20000);
+    await tester.tap(find.text('보조'));
+    await tester.pump();
+    await tester.tap(find.text('칼'));
+    await tester.pump();
+    expect(find.text('구매 20,000 G'), findsOneWidget);
+    expect(find.text('없음'), findsOneWidget); // 탄창
+    expect(find.text('×1.15'), findsOneWidget);
+    expect(find.text('D등급 구매 · 준비 중'), findsNothing);
+  });
+
   testWidgets('no merge area for an E+0 weapon', (tester) async {
     await open(tester, const LoadoutView(), gold: 20000);
     expect(find.text('합성'), findsNothing);

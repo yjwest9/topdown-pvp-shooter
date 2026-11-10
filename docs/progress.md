@@ -1,5 +1,77 @@
 # 진행 상황
 
+## 2026-11-10 (칼 통계 상한: 휘두름당 명중 최대 1번 — feat/knife)
+- 사용자 결정("상한은 정해"): 한 번 휘둘러 여럿을 맞혀도 통계 `hits`는 휘두름당 최대 1번만 센다. `shots`는 휘두름마다 1. 그래서 `hits ≤ shots`, 명중률 100% 초과 없음. 피해는 맞힌 모두에게 그대로 들어감. `MatchSync.hit`에 휘두름 번호(`game.swings`) 비교 한 곳만 바꿈, 총알은 그대로.
+- 테스트: `knife stats: one swing counts at most one hit...`(수정 전 `hits 2 / shots 1`로 실패 확인 → 통과). decisions 칼 항목 갱신.
+- 숫자: format 0 changed, analyze 0, test 685개(684에서 +1).
+- 웹 재확인 체크리스트(칼 사거리·폭 느낌, 칼 그림, 봇전 칼 처치, D등급 버튼, 홈 F5)는 사용자 결정으로 **생략**(귀찮아서). 단위·게임 루프 테스트와 이전 웹 확인 결과로 갈음. 확인 안 된 것: 새 수치(60도·80)의 실제 손맛, 새 칼 그림의 실제 화면.
+
+## 2026-11-09 (칼 마무리: 수치 조정·그림, 웹 재확인 대기 — feat/knife 969191e)
+- 웹 확인 뒤 사용자 결정으로 칼 조정(`969191e`): 부채꼴 60도(π/3), 사거리 80, 나머지 그대로. 칼 그림을 길이 64·밝은 날·나무 손잡이로 키움(`weapons.png`로 소총·권총과 크기·밝기 비교). 자동 휘두르기는 무기 사거리를 중심 거리로 따름(80px), 몸 가장자리 판정은 중심 96px까지. 테스트 684개(683에서 +1, 자동 휘두르기 사거리). decisions 칼 항목 갱신.
+- 별도 브랜치 `fix/early-key-release`(main에서, `e022295`): 로딩 중 키 입력 `LateInitializationError` 방어. 아래 항목 참고. **병합 안 함.**
+- **웹 재확인 체크리스트(사용자가 아직 안 함)**: ① 로그인 주소 9099 ② 칼 사거리·폭 느낌 ③ 무기 화면 칼 그림 ④ 봇전 1대1 칼 처치 ⑤ 저격·샷건 D등급 회색 버튼 ⑥ 홈 F5 5번 임시 닉네임. 이어서 하려면 `flutter build web --debug --dart-define=USE_EMULATOR=true --dart-define-from-file=.env.local` → `build/_verify/new`, 에뮬레이터 `--only auth,database`, 정적 서버 8080(이미 빌드해 둠, 같은 커밋이면 다시 빌드 불필요).
+- 후보(0.1.10 뒤 별도 작업): **킬 로그에 무기 그림**(이름 사이에 아이콘, "창1 > 창2" 형식과 글자 `칼` 개선), `match_hud.dart`. 이번에는 안 함.
+- 결정 대기: 2대2에서 휘두름 1번에 여러 명을 맞히면 명중률이 100%를 넘을 수 있음(상한 처리 안 함).
+- 실서버 규칙 배포(`knife` 허용)는 릴리스 때. 정적 서버·에뮬레이터는 종료함.
+
+## 2026-11-09 (칼 3부: 웹 확인 결과 — feat/knife 8c1ca9f, 코드 수정 없음)
+방법: `flutter build web --debug`(릴리스는 Auth가 실서버로 감, 아래 이전 기록) 새 앱 8080·8082, 옛 앱(v0.1.9) 8081, 에뮬레이터 `--only auth,database`. 화면은 Claude in Chrome(내가 직접)과 사용자 크롬 두 창으로 확인, 방 데이터는 에뮬레이터 DB를 직접 읽음.
+
+| 항목 | 결과 | 근거 |
+|---|---|---|
+| 1. Auth 주소 | 통과 | 디버그 빌드의 `identitytoolkit`이 전부 `localhost:9099`, `googleapis.com` 없음. 프로필이 에뮬레이터 DB에 생김 |
+| 2. 칼 구매·장착·훈련소(사용자 직접 + 내가 확인) | 통과(밸런스 의견 있음) | 보조 탭에 M9·칼, 골드 100,000→80,000, DB `loadout.secondary`=칼, 탄창 "없음", 기동성 꽉 참, 칼에 D등급 버튼 없음, 훈련소에서 표적 처치·흰 호·슬롯에 탄약 숫자 없음·주무기 탄약 그대로. 사용자: 효과음 문제 언급 없음 |
+| 3. 새 앱 둘 1대1 | 통과(킬 로그 디자인 의견 있음) | 킬 로그에 "칼", 처치·점수 기록 |
+| 4. 새 앱(칼) vs 옛 앱 | 통과 | 옛 앱: 피해는 들어가고 멈춤·꺼짐 없음, 칼 든 상대가 소총처럼 보임, 킬 로그 `knife`, **칼 휘두르는 모션은 안 나옴(옛 앱이 `sw`를 모르므로 예상된 동작)**. DB: `shots`에 칼 0건, `states.sw` 증가, 킬 기록 `weapon: knife` |
+| 5. 홈 새로고침·D등급 버튼 | 부분 확인 | 새로고침 3번(5번 아님)에서 `Soldier…` 임시 닉네임 안 보임(순간 깜빡임은 못 잡았을 수 있음). D등급 회색 버튼은 K2(라이플)에서 확인, 저격·샷건은 안 봄. 권총·칼에 없음 확인 |
+
+- **옛 앱 Console 빨간 오류(칼과 무관)**: `LateInitializationError: Field 'player' has not been initialized`(키보드 처리, Control Left 뗌). `soldier_game.dart`의 `_syncRun`이 `late final Player player`를 읽는데, 게임 로딩이 끝나기 전에 키가 들어오면 난다(새 앱도 같은 코드). 게임은 안 멈추고 로그만 남음. 재현은 안 함. 고칠지는 별도 결정.
+- **하지 않은 확인**: 봇전 1대1에서 칼로 봇 처치, 사거리·이동 느낌의 수치 검증, 합성 계열 저격·샷건의 D등급 버튼, 홈 F5 5회.
+- **사용자 피드백(후속 작업 후보)**
+  1. **칼 밸런스가 너무 좋다**(사거리 크고 피해 세고 맞추기 쉬움). 킬 속도는 K2와 비슷(0.8초 vs 0.77초)하지만 장전·퍼짐 없음, 이동 ×1.15, 정면 90° 부채꼴. 조정 후보(`balance.dart` `knife`): 부채꼴 60°, 사거리 80, 피해 34, 간격 0.5. 추천은 부채꼴 60° + 사거리 80. 바꾸면 `melee_test`·`knife_in_game_test`의 수치 기대값 수정 필요. **아직 안 바꿈, 사용자 결정 대기.**
+  2. **킬 로그 디자인**: "창1 > 창2" 형식과 글자 `칼`이 밋밋함. 두 이름 사이에 무기 그림을 넣자는 의견. `match_hud.dart`, 칼 전용이 아니라 킬 로그 전체. 별도 브랜치 권장.
+  3. **칼 그림이 매우 작고 어둡게 보임**(무기 화면 목록·상세). `weaponLooks['knife']` length 30.
+- **도구 한계**: Claude in Chrome 창에서 디버그 빌드는 초당 약 1프레임이라 조작감·대전은 못 봄(사용자 크롬은 정상). 한 창에 탭 둘로 두 클라이언트를 열면 보이지 않는 탭의 게임 루프가 멈춰 동시 확인이 안 된다(창을 둘로 나눠야 함).
+- **메모리**(작업 관리자, 확인 중 마지막 측정): 전체 7,916MB 중 여유 약 1,470MB. chrome 2,096MB(16개), java 132MB, node 124MB(7개). 한때 여유가 457MB까지 내려가 화면 캡처가 한 번 응답 없음이 됐으나 꺼진 프로세스는 없었음.
+- 정리: 정적 서버 8080·8081·8082와 에뮬레이터 종료(에뮬레이터는 내보내기 없이 꺼서 Auth 계정·DB 데이터는 사라짐). 실서버 접속·규칙 배포 없음. `knife` 허용 규칙은 아직 미배포.
+
+## 2026-11-06 (칼 3부 웹 확인 준비 — 중단, 확인 항목은 아직 하나도 못 함)
+- **웹 확인에 릴리스 빌드를 쓰면 Auth가 실서버로 간다.** `firebase_auth_web`이 에뮬레이터 설정(sessionStorage)을 `kDebugMode`일 때만 읽는다(`firebase_auth_web.dart:60`). `flutter build web --release --dart-define=USE_EMULATOR=true`로 띄운 8080에서 F12 Network의 `identitytoolkit`이 `googleapis.com`으로 나갔다(사용자 화면 확인). **웹 확인은 `--debug` 빌드(또는 `flutter run`)로 할 것.**
+- 새 앱(feat/knife 8c1ca9f)과 옛 앱(v0.1.9)을 `flutter build web --debug`로 다시 빌드해 `C:\Projects\_verify
+ew`, `\old`에 복사해 둠(각 약 1.5분). 디버그 빌드가 에뮬레이터(9099)로 가는지는 **아직 확인 못 함**(다음에 Network에서 볼 것).
+- 실서버로 간 요청은 `accounts:lookup`뿐이었고 닉네임 "시작하기"는 안 눌렀다. 실서버에 프로필은 없을 것이나 익명 Auth 계정이 생겼을 수 있다(콘솔 정리 대상 후보, 미확인).
+- 메모리: 에뮬레이터·정적 서버 2개 + 크롬 띄운 상태에서 전체 7,916MB 중 여유 약 1,400MB(node 433MB, java 131MB, chrome 199MB). 디버그 빌드는 더 쓸 수 있음.
+- 끝: 정적 서버·에뮬레이터 종료. 체크리스트 5개 항목 결과 없음. 다음에 이어서 하려면 에뮬레이터 `--only auth,database`와 정적 서버(8080 new, 8081 old)를 다시 띄우고 위 체크리스트부터.
+
+## 2026-11-06 (칼 2부: 게임 연결 — feat/knife)
+- `soldier_game.dart`: 근접이면 총알 대신 `_swing`(간격 0.4초, 자동 사격·달리기 제한 그대로). `meleeHits` 결과마다 `resolveHit`(미스·크리) → `onHit`(훈련소 표적, 상대/봇은 기존 `match.hit` 체력 트랜잭션). `swings` 카운터, `_wantsToFire`는 근접이면 탄 0이어도 허용.
+- 새 `components/swing_arc.dart`(호 이펙트, 내 것 흰색 / 상대 것 빨강). 판정 호는 사거리 105px로 그림.
+- 네트워크: `NetState.sw`(누적 휘두른 횟수, 옛 앱은 0). 보간(`sample`)이 `sw`를 앞 스냅샷 값으로 전달. `RemotePlayer`는 `sw`가 늘면 호 + 소리. **칼은 `shots`에 절대 안 씀**(테스트로 확인). 통계 `shots`에는 `countSwing`으로 셈. 서버 규칙 변경 없음.
+- 무기 화면: 보조 탭에 권총·칼, 칼 E등급 20,000골드 구매, 보조 칸에 장착(권총으로 되돌리기 가능), D등급 버튼 없음, 탄창 칸 "없음". `WeaponStats.isSecondary`. 게임 HUD 슬롯은 칼이면 탄약 숨김. 이동 막대 최대 1.0 고정(`statBars`), 1부에서 바꿨던 `loadout_test` K2 기대값을 1.0으로 되돌림.
+- 효과음: ogg 변환 도구(ffmpeg 등)가 없고 CC0 사이트 직접 받기도 막혀(kenney.nl 403) 칼 전용 소리를 못 구함. 맞힘 소리 `hit.ogg`를 휘두를 때도 쓴다(`fireSound`). 1부에서 좁힌 `sound_test` 두 개와 `allSounds`는 **그대로 둠**(전용 파일이 없으므로).
+- 기존 테스트 수정: `loadout_test` K2 이동 막대 기대값을 1.0으로 되돌림(1부 변경 취소). 그 밖에 깨진 기존 테스트 없음.
+- 테스트 +8: `knife_in_game_test`(표적 쓰러뜨리기·총알 0·탄 0, 간격 0.4초와 호, 사거리 밖 무피해, 온라인 sw 증가·shots 비어 있음·상대 체력 감소, 상대 sw 증가 시 상대 호), 무기 화면(구매·장착·권총 복귀, 칼 표시), 이동 막대. 숫자: format 0 changed, analyze 0, test 683개 통과(675에서 +8).
+- 봇전의 봇이 칼을 들진 않는다(범위 밖). 봇전에서 내가 칼로 봇을 치는 건 상대와 같은 `hitTargets` 경로.
+- **3부 웹 확인 항목**
+  1. 칼: 무기 화면 보조 탭에 권총·칼, 칼 구매(20,000G, 골드 부족 표시), 장착 표시, 권총 되돌리기, D등급 회색 버튼이 칼에 없음, 탄창 "없음"·기동성 막대 꽉 참.
+  2. 훈련소에서 보조 칸 칼: 칼 슬롯 탭 → 휘두르기 호(흰색), 표적 3번에 쓰러짐, 탄약 숫자 안 보임, 이동이 총보다 빠름(×1.15), 사거리(몸 가장자리 105px)가 너무 길거나 짧지 않은지(길면 `balance.dart` 수치만 조정), 호 크기와 실제 맞는 범위가 맞는지.
+  3. 에뮬레이터 모드 2클라이언트: 한쪽이 칼을 휘두르면 상대 화면에 빨간 호와 소리, 체력 감소, `rooms/{code}/shots`에 아무것도 안 쌓임, `states/{uid}/sw` 증가. 높은 벽 뒤·낮은 상자 뒤 앉은 상대는 안 맞음, 부활 보호 중 안 맞음.
+  4. 1·2에서 미룬 것: 홈 진입·새로고침 때 `Soldier…` 임시 닉네임이 안 보이는지 / 첫 실행 프로필 생성(트랜잭션 `createdAt` 서버 시간) 실서버·에뮬레이터 모두 / 보유 합성 계열 무기에서만 회색 `D등급 구매 · 준비 중` 버튼이 보이고 눌려도 아무 일 없는지(권총·칼·미보유에는 없음).
+  5. 실서버 규칙 배포(`knife` 허용)는 배포 전에는 실서버에서 칼을 못 산다. 3부에서 배포 여부 결정.
+  6. 효과음: 지금은 맞힘 소리(`hit.ogg`)를 쓴다. 어색하면 CC0 칼 소리를 따로 구해 교체.
+
+## 2026-11-06 (칼 1부: 규칙·판정·데이터 — feat/knife)
+- 칼 추가(decisions 6장 "칼" 항목): `balance.dart`의 `knife`(피해 40, 간격 0.40, 사거리 105, 폭 π/2, 이동 ×1.15, 크리 15%·×2, 탄창·재장전 0)와 `WeaponFamily.melee`, 무기 12종. `WeaponStats.isMelee`.
+- `weapon_state.dart`: 근접은 탄을 안 쓰고 재장전·자동 재장전 없음(간격만). `weapon_merge.dart`: 근접 합성 제외.
+- `rules/melee.dart` 신규 `meleeHits`: 부채꼴(몸 가장자리 거리·각도), 높은 벽, 낮은 상자(총알 규칙과 같게), 아군·부활 보호 제외, 여러 대상. 테스트 먼저(`melee_test.dart`).
+- 그림 데이터: `weaponLooks['knife']`(`WeaponLook.knife`), 포즈는 권총과 같은 `Pose.gun`, `weapon_art.dart`에 `_knife()`. 단순한 단검 모양이고 게임·무기 화면에는 아직 연결 안 됨.
+- `match_sync.dart`: `shots`의 모르는 무기 id에서 `firstWhere`가 크래시하던 것을 `weaponById` + 건너뜀으로 고침(테스트 1개).
+- `database.rules.json` 무기 id 목록에 `knife`. `tool/rules_check.sh`에 칼 구매 허용, 모르는 칼 id 거부, 칼 D등급 신규 거부 추가.
+- `sound.dart`: 칼은 효과음이 없어서 `allSounds`(미리 불러오는 목록)에서 제외(없는 `fire_knife.ogg`·`reload_melee.ogg`를 불러오다 깨지지 않게).
+- 기존 테스트 수정: ① `combat_test` "weapon table has 11 → 12"(허용된 데이터 추가). ② `sound_test` "all 11 weapons have their own fire sound"와 "reload sound is one per family": 칼은 효과음이 없어서 총기 11종·근접 제외 계열 기준으로 좁힘(단언 의도는 그대로). ③ `loadout_test` "each bar is value / max": 이동 막대 최대가 칼 1.15가 되어 K2의 이동 막대가 1.0 → 1/1.15(0.87). 이동 배율 1.0 초과를 막는 검사는 아니고 "값÷최대" 기대값이 데이터에 따라 바뀐 것. 이 막대는 아직 칼이 화면에 안 나온다. 2부에서 칼을 무기 화면에 넣을 때 이동 막대를 어떻게 볼지 정할 것.
+- 추가한 테스트: `melee_test`(칼 수치·탄약 없음·경계·차단), `weapon_merge_test`에 근접 불가 단언, `match_sync_test`에 모르는 id.
+- 2부로 남김: 게임 루프 휘두르기, 호 이펙트, `states.sw`, 무기 화면(구매·장착), HUD, 효과음, 웹 확인, 실서버 규칙 배포(`knife` 허용은 배포해야 실서버에서 산다).
+
 ## 2026-11-09 (로딩 중 키 입력 오류 수정 — fix/early-key-release)
 - 증상: 옛 앱(v0.1.9) 웹 Console에 `LateInitializationError: Field 'player' has not been initialized`(Control Left 뗌). 게임이 멈추진 않고 로그만 남음. **main에도 같은 코드**: `SoldierGame.onKeyEvent`가 `_syncRun`/`_syncMoveKeys`에서 `late final Player player`를 읽는데, 게임 `onLoad`(그림·맵 불러오기)가 끝나기 전에 키가 들어오면 난다.
 - 수정: `onKeyEvent` 맨 앞에 `if (!isLoaded) return KeyEventResult.ignored;` 한 줄(로딩 전 키는 무시).

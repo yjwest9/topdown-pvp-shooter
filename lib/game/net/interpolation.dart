@@ -27,6 +27,7 @@ NetState? sample(List<NetState> buffer, int t) {
       up: a.up + (b.up - a.up) * f,
       weapon: a.weapon,
       reloading: a.reloading,
+      sw: a.sw,
       t: t,
     );
   }

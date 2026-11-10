@@ -61,7 +61,7 @@ class LoadoutState {
 
   List<WeaponStats> get list => [
     for (final w in weapons)
-      if (w.family == family) w,
+      if (w.family == family || (family == WeaponFamily.pistol && w.isMelee)) w,
   ];
 
   bool owns(WeaponStats w) => profile.owned(w.id) != null;
@@ -254,7 +254,7 @@ class LoadoutViewModel extends Notifier<LoadoutState> {
     await _repo.equip(
       await _auth.signIn(),
       owned.id,
-      primary: state.selected.family != WeaponFamily.pistol,
+      primary: !state.selected.isSecondary,
     );
   }
 }

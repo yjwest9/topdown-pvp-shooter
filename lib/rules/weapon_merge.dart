@@ -19,9 +19,10 @@ enum MergeCheck {
   notEnoughGold,
 }
 
-/// 합성 대상: 라이플·저격·샷건의 E+5. 권총은 계열에 1종뿐이라 제외.
+/// 합성 대상: 라이플·저격·샷건의 E+5. 권총·칼은 계열에 1종뿐이라 제외.
 bool isMergeable(MergeWeapon w) =>
     w.family != WeaponFamily.pistol &&
+    w.family != WeaponFamily.melee &&
     w.grade == Grade.e &&
     w.level == maxUpgradeLevel;
 

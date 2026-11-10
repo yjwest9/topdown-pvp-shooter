@@ -30,6 +30,7 @@ void main() {
 
     test('pistol, E+4, and D grade are not', () {
       expect(isMergeable(w('a', family: WeaponFamily.pistol)), false);
+      expect(isMergeable(w('a', family: WeaponFamily.melee)), false);
       expect(isMergeable(w('a', level: 4)), false);
       expect(isMergeable(w('a', grade: Grade.d)), false);
       expect(isMergeable(w('a', grade: Grade.d, level: 0)), false);

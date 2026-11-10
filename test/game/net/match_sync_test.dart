@@ -201,6 +201,26 @@ void main() {
     },
   );
 
+  onlineTester(db).testGameWidget(
+    "a shot with a weapon id I don't know is skipped, no crash",
+    verify: (game, tester) async {
+      await db.push('rooms/$code/shots', {
+        'by': 'b',
+        'x': 700.0,
+        'y': 400.0,
+        'a': 0.0,
+        'weapon': 'laser_from_the_future',
+        't': {'.sv': 'timestamp'},
+      });
+      db.serverTime += 200;
+      await tester.pump();
+      game.update(1 / 60);
+      await tester.pump();
+
+      expect(game.world.children.whereType<Bullet>(), isEmpty);
+    },
+  );
+
   /// onMatchEnd 기록용.
   ({MatchStats stats, bool opponentLeft})? ended;
   void listenEnd(SoldierGame game) {

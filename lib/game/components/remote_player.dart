@@ -9,6 +9,7 @@ import '../game_art.dart';
 import '../net/interpolation.dart';
 import '../net/match_sync.dart';
 import '../soldier_game.dart';
+import 'swing_arc.dart';
 
 /// 상대 병사. 받은 상태를 [MatchSync.renderTime](서버 시간 − 100ms)에 맞춰 보간해서 그린다.
 class RemotePlayer extends PositionComponent
@@ -23,6 +24,7 @@ class RemotePlayer extends PositionComponent
 
   /// 지금 그리는(보간된) 상태. 아직 받은 게 없으면 null.
   NetState? state;
+  int? _swSeen;
 
   NetHp? get hp => sync.hp[uid];
   bool get dead => (hp?.value ?? 1) <= 0;
@@ -77,6 +79,21 @@ class RemotePlayer extends PositionComponent
     state = s;
     position.setValues(s.x, s.y);
     angle = s.a;
+    // 휘두른 횟수가 늘었으면 호 이펙트(처음 받은 값은 기준일 뿐).
+    final weapon = weaponById(s.weapon);
+    if (_swSeen != null && s.sw > _swSeen! && (weapon?.isMelee ?? false)) {
+      game
+        ..world.add(
+          SwingArc(
+            position: position.clone(),
+            angle: s.a,
+            weapon: weapon!,
+            mine: false,
+          ),
+        )
+        ..playEnemyShot(weapon, position);
+    }
+    _swSeen = s.sw;
   }
 
   /// 발밑 팀 원: 상대는 빨강(decisions 3장), 아군은 파랑(decisions 12장).

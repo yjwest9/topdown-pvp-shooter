@@ -18,6 +18,7 @@ StatBars statBars(WeaponStats w, List<WeaponStats> all) {
     fireRate: bar((x) => 1 / x.fireInterval),
     range: bar((x) => x.range),
     magazine: bar((x) => x.magazine.toDouble()),
-    mobility: bar((x) => x.moveSpeed),
+    // 최대를 1.0으로 고정: 칼(×1.15)처럼 넘으면 꽉 찬 막대.
+    mobility: min(1.0, w.moveSpeed),
   );
 }

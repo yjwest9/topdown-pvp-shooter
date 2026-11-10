@@ -48,16 +48,18 @@ void main() {
     }
   });
 
-  test('all 11 weapons have their own fire sound', () {
-    expect(weapons, hasLength(11));
-    final files = {for (final w in weapons) fireSound(w)};
+  test('all 11 firearms have their own fire sound (knife has none yet)', () {
+    final guns = weapons.where((w) => !w.isMelee).toList();
+    expect(guns, hasLength(11));
+    final files = {for (final w in guns) fireSound(w)};
     expect(files, hasLength(11)); // 같은 종류(라이플 4종 등)끼리도 다름
     expect(fireSound(rifleHeavy), 'fire_rifle_heavy.ogg');
   });
 
   test('reload sound is one per weapon family', () {
-    final files = {for (final f in WeaponFamily.values) reloadSound(f)};
-    expect(files, hasLength(WeaponFamily.values.length));
+    final families = WeaponFamily.values.where((f) => f != WeaponFamily.melee);
+    final files = {for (final f in families) reloadSound(f)};
+    expect(files, hasLength(families.length));
     expect(reloadSound(rifleHeavy.family), reloadSound(rifleStandard.family));
     expect(reloadSound(sniperBolt.family), isNot(reloadSound(pistol.family)));
   });

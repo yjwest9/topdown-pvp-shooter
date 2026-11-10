@@ -80,6 +80,7 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
   int _shots = 0;
   int _hits = 0;
   int _crits = 0;
+  int _lastMeleeHitSwing = -1;
 
   final _subs = <StreamSubscription<Object?>>[];
   final _pendingShots = <NetShot>[];
@@ -370,6 +371,7 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
               up: p.lift,
               weapon: p.weapon.weapon.id,
               reloading: p.weapon.reloading,
+              sw: game.swings,
             ),
           )
           .whenComplete(() => _stateInFlight = false),
@@ -382,7 +384,9 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
     _pendingShots.removeWhere((s) {
       if (s.t > now) return false;
       final shooter = remotes[s.by];
-      final weapon = weapons.firstWhere((w) => w.id == s.weapon);
+      // 모르는 무기 id(새 무기를 든 상대 등)는 연출만 건너뛴다.
+      final weapon = weaponById(s.weapon);
+      if (weapon == null) return true;
       _playShotSound(s, weapon);
       game.world.add(
         Bullet(
@@ -433,10 +437,17 @@ class MatchSync extends Component with HasGameReference<SoldierGame> {
     );
   }
 
+  /// 칼을 휘둘렀다(명중률 통계용으로만 센다. 네트워크로는 states의 sw가 알린다).
+  void countSwing() => _shots++;
+
   /// 내 총알이 [victim]에 맞음(미스 아님). 내 화면 기준 판정이라 그대로 적용한다.
   void hit(String victim, HitResult h, WeaponStats weapon) {
-    _hits++;
-    if (h.crit) _crits++;
+    // 칼은 한 번 휘둘러 여럿을 맞혀도 통계 명중은 1번만(명중률이 100%를 넘지 않게).
+    if (!weapon.isMelee || _lastMeleeHitSwing != game.swings) {
+      _hits++;
+      if (h.crit) _crits++;
+      if (weapon.isMelee) _lastMeleeHitSwing = game.swings;
+    }
     unawaited(_damage(victim, h, weapon));
   }
 

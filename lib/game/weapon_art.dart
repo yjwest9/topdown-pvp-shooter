@@ -82,6 +82,7 @@ class _WeaponPainter {
     );
 
   void paint() {
+    if (look.knife) return _knife();
     if (look.pistol) return _pistol();
     if (look.barrels == 2) return _doubleBarrel();
     if (look.bipod) _bipod();
@@ -337,5 +338,31 @@ class _WeaponPainter {
       _dark,
       1.2,
     );
+  }
+
+  void _knife() {
+    const steel = Color(0xFFD3DADF); // 다른 무기보다 밝게(어두운 바탕에서 보이게)
+    _fill(_rect(0, -4.5, 0.28 * l, 4.5, 2), _furniture); // 손잡이
+    for (var x = 0.06 * l; x < 0.26 * l; x += 0.06 * l) {
+      canvas.drawLine(Offset(x, -4.5), Offset(x, 4.5), _outline);
+    }
+    _fill(_rect(0.28 * l, -8, 0.33 * l, 8, 1), _dark); // 날받이
+    _fill(
+      _poly([
+        Offset(0.33 * l, -6),
+        Offset(0.84 * l, -6),
+        Offset(l, 0),
+        Offset(0.84 * l, 6.5),
+        Offset(0.33 * l, 6.5),
+      ]),
+      steel,
+    );
+    canvas.drawLine(
+      Offset(0.36 * l, 0),
+      Offset(0.86 * l, 0),
+      Paint()
+        ..color = const Color(0xFF9AA3AA)
+        ..strokeWidth = 1.2,
+    ); // 날 홈
   }
 }

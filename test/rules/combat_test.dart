@@ -130,8 +130,8 @@ void main() {
     }
   });
 
-  test('weapon table has 11 weapons with unique ids', () {
-    expect(weapons, hasLength(11));
-    expect(weapons.map((w) => w.id).toSet(), hasLength(11));
+  test('weapon table has 12 weapons with unique ids', () {
+    expect(weapons, hasLength(12));
+    expect(weapons.map((w) => w.id).toSet(), hasLength(12));
   });
 }

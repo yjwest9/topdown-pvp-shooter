@@ -63,6 +63,30 @@ void main() {
     expect(equippedWeapons(s.profile).secondary, pistol);
   });
 
+  test('secondary tab lists the pistol and the knife; the knife goes in the '
+      'secondary slot and the primary stays', () async {
+    final c = await loadout(FakeRtdbService(), gold: 20000);
+    final vm = c.read(loadoutProvider.notifier)
+      ..showFamily(WeaponFamily.pistol);
+    expect(c.read(loadoutProvider).list, [pistol, knife]);
+
+    vm.select(knife);
+    expect(await vm.buy(), true);
+    await pumpEventQueue();
+    expect(c.read(loadoutProvider).profile.gold, 0);
+
+    await vm.equip();
+    await pumpEventQueue();
+    var e = equippedWeapons(c.read(loadoutProvider).profile);
+    expect((e.primary, e.secondary), (rifleStandard, knife));
+
+    vm.select(pistol);
+    await vm.equip(); // 권총을 다시 들 수 있다
+    await pumpEventQueue();
+    e = equippedWeapons(c.read(loadoutProvider).profile);
+    expect((e.primary, e.secondary), (rifleStandard, pistol));
+  });
+
   test('not enough gold → cannot buy, nothing changes', () async {
     final db = FakeRtdbService();
     final c = await loadout(db, gold: 19999);

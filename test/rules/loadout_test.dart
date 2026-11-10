@@ -16,6 +16,11 @@ void main() {
       expect(b.fireRate, closeTo(0.07 / 0.11, 1e-9));
     });
 
+    test('mobility bar is capped at 1.0: the knife (x1.15) is a full bar', () {
+      expect(statBars(knife, weapons).mobility, 1.0);
+      expect(statBars(rifleHeavy, weapons).mobility, 0.75);
+    });
+
     test('the best weapon in a stat gets a full bar, all bars in 0..1', () {
       expect(statBars(shotgunDouble, weapons).damage, 1.0);
       expect(statBars(sniperBolt, weapons).range, 1.0);

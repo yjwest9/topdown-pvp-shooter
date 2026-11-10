@@ -10,7 +10,7 @@ Pose poseFor(WeaponFamily family, {bool reloading = false}) {
   return switch (family) {
     WeaponFamily.rifle || WeaponFamily.shotgun => Pose.machine,
     WeaponFamily.sniper => Pose.silencer,
-    WeaponFamily.pistol => Pose.gun,
+    WeaponFamily.pistol || WeaponFamily.melee => Pose.gun,
   };
 }
 
@@ -47,6 +47,7 @@ class WeaponLook {
     this.suppressor = false,
     this.pump = false,
     this.pistol = false,
+    this.knife = false,
   });
 
   /// 총 길이(그림 단위). 권총 34 ~ 저격총 124. 상세·목록에서 상대 크기로도 쓴다.
@@ -68,6 +69,9 @@ class WeaponLook {
   final bool pump;
   final bool pistol;
 
+  /// 칼(날 + 손잡이).
+  final bool knife;
+
   @override
   bool operator ==(Object other) =>
       other is WeaponLook &&
@@ -81,7 +85,8 @@ class WeaponLook {
       other.bullpup == bullpup &&
       other.suppressor == suppressor &&
       other.pump == pump &&
-      other.pistol == pistol;
+      other.pistol == pistol &&
+      other.knife == knife;
 
   @override
   int get hashCode => Object.hash(
@@ -96,6 +101,7 @@ class WeaponLook {
     suppressor,
     pump,
     pistol,
+    knife,
   );
 }
 
@@ -182,6 +188,14 @@ const weaponLooks = <String, WeaponLook>{
     stock: Stock.none,
     magazine: Magazine.none,
     pistol: true,
+  ),
+  // 칼: 짧은 단검
+  'knife': WeaponLook(
+    length: 64,
+    stock: Stock.none,
+    magazine: Magazine.none,
+    finish: Finish.wood,
+    knife: true,
   ),
 };
 
