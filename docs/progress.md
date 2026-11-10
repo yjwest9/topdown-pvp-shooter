@@ -1,5 +1,13 @@
 # 진행 상황
 
+## 2026-11-10 (실서버 Authentication·DB 테스트 데이터 정리)
+- 1단계(읽기만): 실서버 Auth 74개 전부 익명(구글 연결 0). 마지막 로그인 시각이 생성 시각과 같아 "그 뒤 로그인 없음"으로는 구분 불가 → 생성일·DB 프로필·기록으로 분류. 분류: 테스트 A 8, 프로필 없는 익명 B 55(웹 확인일 겹침 B1 5 + 나머지 B2 50), 남김 C 11.
+- **정정**: 이전 기록에서 `nadx1d9t`·`PXQLlaOg`·`qkWuGf73`·`QCU7pFHk`를 "에뮬레이터 계정"이라 한 것은 틀림. 실서버에 만들었다가 사용자가 콘솔에서 이미 지운 계정이다(그래서 1단계 목록에 없었음).
+- 2단계(사용자 확인 뒤): DB 먼저 삭제 → `users/` 5개(Soldier4479·Soldier6156y·Soldie233·Sold·Soldier2202), `presence/vVPebZ49…`, `friendCodes/TS-THBWT6`. 재조회 모두 null. `rooms` 5개는 안 건드림.
+- Auth 60개(A 8 + B1 5 + B2 중 10-08~10-24 생성 47)는 gcloud가 없어 사용자가 Identity Toolkit `accounts:batchDelete`("Try this method", `force: true`)로 직접 삭제. 삭제 뒤 다시 내보내 확인: **Auth 75 → 15**, 지울 목록 중 남은 것 0, 남길 15개(C 11 + 11-10 생성 3 + 1단계 뒤 생긴 `zqyGmIAn`) 전부 그대로, 그 밖의 계정 없음. DB `users` 12개.
+- 내보낸 파일(`build/tmp`의 Auth 내보내기·uid 목록·요청 본문)은 모두 삭제함. 서비스 계정 키는 쓰지 않음.
+- 남은 판단: C의 `home`·`realtimeDB`·`Soldier####`(개발 초기 테스트로 보임)는 사용자가 닉네임을 보고 결정.
+
 ## 2026-11-10 (0.1.10+12 출시: Play 비공개 테스트 업로드·검토 제출, 태그 v0.1.10)
 - 사용자가 `app-release.aab`(0.1.10+12, 62,914,948바이트, 업로드 키 서명)를 Play 비공개 테스트에 업로드하고 검토 제출함. 실서버 규칙은 업로드 전에 배포 완료(아래 2부 기록).
 - **업로드한 aab = 태그 코드**: aab는 `6ca72cd`(칼·키 오류 병합) 코드에 `pubspec.yaml` version만 `0.1.10+12`로 바꾼 상태에서 빌드. 태그 커밋과 `6ca72cd`의 차이는 `pubspec.yaml`(version)과 `docs/`뿐이고 `lib/`·`android/`·`test/`는 같음(`git diff`로 확인).
