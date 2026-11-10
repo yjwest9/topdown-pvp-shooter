@@ -84,3 +84,4 @@ http://127.0.0.1:4000/database 에서 `rooms/{코드}` 아래 `meta`, `players`,
 - 상대가 안 보임: 관리 화면에서 `states/{uid}`가 계속 바뀌는지 확인.
 - 몇 초 뒤 상대가 멈춤: 안드로이드에서 `useDatabaseEmulator`를 쓰면 생기는 문제라 `firebase_setup.dart`에서 에뮬레이터 주소로 직접 연결한다. 그 코드를 바꾸지 않았는지 확인.
 - 에뮬레이터 로그(`database-debug.log`)에 NullPointerException 또는 DB가 30초씩 멈춤: `java -version`이 21인지 확인.
+- 웹을 로컬 에뮬레이터로 확인할 때는 `flutter build web --debug`를 쓴다. 릴리스 웹 빌드는 Auth가 실서버로 간다.

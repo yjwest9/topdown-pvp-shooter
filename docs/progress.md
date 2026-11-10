@@ -1,5 +1,24 @@
 # 진행 상황
 
+## 2026-11-10 (0.1.10+12 출시: Play 비공개 테스트 업로드·검토 제출, 태그 v0.1.10)
+- 사용자가 `app-release.aab`(0.1.10+12, 62,914,948바이트, 업로드 키 서명)를 Play 비공개 테스트에 업로드하고 검토 제출함. 실서버 규칙은 업로드 전에 배포 완료(아래 2부 기록).
+- **업로드한 aab = 태그 코드**: aab는 `6ca72cd`(칼·키 오류 병합) 코드에 `pubspec.yaml` version만 `0.1.10+12`로 바꾼 상태에서 빌드. 태그 커밋과 `6ca72cd`의 차이는 `pubspec.yaml`(version)과 `docs/`뿐이고 `lib/`·`android/`·`test/`는 같음(`git diff`로 확인).
+- `chore/release-0.1.10`을 main에 squash 병합·push, 그 병합 커밋에 태그 `v0.1.10`. 브랜치는 안 지움.
+- 검토 결과는 아직 모름(통과/반려는 Play Console에서 확인).
+
+## 2026-11-10 (0.1.10+12 릴리스 2부 — 실서버 규칙 배포, chore/release-0.1.10)
+- **규칙 배포: 2026-11-10 18:01:11~18:01:19(KST)** `firebase deploy --only database` 성공(`topsoldier-default-rtdb`).
+- 배포 직전 비교(다시 받음): 차이는 1부와 같은 무기 id 허용 목록의 `|knife` 추가 1곳뿐(그 줄에서 `|knife`를 빼면 실서버와 문자 그대로 같음). 배포 뒤 다시 받아 비교: **차이 0**.
+- 실서버 테스트 데이터는 만들지 않았으므로 삭제할 것 없음. 태그·병합·push 안 함. 다음: Play Console 업로드.
+
+## 2026-11-10 (0.1.10+12 릴리스 1부 — 병합·검사·빌드, 규칙 배포 안 함, chore/release-0.1.10)
+- 병합(squash, push): `fix/early-key-release` → `af314a3`, `feat/knife` → `6ca72cd`. `docs/progress.md` 맨 위 항목이 겹쳐 충돌이 한 번 났고 사용자 허락(A)으로 두 항목을 모두 남기는 쪽으로만 해결. main = origin/main = `6ca72cd`. 브랜치는 안 지움.
+- 검사(새로 돌림): format 0 변경, analyze 0, test **686개**(662 + 키 오류 1 + 칼 23), rules_check **146 OK / FAIL 0**(에뮬레이터 `--only auth,database`, 끝나고 끔).
+- 실서버 규칙 비교(받기만, **배포 안 함**): 저장소와 실서버의 차이는 무기 id 허용 목록의 `|knife` 추가 **1곳뿐**. 규칙 배포는 앱 업로드 전에 사용자가 결정(`release.md` 4장 절차).
+- `pubspec.yaml` 0.1.10+12. aab `build/app/outputs/bundle/release/app-release.aab` 62,914,948바이트(60.0MB), `jarsigner -verify` 통과, 서명 CN=youngjun seo, SHA-256 `F7:3C:72:7D…:CA:63`(업로드 키).
+- 릴리스 apk 정적 확인(기기 확인은 안 함, 11/02 결정): 패키지 `com.yjseo.topsoldier`, versionCode 12, versionName 0.1.10, minSdk 24, targetSdk 36. v0.1.9를 같은 설정으로 빌드해 비교 → 권한 14개 **차이 없음**.
+- 하지 않음: 태그, release 브랜치 병합, 실서버 규칙 배포·데이터 삭제. 사용자 확인 안 된 것: 칼 새 수치 손맛, 새 칼 그림 실제 화면.
+
 ## 2026-11-10 (칼 통계 상한: 휘두름당 명중 최대 1번 — feat/knife)
 - 사용자 결정("상한은 정해"): 한 번 휘둘러 여럿을 맞혀도 통계 `hits`는 휘두름당 최대 1번만 센다. `shots`는 휘두름마다 1. 그래서 `hits ≤ shots`, 명중률 100% 초과 없음. 피해는 맞힌 모두에게 그대로 들어감. `MatchSync.hit`에 휘두름 번호(`game.swings`) 비교 한 곳만 바꿈, 총알은 그대로.
 - 테스트: `knife stats: one swing counts at most one hit...`(수정 전 `hits 2 / shots 1`로 실패 확인 → 통과). decisions 칼 항목 갱신.
