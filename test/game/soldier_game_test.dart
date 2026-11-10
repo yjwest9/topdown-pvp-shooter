@@ -36,6 +36,31 @@ void place(SoldierGame game, double angle) {
 }
 
 void main() {
+  test('key events before the game has loaded are ignored (no LateInitializationError)', () {
+    final game = SoldierGame(); // onLoad 전: player가 아직 없다
+    for (final k in [
+      LogicalKeyboardKey.controlLeft,
+      LogicalKeyboardKey.shiftLeft,
+      LogicalKeyboardKey.keyW,
+      LogicalKeyboardKey.space,
+    ]) {
+      for (final event in [
+        KeyUpEvent(
+          physicalKey: PhysicalKeyboardKey.keyA,
+          logicalKey: k,
+          timeStamp: Duration.zero,
+        ),
+        KeyDownEvent(
+          physicalKey: PhysicalKeyboardKey.keyA,
+          logicalKey: k,
+          timeStamp: Duration.zero,
+        ),
+      ]) {
+        expect(game.onKeyEvent(event, {k}), KeyEventResult.ignored);
+      }
+    }
+  });
+
   for (final a in [0.0, pi / 2, pi]) {
     gameTester().testGameWidget(
       'forward 1s at angle $a moves (cos a, sin a) x speed',

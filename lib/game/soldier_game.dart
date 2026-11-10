@@ -539,6 +539,8 @@ class SoldierGame extends FlameGame with RiverpodGameMixin, KeyboardEvents {
     KeyEvent event,
     Set<LogicalKeyboardKey> keysPressed,
   ) {
+    // 로딩이 끝나기 전(player가 아직 없음)에 들어온 키는 무시한다.
+    if (!isLoaded) return KeyEventResult.ignored;
     final key = event.logicalKey;
     if (!_gameKeys.contains(key)) return KeyEventResult.ignored;
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {

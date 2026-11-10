@@ -1,5 +1,11 @@
 # 진행 상황
 
+## 2026-11-09 (로딩 중 키 입력 오류 수정 — fix/early-key-release)
+- 증상: 옛 앱(v0.1.9) 웹 Console에 `LateInitializationError: Field 'player' has not been initialized`(Control Left 뗌). 게임이 멈추진 않고 로그만 남음. **main에도 같은 코드**: `SoldierGame.onKeyEvent`가 `_syncRun`/`_syncMoveKeys`에서 `late final Player player`를 읽는데, 게임 `onLoad`(그림·맵 불러오기)가 끝나기 전에 키가 들어오면 난다.
+- 수정: `onKeyEvent` 맨 앞에 `if (!isLoaded) return KeyEventResult.ignored;` 한 줄(로딩 전 키는 무시).
+- 테스트: `key events before the game has loaded are ignored`(수정 전 같은 오류로 실패 확인 → 통과).
+- 숫자: format 0 changed, analyze 0, test 663개 통과(main 기준 662에서 +1).
+
 ## 2026-11-06 (D등급 다이아 구매 버튼, 비활성 — feat/d-grade-button)
 - 무기 화면 보유 무기 상세에 `D등급 구매 · 준비 중` 버튼을 추가했다(`loadout_view.dart`, 합성 영역 아래). 눌리지 않는 비활성 버튼이고 가격은 표시하지 않는다(decisions 7장 "결제 연동 전까지 비활성", 가격이 정해진 적 없음). 보유한 라이플·저격·샷건에만 보이고 권총(보조)과 미보유 무기에는 안 보인다. 새 규칙·저장소·DB·패키지 없음.
 - 테스트: `D-grade buy button is disabled "준비 중", not for the pistol`(버튼이 보이고 `onPressed`가 null, 보조 탭에서는 없음). 기존 `owned weapon: equip, no buy button...`의 `textContaining('구매')`는 새 버튼 글자에도 걸려서 `'구매 20,000'`(E등급 구매 버튼)으로 좁힘(의도는 그대로).
