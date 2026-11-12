@@ -120,12 +120,13 @@ void main() {
     a.dispose();
   });
 
-  testWidgets('bot button shows up after 30 seconds of waiting', (
+  testWidgets('bot button shows up after 10 seconds of waiting', (
     tester,
   ) async {
     final db = FakeRtdbService();
     final a = player('a', db);
     await tester.pump();
+    expect(quickMatchBotOffer, const Duration(seconds: 10));
     await tester.pump(quickMatchBotOffer - const Duration(seconds: 1));
     expect(stateOf(a).offerBot, false);
     await tester.pump(const Duration(seconds: 1));

@@ -522,7 +522,7 @@ const connectWait = Duration(seconds: 3);
 const quickMatchRetry = Duration(milliseconds: 500);
 
 /// 이만큼 기다려도 상대가 없으면 "봇과 대전" 버튼을 보여 준다.
-const quickMatchBotOffer = Duration(seconds: 30);
+const quickMatchBotOffer = Duration(seconds: 10);
 
 /// 상대를 찾은 뒤 시작까지 카운트다운(초).
 const quickMatchCountdown = 3;

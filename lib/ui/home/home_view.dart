@@ -106,7 +106,7 @@ class _Home extends ConsumerWidget {
     );
   }
 
-  /// 빠른 대전. 30초 넘게 못 찾아 "봇과 대전"을 누르면 보통 봇전으로.
+  /// 빠른 대전. 10초 넘게 못 찾아 "봇과 대전"을 누르면 보통 봇전으로.
   Future<void> _quickMatch(BuildContext context, WidgetRef ref) async {
     final bot = await Navigator.of(context)
         .push<bool>(MaterialPageRoute(builder: (_) => const MatchmakingView()));
