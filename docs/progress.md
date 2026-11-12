@@ -1,5 +1,19 @@
 # 진행 상황
 
+## 2026-11-12 (0.1.11+13 출시: Play 비공개 테스트 업로드·검토 제출, 태그 v0.1.11)
+- 사용자가 `app-release.aab`(0.1.11+13, 62,919,041바이트, 업로드 키 서명)를 Play 비공개 테스트에 업로드하고 검토 제출함(2026-11-12, 시각 기록 안 함). 규칙 변경 없는 릴리스라 규칙 배포 없음(실서버와 차이 0 확인).
+- **업로드한 aab = 태그 코드**: `428a359`(main)과 `chore/release-0.1.11`의 차이는 `pubspec.yaml`(version)과 `docs/`뿐(`git diff --stat`으로 확인).
+- `chore/release-0.1.11`을 main에 squash 병합·push, 그 병합 커밋에 태그 `v0.1.11`. 브랜치는 안 지움.
+- 검토 결과는 아직 모름(통과/반려는 Play Console에서 확인).
+
+## 2026-11-12 (0.1.11+13 릴리스 준비 — chore/release-0.1.11)
+- 병합(squash, push): `fix/quick-bot-offer` → `680bff4`, `feat/killlog-weapon-icon` → `428a359`. 두 브랜치 모두 `database.rules.json` 변경 없음. `progress.md` 맨 위가 겹쳐 충돌이 한 번 났고 두 기록을 모두 남김. main = origin/main = `428a359`. 브랜치는 안 지움.
+- 검사(새로 돌림): format 0 changed, analyze 0, test **688개** 통과(686 + 킬 로그 2).
+- 실서버 규칙 비교(받기만, 배포 안 함): `database.rules.json`과 실서버 차이는 파일 끝 빈 줄 1개뿐, 내용 **차이 0**. 규칙 변경이 없어 rules_check 생략.
+- `pubspec.yaml` 0.1.11+13. aab `build/app/outputs/bundle/release/app-release.aab` 62,919,041바이트(60.0MB), `jarsigner -verify` 통과, 서명 CN=youngjun seo, SHA-256 `F7:3C:72:7D…:CA:63`(업로드 키).
+- 릴리스 apk 정적 확인(기기 확인은 안 함, 11/02 결정): 패키지 `com.yjseo.topsoldier`, versionCode 13, versionName 0.1.11, minSdk 24, targetSdk 36. v0.1.10을 `build/_verify/v0.1.10` worktree로 꺼내 같은 명령으로 빌드해 비교 → 권한 14개 **차이 없음**. worktree는 삭제함.
+- 하지 않음: 태그, release 브랜치 push·병합, 실서버 규칙 배포·데이터 쓰기. 다음: Play Console 업로드(사용자), 그 뒤 태그 `v0.1.11`과 이 브랜치 병합.
+
 ## 2026-11-12 (0.1.11 작업 2: 킬 로그에 무기 그림 — feat/killlog-weapon-icon)
 - `match_hud.dart` 킬 로그를 "처치자 [무기 그림] 피처치자 (CRIT)"로. 그림은 `paintWeapon`(기존 무기 그림)을 46x13 칸에 가장 긴 무기(124) 기준 비율로 그려 무기끼리 크기 차이가 남는다. 모르는 무기 id면 예전처럼 `A > B  id` 글자. 줄 그리기는 `MatchHud.paintKillLine`(static, 그림 그렸으면 true)로 뽑아 테스트함. 새 규칙·패키지 없음.
 - 테스트 +2 `killlog_line_test.dart`(K2·칼·M870은 그림 자리에 픽셀이 칠해짐, 모르는 id는 글자만). 숫자: format 0 changed, analyze 0, test 688개(기준 686에서 +2).
