@@ -1,5 +1,11 @@
 # 진행 상황
 
+## 2026-11-12 (0.1.11 작업 2: 킬 로그에 무기 그림 — feat/killlog-weapon-icon)
+- `match_hud.dart` 킬 로그를 "처치자 [무기 그림] 피처치자 (CRIT)"로. 그림은 `paintWeapon`(기존 무기 그림)을 46x13 칸에 가장 긴 무기(124) 기준 비율로 그려 무기끼리 크기 차이가 남는다. 모르는 무기 id면 예전처럼 `A > B  id` 글자. 줄 그리기는 `MatchHud.paintKillLine`(static, 그림 그렸으면 true)로 뽑아 테스트함. 새 규칙·패키지 없음.
+- 테스트 +2 `killlog_line_test.dart`(K2·칼·M870은 그림 자리에 픽셀이 칠해짐, 모르는 id는 글자만). 숫자: format 0 changed, analyze 0, test 688개(기준 686에서 +2).
+- 미리보기: `flutter test tool/killlog_preview_test.dart` → `build/tmp/killlog.png`(K2·칼·M870 CRIT·모르는 id 한 줄씩, 4배). 테스트 글꼴이라 글자는 네모로 보이고 그림 위치·크기만 확인용. 실제 글자·위치는 게임 화면에서 확인 필요(확인 안 함).
+- 하지 않음: 웹 확인, 푸시, 병합.
+
 ## 2026-11-12 (0.1.11 작업 1: 봇 버튼 10초 — fix/quick-bot-offer)
 - `quickMatchBotOffer` 30초 → 10초(`balance.dart`). 버튼만 빨리 보이고 자동 전환은 없음(누르기 전까지 사람 찾기 계속). `home_view.dart` 주석, decisions 13장 값 갱신.
 - 테스트: 기존 `bot button shows up after...`가 이미 "직전엔 없고 1초 뒤 보임"을 검사해서 이름을 10초로 고치고 값 10초 고정 단언 1줄 추가. 새 테스트 없음.

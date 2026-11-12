@@ -3,9 +3,11 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flutter/painting.dart' show FontWeight, Shadow, TextStyle;
 
+import '../../rules/appearance.dart';
 import '../../rules/balance.dart';
 import '../net/match_sync.dart';
 import '../soldier_game.dart';
+import '../weapon_art.dart';
 
 /// 1대1 화면 HUD: 위 가운데 점수·남은 시간, 오른쪽 위 킬 로그, 아래 가운데 내 체력,
 /// 맞으면 가장자리 빨간 깜빡임, 죽으면 "전사" + 부활 카운트다운.
@@ -64,16 +66,56 @@ class MatchHud extends Component with HasGameReference<SoldierGame> {
   /// 무기 슬롯(오른쪽 위) 아래에 최근 3개.
   void _renderKillLog(Canvas canvas, Vector2 size) {
     for (final (i, k) in sync.killLog.indexed) {
-      _log.render(
+      paintKillLine(
         canvas,
-        // 웹에서 드문 기호(▸)는 글꼴이 늦게 와서 깨진 채 남는다. ASCII만.
-        '${sync.nameOf(k.killer)} > ${sync.nameOf(k.victim)}  '
-        '${weaponById(k.weapon)?.name ?? k.weapon}'
-        '${k.crit ? '  CRIT' : ''}',
-        Vector2(size.x - 16, 84 + i * 16.0),
-        anchor: Anchor.topRight,
+        Offset(size.x - 16, 84 + i * 16.0),
+        sync.nameOf(k.killer),
+        sync.nameOf(k.victim),
+        k.weapon,
+        crit: k.crit,
       );
     }
+  }
+
+  /// 킬 로그 한 줄: "처치자 [무기 그림] 피처치자". [topRight]가 줄 오른쪽 위.
+  /// 모르는 무기 id면 그림 대신 예전처럼 글자. 그림을 그렸으면 true.
+  static bool paintKillLine(
+    Canvas canvas,
+    Offset topRight,
+    String killer,
+    String victim,
+    String weaponId, {
+    bool crit = false,
+  }) {
+    final crits = crit ? '  CRIT' : '';
+    final pos = Vector2(topRight.dx, topRight.dy);
+    if (weaponById(weaponId) == null) {
+      // 웹에서 드문 기호(▸)는 글꼴이 늦게 와서 깨진 채 남는다. ASCII만.
+      _log.render(
+        canvas,
+        '$killer > $victim  $weaponId$crits',
+        pos,
+        anchor: Anchor.topRight,
+      );
+      return false;
+    }
+    const iconW = 46.0, iconH = 13.0, gap = 4.0;
+    final right = '$victim$crits';
+    _log.render(canvas, right, pos, anchor: Anchor.topRight);
+    final iconRight = topRight.dx - _log.getLineMetrics(right).width - gap;
+    paintWeapon(
+      canvas,
+      Rect.fromLTWH(iconRight - iconW, topRight.dy, iconW, iconH),
+      weaponLook(weaponId),
+      refLength: 124,
+    );
+    _log.render(
+      canvas,
+      killer,
+      Vector2(iconRight - iconW - gap, topRight.dy),
+      anchor: Anchor.topRight,
+    );
+    return true;
   }
 
   void _renderHp(Canvas canvas, Vector2 size) {
